@@ -1,0 +1,8 @@
+pandas>=2.0
+numpy>=1.25
+anthropic>=0.25
+python-dotenv>=1.0
+matplotlib>=3.7
+pytest>=7.4
+pytest-mock>=3.11
+pytz>=2024.1
