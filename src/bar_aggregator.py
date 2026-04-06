@@ -34,6 +34,9 @@ def aggregate_to_bars(trades: list, freq: str = '1min') -> list:
     agg['vwap']      = np.where(agg['volume'] > 0,
                                 agg['dollar'] / agg['volume'], agg['close'])
     agg['cvd']       = agg['delta'].cumsum()
+    # Guard against unrecognised side values silently corrupting delta
+    balance_ok = (agg['buy_volume'] + agg['sell_volume'] == agg['volume']).all()
+    assert balance_ok, "Unrecognised side value — buy+sell volume != total volume"
 
     # Map big trades to bar floor timestamp
     big_map: dict = {}

@@ -17,6 +17,7 @@ def test_single_bar_ohlcv():
     bars = aggregate_to_bars(trades, freq='1min')
     assert len(bars) == 1
     b = bars[0]
+    assert b.timestamp.tzinfo is not None
     assert b.open  == pytest.approx(20000.00)
     assert b.high  == pytest.approx(20000.25)
     assert b.low   == pytest.approx(19999.75)
