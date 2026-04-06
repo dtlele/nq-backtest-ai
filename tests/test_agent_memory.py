@@ -15,9 +15,8 @@ def _trade(pnl_usd, direction='long'):
                        'fabio', 'andrea', 'squeeze', 75, 2.0)
 
 def test_reset_session_writes_file(tmp_path):
+    import src.agent_memory as am
     with patch('src.agent_memory.SESSION_FILE', tmp_path / 'session_state.json'):
-        import src.agent_memory as am
-        am.SESSION_FILE = tmp_path / 'session_state.json'
         state = am.reset_session('2025-04-30')
         assert state['date'] == '2025-04-30'
         assert state['daily_pnl_usd'] == 0.0

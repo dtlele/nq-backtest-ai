@@ -11,9 +11,12 @@ def test_nlm_ask_returns_stdout(tmp_path):
         answer = nlm_ask("What is a wall?", "4c868e52")
     assert "wall" in answer.lower()
     # Verify CLI was called with correct notebook
-    call_args = mock_run.call_args[0][0]
-    assert "ask" in call_args
-    assert "What is a wall?" in call_args
+    # call_args_list[0] = nlm_use_notebook (the 'use' call)
+    # call_args_list[1] = the actual 'ask' call
+    assert mock_run.call_count == 2
+    ask_call_args = mock_run.call_args_list[1][0][0]
+    assert "ask" in ask_call_args
+    assert "What is a wall?" in ask_call_args
 
 def test_nlm_ask_raises_on_auth_error():
     mock_result = MagicMock()

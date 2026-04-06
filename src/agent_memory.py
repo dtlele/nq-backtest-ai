@@ -3,6 +3,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 MEMORY_DIR = Path(__file__).parent.parent / 'agent_memory'
+MEMORY_DIR.mkdir(parents=True, exist_ok=True)
 SESSION_FILE  = MEMORY_DIR / 'session_state.json'
 PATTERN_FILE  = MEMORY_DIR / 'pattern_memory.json'
 LOG_FILE      = MEMORY_DIR / 'reasoning_log.jsonl'
