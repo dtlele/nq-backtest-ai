@@ -4,12 +4,16 @@ from src import (FabioSignal, AndreaSignal, ConsensusSignal,
 def build_consensus(fabio: FabioSignal, andrea: AndreaSignal) -> ConsensusSignal:
     # Gate 1: Fabio confidence
     if fabio.confidence < FABIO_MIN_CONFIDENCE or fabio.direction == 'none':
+        if fabio.confidence < FABIO_MIN_CONFIDENCE:
+            reason = f'fabio_below_threshold ({fabio.confidence} < {FABIO_MIN_CONFIDENCE})'
+        else:
+            reason = 'fabio_direction_none'
         return ConsensusSignal(
             direction='none', entry=0, stop=0, target=0,
             r_ratio=0, final_confidence=fabio.confidence,
             fabio=fabio, andrea=andrea,
             decision='no_trade',
-            no_trade_reason=f'fabio_below_threshold ({fabio.confidence} < {FABIO_MIN_CONFIDENCE})',
+            no_trade_reason=reason,
         )
     # Gate 2: Andrea veto
     if not andrea.confirmation and andrea.confidence < ANDREA_VETO_THRESHOLD:
@@ -23,9 +27,11 @@ def build_consensus(fabio: FabioSignal, andrea: AndreaSignal) -> ConsensusSignal
     # Trade approved
     boost = 1.1 if andrea.confirmation else 0.85
     final_conf = min(100, int(fabio.confidence * boost))
-    entry  = fabio.entry  or 0.0
-    stop   = fabio.stop   or 0.0
-    target = fabio.target or 0.0
+    if fabio.entry is None or fabio.stop is None or fabio.target is None:
+        raise ValueError(f"Approved trade has None price fields: entry={fabio.entry}, stop={fabio.stop}, target={fabio.target}")
+    entry  = fabio.entry
+    stop   = fabio.stop
+    target = fabio.target
     risk   = abs(entry - stop)
     reward = abs(target - entry)
     r_ratio = round(reward / risk, 2) if risk > 0 else 0.0

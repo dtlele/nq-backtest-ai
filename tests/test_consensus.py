@@ -32,3 +32,16 @@ def test_r_ratio_calculated():
     c = build_consensus(_fab(75), _and(True, 65))
     # entry=20002, stop=19990, target=20040 → R = (20040-20002)/(20002-19990) = 38/12 ≈ 3.17
     assert c.r_ratio == pytest.approx(38/12, rel=0.01)
+
+def test_fabio_direction_none_no_trade():
+    """direction='none' with high confidence still blocks trade."""
+    c = build_consensus(_fab(80, direction='none'), _and(True, 70))
+    assert c.decision == 'no_trade'
+    assert 'fabio' in c.no_trade_reason
+    assert 'threshold' not in c.no_trade_reason  # reason says 'direction_none', not 'threshold'
+
+def test_approved_trade_none_prices_raises():
+    """Approved trade with None prices must raise, not silently corrupt."""
+    fab_none = FabioSignal('long', 75, None, None, None, 'squeeze', 'r', 'nlm')
+    with pytest.raises(ValueError, match='None price fields'):
+        build_consensus(fab_none, _and(True, 65))
