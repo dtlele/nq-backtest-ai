@@ -22,6 +22,12 @@ def test_fabio_question_contains_key_data():
     assert '20020' in q or 'IVB' in q  # ib_high
     assert 'squeeze' in q.lower() or 'drive' in q.lower()
 
+def test_fabio_question_no_volume_profile():
+    cand = _candidate()
+    cand.session_ctx.vp = None
+    q = build_fabio_question(cand)
+    assert 'N/A' in q
+
 def test_andrea_question_requires_fabio_signal():
     from src import FabioSignal
     fab = FabioSignal('long', 75, 20002.0, 19990.0, 20040.0, 'squeeze', 'reasoning', 'nlm')

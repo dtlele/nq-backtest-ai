@@ -8,8 +8,13 @@ ET = pytz.timezone('America/New_York')
 STRATEGY_FILE = Path(__file__).parent.parent / 'strategies' / 'fabio_andrea_hybrid.json'
 
 def _load_templates() -> dict:
-    with open(STRATEGY_FILE, encoding='utf-8') as f:
-        return json.load(f)
+    try:
+        with open(STRATEGY_FILE, encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Strategy file not found: {STRATEGY_FILE}") from None
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Strategy file is invalid JSON ({STRATEGY_FILE}): {e}") from e
 
 def build_fabio_question(candidate: CandidateBar) -> str:
     templates = _load_templates()
