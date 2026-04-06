@@ -16,8 +16,7 @@ def nlm_ask(question: str, notebook_id: str, retry: int = 0) -> str:
         [sys.executable, '-m', 'notebooklm', 'ask', question],
         capture_output=True, text=True, timeout=180
     )
-    combined = result.stdout + result.stderr
-    if 'Authentication expired' in combined or 'notebooklm login' in combined:
+    if 'Authentication expired' in result.stderr or 'notebooklm login' in result.stderr:
         raise RuntimeError("[AUTH EXPIRED] Run 'python -m notebooklm login' then retry.")
     if result.returncode != 0 and retry < 2:
         time.sleep(5)
