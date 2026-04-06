@@ -16,8 +16,8 @@ def _close(trade: OpenTrade, exit_price: float,
     sign = 1 if trade.direction == 'long' else -1
     pnl_ticks = sign * (exit_price - trade.entry) / NQ_TICK_SIZE
     pnl_usd   = pnl_ticks * NQ_TICK_VALUE
-    risk_ticks = abs(trade.entry - trade.stop) / NQ_TICK_SIZE
-    r_actual   = pnl_ticks / risk_ticks if risk_ticks > 0 else 0.0
+    # r_ratio stores the PLANNED R from consensus (target distance / stop distance)
+    # Realized R can be derived from pnl_ticks and (entry - stop) / tick_size
     return ClosedTrade(
         direction        = trade.direction,
         entry            = trade.entry,
@@ -37,7 +37,11 @@ def _close(trade: OpenTrade, exit_price: float,
     )
 
 def step_trade(trade: OpenTrade, bars: list) -> 'ClosedTrade | None':
-    """Walk forward through bars. Return ClosedTrade if exited, else None."""
+    """Walk forward through bars. Return ClosedTrade if exited, else None.
+
+    Tie-breaking: if a single bar touches both target and stop, target is
+    awarded (optimistic convention). Conservative alternative would award stop.
+    """
     for bar in bars:
         if trade.direction == 'long':
             if bar.high >= trade.target:
