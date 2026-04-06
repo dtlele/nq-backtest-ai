@@ -11,8 +11,14 @@ def compute_metrics(trades: list) -> dict:
     losses = [t for t in trades if t.pnl_usd <= 0]
     gross_profit = sum(t.pnl_usd for t in wins)
     gross_loss   = abs(sum(t.pnl_usd for t in losses))
-    avg_r = sum(t.pnl_ticks / ((abs(t.entry - t.stop) / 0.25) or 1)
-                for t in trades) / len(trades)
+    valid_r_trades = [t for t in trades if abs(t.entry - t.stop) >= 0.25]
+    if len(valid_r_trades) < len(trades):
+        invalid_count = len(trades) - len(valid_r_trades)
+        import warnings
+        warnings.warn(f"{invalid_count} trade(s) have entry==stop and are excluded from avg_r")
+    avg_r = (sum(t.pnl_ticks / (abs(t.entry - t.stop) / 0.25)
+                 for t in valid_r_trades) / len(valid_r_trades)
+             if valid_r_trades else 0.0)
     return {
         'total_trades':   len(trades),
         'wins':           len(wins),

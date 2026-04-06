@@ -39,6 +39,8 @@ def run_day(csv_path: str, dry_run: bool = False) -> list:
         return []
 
     vp  = compute_volume_profile(bars_ny)
+    # vp may be None if bars have insufficient volume; SessionContext and
+    # candidate_detector both handle None vp gracefully (fewer candidates)
     ctx = build_session_context(date_str, bars_ny, vp)
     candidates = detect_candidates(bars_ny, ctx)
 
