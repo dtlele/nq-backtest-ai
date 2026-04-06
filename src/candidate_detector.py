@@ -7,10 +7,9 @@ def _near(price: float, level: float, ticks: int) -> bool:
     return abs(price - level) <= ticks * NQ_TICK_SIZE
 
 def _get_vp_levels(ctx: SessionContext) -> list:
-    levels = [
-        (ctx.ib_high, 'ib_high'),
-        (ctx.ib_low,  'ib_low'),
-    ]
+    levels = []
+    if ctx.ib_complete:
+        levels += [(ctx.ib_high, 'ib_high'), (ctx.ib_low, 'ib_low')]
     if ctx.vp:
         levels += [
             (ctx.vp.poc,      'poc'),
@@ -45,7 +44,7 @@ def detect_candidates(bars: list, ctx: SessionContext) -> list:
         buy_big  = sum(t.size for t in all_big if t.side == 'A')
         sell_big = sum(t.size for t in all_big if t.side == 'B')
         wall_side  = 'ask' if buy_big >= sell_big else 'bid'
-        wall_level = max(window, key=lambda b: sum(t.size for t in b.big_trades)).close
+        wall_level = max(all_big, key=lambda t: t.size).price
         candidates.append(CandidateBar(
             bar=bar,
             session_ctx=ctx,

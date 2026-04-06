@@ -44,11 +44,13 @@ def compute_volume_profile(bars: list):
 
     hvn, lvn = [], []
     for i in range(len(volumes)):
-        lo_v = volumes[i - 1] if i > 0 else float('inf')
-        hi_v = volumes[i + 1] if i < len(volumes) - 1 else float('inf')
+        lo_v = volumes[i - 1] if i > 0 else float('-inf')
+        hi_v = volumes[i + 1] if i < len(volumes) - 1 else float('-inf')
         if volumes[i] > lo_v and volumes[i] > hi_v:
             hvn.append(sorted_prices[i])
-        elif volumes[i] < lo_v and volumes[i] < hi_v:
+        lo_v = volumes[i - 1] if i > 0 else float('inf')
+        hi_v = volumes[i + 1] if i < len(volumes) - 1 else float('inf')
+        if volumes[i] < lo_v and volumes[i] < hi_v:
             lvn.append(sorted_prices[i])
 
     hvn = sorted(hvn, key=lambda p: -price_vol[p])[:5]
