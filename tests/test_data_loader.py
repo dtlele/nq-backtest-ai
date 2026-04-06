@@ -27,18 +27,24 @@ def test_load_day_parses_trades():
     assert trades[1].price == pytest.approx(19999.75)
     assert trades[2].size == 35
 
-def test_load_day_skips_non_trade_actions():
-    path = _write_csv(SAMPLE_CSV)
+def test_load_day_returns_empty_for_no_trade_actions():
+    # CSV with only action='A' rows (add, not trade)
+    csv_no_trades = textwrap.dedent("""\
+        ts_recv,ts_event,rtype,publisher_id,instrument_id,action,side,depth,price,size,flags,ts_in_delta,sequence,symbol
+        2025-04-30T13:30:05.000000000Z,2025-04-30T13:30:05.000000000Z,0,1,1,A,A,0,20000.000000000,5,0,1000,1,NQM5
+        2025-04-30T13:30:10.000000000Z,2025-04-30T13:30:10.000000000Z,0,1,1,C,B,0,19999.750000000,10,0,1000,2,NQM5
+    """)
+    path = _write_csv(csv_no_trades)
     trades = load_day(path)
     os.unlink(path)
-    assert len(trades) == 3
+    assert trades == []
 
 def test_load_day_timestamp_is_utc_datetime():
     path = _write_csv(SAMPLE_CSV)
     trades = load_day(path)
     os.unlink(path)
     from datetime import timezone
-    assert trades[0].ts_event.tzinfo is not None
+    assert trades[0].ts_event.tzinfo == timezone.utc
     assert trades[0].ts_event.hour == 13  # 13:30:05 UTC
 
 def test_list_data_files():
