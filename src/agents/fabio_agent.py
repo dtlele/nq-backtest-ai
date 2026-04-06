@@ -61,7 +61,7 @@ def analyze(candidate: CandidateBar) -> FabioSignal:
 {nlm_answer}
 
 ## Current Bar Data
-{build_fabio_question(candidate)}
+{nlm_question}
 
 Analyze this setup and respond with JSON only."""
 
@@ -77,7 +77,16 @@ Analyze this setup and respond with JSON only."""
     if raw.startswith('```'):
         raw = raw.split('```')[1].lstrip('json').strip()
 
-    data = json.loads(raw)
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return FabioSignal(
+            direction='none', confidence=0,
+            entry=None, stop=None, target=None,
+            setup_type='none',
+            reasoning=f'JSON parse error: {raw[:100]}',
+            nlm_answer=nlm_answer,
+        )
     return FabioSignal(
         direction   = data.get('direction', 'none'),
         confidence  = int(data.get('confidence', 0)),
