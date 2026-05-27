@@ -1,0 +1,22 @@
+# .gitignore
+
+# Secrets
+.env
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Large data files (consider Git LFS)
+*.csv
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Notebook checkpoints
+.ipynb_checkpoints/
