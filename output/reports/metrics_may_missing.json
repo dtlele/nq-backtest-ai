@@ -1,0 +1,17 @@
+{
+  "total_trades": 6,
+  "wins": 4,
+  "losses": 2,
+  "win_rate": 0.6666666666666666,
+  "profit_factor": 4.07,
+  "total_pnl_usd": 2640.0,
+  "avg_pnl_usd": 440.0,
+  "avg_r": 0.44,
+  "by_setup": {
+    "squeeze": {
+      "count": 6,
+      "pnl_usd": 2640.0,
+      "wins": 4
+    }
+  }
+}

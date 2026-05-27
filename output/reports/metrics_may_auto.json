@@ -1,0 +1,27 @@
+{
+  "total_trades": 7,
+  "wins": 6,
+  "losses": 1,
+  "win_rate": 0.8571428571428571,
+  "profit_factor": 4.24,
+  "total_pnl_usd": 3645.0,
+  "avg_pnl_usd": 520.71,
+  "avg_r": 0.84,
+  "by_setup": {
+    "ivb_breakout": {
+      "count": 1,
+      "pnl_usd": 730.0,
+      "wins": 1
+    },
+    "failed_auction": {
+      "count": 1,
+      "pnl_usd": 450.0,
+      "wins": 1
+    },
+    "squeeze": {
+      "count": 5,
+      "pnl_usd": 2465.0,
+      "wins": 4
+    }
+  }
+}

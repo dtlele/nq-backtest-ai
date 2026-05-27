@@ -1,0 +1,28 @@
+{
+  "simplified_strategy": {
+    "ibob_overview": "Initial Balance is the first 60 mins. Breakouts define the session bias.",
+    "ibob_candle_close": "Valid breakout requires a candle BODY close outside the Initial Balance, not just a wick.",
+    "ibob_bubble_body_vs_wick": "Wicks piercing levels with Big Trades represent absorption (reversal). Bodies closing through represent initiative (breakout).",
+    "simplified_entry_mechanical": "Enter only when structural stop is clearly defined behind a High Volume Node or Ledge.",
+    "ibob_diagonal_imbalances": "Diagonal imbalances on the footprint indicate strong aggressive participation.",
+    "ibob_stop_target": "Stop behind the breakout structure. Target 1.5x IB extension.",
+    "ibob_invalidation": "If price closes back inside the IB after a breakout, it is a failed auction.",
+    "failed_auction_definition": "A failed auction is a probe outside a known balance area that gets immediately rejected back inside.",
+    "failed_auction_variants": "Can happen at IB High/Low, VAH/VAL, or previous day extremes.",
+    "absorption_vs_exhaustion": "Absorption = high volume, no price movement. Exhaustion = low volume, no price movement.",
+    "ibob_no_trade_conditions": "Do not trade inside the IB on a balance day.",
+    "balance_vs_imbalance": "Balance = trading inside Value Area. Imbalance = trending outside Value Area.",
+    "no_trade_rules": "No trade in choppy, low volume conditions.",
+    "trend_day_rules": "Do not fade a trend day. Only take continuation setups.",
+    "initiative_vs_response": "Initiative flow pushes price to new areas. Responsive flow pushes price back to mean."
+  },
+  "confirmation_rules": {
+    "bolle_filter": "Big bubbles must support the direction of the trade.",
+    "footprint_reading": "Look for stacked imbalances and unfinished auctions.",
+    "rotation_within_va": "Price rotates from VAL to VAH and vice versa on balance days.",
+    "entry_failed_auction": "Enter on the close of the rejection candle.",
+    "hvn_lvn": "HVN acts as a magnet. LVN acts as a wall/rejection point.",
+    "institutional_activity": "Follow the large lot sizes (>50 contracts)."
+  },
+  "knowledge_by_topic": {}
+}

@@ -1,0 +1,28 @@
+[
+  {
+    "date": "2025-04-30",
+    "question": "Standard IVB filters on balance day?",
+    "answer": "Accepted outside range with full-body close and Big Trades inside body. Avoid first drive.",
+    "answered_at": "2026-04-10T10:00:00Z"
+  },
+  {
+    "date": "2025-09-09",
+    "answer": "Correctly skipped. On a Bullish Trend Day, a valid Second Drive requires a test of an LVN or POC with renewed institutional initiative (Big Trades in body). On Sep 9th, price entered a high-volume node (HVN) consolidation without a clear delta flip, indicating absorption rather than aggressive extension.",
+    "answered_at": "2026-04-19T10:35:00Z"
+  },
+  {
+    "date": "2025-09-16",
+    "answer": "Validation: The Failed Auction at the IB High was confirmed by a +400 buy-side absorption wall on the wicks. Fabio’s rules dictate a mean reversion trade (Squeeze) back to POC when price fails to hold above the breakout candle body.",
+    "answered_at": "2026-04-19T10:35:00Z"
+  },
+  {
+    "date": "2025-09-22",
+    "answer": "Correctly avoided. A Valid Squeeze requires a defended Institutional Wall (Big Trades 30+) that acts as a structural floor. If the squeeze was flagged but no trade taken, it likely lacked a clean pullback to an LVN or the IVB edge, leading to a False Squeeze Trap scenario.",
+    "answered_at": "2026-04-19T10:54:00Z"
+  },
+  {
+    "date": "2025-09-30",
+    "answer": "Final validation. On a Balance Day, Valentini handles the Rotation vs Breakout dilemma by monitoring VA Edge acceptance. A Valid Squeeze (like the -1177 delta one today) requires the Institutional Wall to hold above VAH (24830), confirming the transition to an impulsive trend. Today was a clear breakout confirmed by volume.",
+    "answered_at": "2026-04-19T11:10:00Z"
+  }
+]

@@ -1,0 +1,129 @@
+C:\Users\Mauro\Documents\nq-backtest\src\bar_aggregator.py:42: UserWarning: 2 bars contain trades with unknown side (N) - excluded from buy/sell volume
+  warnings.warn(f"{n_bars} bars contain trades with unknown side (N) - excluded from buy/sell volume")
+C:\Users\Mauro\Documents\nq-backtest\src\bar_aggregator.py:42: UserWarning: 2 bars contain trades with unknown side (N) - excluded from buy/sell volume
+  warnings.warn(f"{n_bars} bars contain trades with unknown side (N) - excluded from buy/sell volume")
+Processing glbx-mdp3-20250430.trades.csv...
+
+  [CANDIDATE] 14:35 UTC | wall=19331.00 (bid) | near=ib_high @ 19304.50
+             IB=19135.00-19304.50 | bar O=19322.00 H=19322.50 L=19280.00 C=19306.00 V=8542
+  [FABIO] querying... dir=short conf=38 setup=ivb_breakout
+         entry=19295.0 stop=19332.0 target=19215.0
+         reason: Price made a first drive above IVB high (19304.5) to 19344, but met clear institutional resistance: 35 sell-side contracts at 10:25 and 52 sell-side contracts at 10:30 hitting the bid, forming a sell wall near 19315-19322. Current bar is a bearish rejection candle (H=19322.5, C=19306) back at IVB high/POC cluster (19298-19304), qualifying as the retracement test for a potential second drive short. However, confidence is suppressed significantly: day type is 'balance' which per Fabio's rules invalidates the trend-following IVB model, and the current bar's big trades are mixed (30 buy / 31 sell) rather than a clean directional cluster. A second drive short only triggers on a confirmed break and close below IVB high (19304.5) and POC (19298.25) with new sell-side big trades; stop sits behind the sell wall, target is VA low region.
+  [DECISION] NO_TRADE - fabio_confidence=38 < 65
+
+  [CANDIDATE] 15:25 UTC | wall=19417.00 (bid) | near=va_high @ 19414.50
+             IB=19135.00-19304.50 | bar O=19397.25 H=19425.25 L=19379.25 C=19413.00 V=6863
+  [FABIO] querying... C:\Users\Mauro\Documents\nq-backtest\src\bar_aggregator.py:42: UserWarning: 2 bars contain trades with unknown side (N) - excluded from buy/sell volume
+  warnings.warn(f"{n_bars} bars contain trades with unknown side (N) - excluded from buy/sell volume")
+C:\Users\Mauro\Documents\nq-backtest\src\bar_aggregator.py:42: UserWarning: 2 bars contain trades with unknown side (N) - excluded from buy/sell volume
+  warnings.warn(f"{n_bars} bars contain trades with unknown side (N) - excluded from buy/sell volume")
+dir=short conf=52 setup=squeeze
+         entry=19397.0 stop=19427.0 target=19298.25
+         reason: Price is testing VA high (19414.5) with a 57-contract sell-side big trade appearing on the current bar, suggesting absorption at resistance. However, day type is balance and we are above IVB — no clean second-drive sequence yet (no prior breakout + retracement + confirmed second drive short). The sell big trade at 19417 near VA high provides a squeeze entry signal, but confidence is moderate because this is a balance day without a clear IVB breakdown first.
+  [DECISION] NO_TRADE - fabio_confidence=52 < 65
+  [NLM] question queued for 2025-04-30 -> nlm_pending.jsonl
+  -> 0 trades
+Processing glbx-mdp3-20250501.trades.csv...
+
+  [CANDIDATE] 13:50 UTC | wall=19981.25 (bid) | near=poc @ 19943.00
+             IB=19888.25-19990.75 | bar O=19971.50 H=19996.25 L=19941.00 C=19944.50 V=9540
+  [FABIO] querying... dir=short conf=65 setup=squeeze
+         entry=19940.0 stop=19988.0 target=19888.25
+         reason: Classic failed-breakout squeeze: the 09:30 bar established the first drive down (to 19913), price retraced back toward IVB high across 09:35-09:45, then the 09:50 bar probed above IVB high (19990.75) to 19996.25 but was crushed by 382 all-sell institutional contracts — a clear wall at the IVB resistance zone reinforced by the LVN at 19993.0. Close snapped back inside IVB at 19944.5 with delta -538, confirming the failed auction. Stop sits just above the sell-side cluster at 19988 (inside IVB high, slippage trick); target is IVB low at 19888.25. Confidence capped at 65 because day-type is still 'balance,' prior bars showed buy-side big trades (09:30 61 buy, 09:40 32 buy, 09:45 38 buy) indicating contested auction, and no confirmed body-close below IVB interior support yet.
+  [ANDREA] querying... confirm=True conf=62 setup=failed_auction
+         reason: The 09:50 bar is NOT a clean IBOB — the close (19944.5) is inside the IB range (19888.25–19990.75), failing the mandatory outside-close condition. However, the bar printed a failed auction: it poked above IB high to 19996.25, then collapsed back inside with a sell BIG of 382 contracts at ~19981.25 — which sits in the upper wick (above open 19971.5), signaling classic absorption/rejection rather than initiative, a bearish failed-breakout signature that confirms Fabio's short bias.
+  [CONSENSUS] decision=trade final_conf=71 reason=approved
+  [TRADE OPEN] dir=short entry=19940.0 stop=19988.0 target=19888.25
+
+  [CANDIDATE] 14:15 UTC | wall=19910.00 (bid) | near=hvn @ 19941.00
+             IB=19888.25-19990.75 | bar O=19926.25 H=19959.00 L=19925.00 C=19939.00 V=6086
+  [FABIO] querying... dir=none conf=18 setup=none
+         entry=None stop=None target=None
+         reason: Price is inside the IVB (19888.25-19990.75) at 19939, so no breakout has occurred — the model requires a confirmed close outside the IVB before considering a second-drive entry. The big trade activity (9 trades, 0 contracts net shown, largest 455 at ~19910 on bid side) lacks directional conviction given mixed delta across the bar sequence. Day type is balance with no acceptance outside the range, making this a no-trade condition per Fabio's equilibrium/consolidation filter.
+  [DECISION] NO_TRADE - fabio_confidence=18 < 65
+
+  [CANDIDATE] 14:45 UTC | wall=20050.00 (bid) | near=lvn @ 20049.75
+             IB=19888.25-19990.75 | bar O=20019.50 H=20052.00 L=20014.75 C=20048.75 V=5372
+  [FABIO] querying... dir=short conf=52 setup=squeeze
+         entry=20048.75 stop=20076.5 target=19993.0
+         reason: Price is above IVB high (19990.75) and near VA High (20034.0), with consistent sell-side Big Trades dominating the last 6 bars (total sell BIG >> buy BIG: ~605 sell vs ~89 buy). The 10:45 bar shows 56-contract sell Big Trade at ~20050 near an LVN cluster (20049.75, 20073.75), suggesting absorption against upward move. However, this is a 'first drive' above IVB — no confirmed retracement-and-second-drive short setup yet — so confidence is moderate; ideal entry would be after a push to 20073-20090 LVN zone and rejection. Stop above nearest LVN at 20076.5, target the IVB edge/LVN at 19993.0.
+  [DECISION] NO_TRADE - fabio_confidence=52 < 65
+
+  [CANDIDATE] 14:55 UTC | wall=20063.25 (bid) | near=lvn @ 20073.75
+             IB=19888.25-19990.75 | bar O=20045.50 H=20073.50 L=20045.00 C=20072.75 V=6454
+  [FABIO] querying... dir=short conf=52 setup=squeeze
+         entry=20068.0 stop=20080.0 target=20034.0
+         reason: Price tagged LVN cluster at 20073.75/20076.5 on the 10:55 bar with 176 sell-side big contracts (buy=0, sell=176) and deeply negative delta (-684) on an up bar — classic absorption signature at LVN resistance. However, this setup is counter to the IVB bullish breakout direction (price is 82 points above the 19990.75 IVB high), which is Fabio's primary model requirement, significantly capping confidence. Balance day type further reduces edge; no confirmed second drive pattern exists for the short since the dominant trend has been upward — this is a potential reversal at LVN, not a textbook second drive.
+  [DECISION] NO_TRADE - fabio_confidence=52 < 65
+
+  [CANDIDATE] 15:25 UTC | wall=20107.00 (bid) | near=lvn @ 20076.50
+             IB=19888.25-19990.75 | bar O=20081.00 H=20091.00 L=20073.00 C=20078.00 V=5026
+  [FABIO] querying... dir=short conf=62 setup=ivb_breakout
+         entry=20073.0 stop=20092.0 target=19993.0
+         reason: Price is above IVB (broke out upside) but showing heavy sell-side Big Trades: 11:15 bar had 309 contracts all sell-side on high volume 11087, and 11:05 had 187 sell contracts — consistent institutional selling into the push above VA high (20034). Current bar at 20078 is sitting on LVN cluster (20076.5/20073.75) which is the retest zone after the 11:15 spike to 20125; a second drive down through this LVN targets the next major LVN/POC confluence near 19993. Stop above the current bar high (20091) keeps risk tight behind the LVN rejection zone.
+  [DECISION] NO_TRADE - fabio_confidence=62 < 65
+  [NLM] question queued for 2025-05-01 -> nlm_pending.jsonl
+  -> 1 trades
+Processing glbx-mdp3-20250502.trades.csv...
+
+  [CANDIDATE] 13:40 UTC | wall=20050.00 (ask) | near=lvn @ 20099.75
+             IB=20031.00-20125.00 | bar O=20089.25 H=20119.75 L=20078.25 C=20100.25 V=8385
+  [FABIO] querying... dir=none conf=15 setup=none
+         entry=None stop=None target=None
+         reason: Price remains inside the IVB range (20031-20125) with no confirmed breakout in either direction — the model requires a full-body candle close outside the IVB before any trade is considered. The single 120-contract buy trade at ~20050 occurred on the ask during the 09:35 bar's probe to 20031 (IVB low touch), but there is no second-drive confirmation and no retracement-then-resumption sequence. Day type is balance with price oscillating mid-range, which is a no-trade condition per the simplified model.
+  [DECISION] NO_TRADE - fabio_confidence=15 < 65
+
+  [CANDIDATE] 14:10 UTC | wall=20100.00 (bid) | near=poc @ 20151.50
+             IB=20031.00-20125.00 | bar O=20130.75 H=20152.75 L=20116.00 C=20150.25 V=7260
+  [FABIO] querying... dir=none conf=15 setup=none
+         entry=None stop=None target=None
+         reason: IVB broke to the UPSIDE (price 20150.25 vs IVB high 20125.0), making a short position counter-directional to the session bias. The 10:00 bar's 89-contract all-sell institutional print at ~20100 (IVB edge / LVN cluster at 20099.75-20104.5) was fully absorbed — bearish aggression failed to push price lower, which is a bullish absorption signal, not a short trigger. The subsequent second drive carried price through LVN 20134.5 and up to current POC (20151.5); with VA high at 20178.25 still open above and no failed-auction candle body closing back inside the IVB, there is no valid squeeze or second-drive short setup present.
+  [DECISION] NO_TRADE - fabio_confidence=15 < 65
+
+  [CANDIDATE] 14:15 UTC | wall=20150.00 (bid) | near=hvn @ 20148.00
+             IB=20031.00-20125.00 | bar O=20150.50 H=20174.00 L=20144.50 C=20147.50 V=6400
+  [FABIO] querying... dir=none conf=22 setup=none
+         entry=None stop=None target=None
+         reason: Price broke above IVB high (20125) and is now trading above it, so the breakout direction is long — a short setup requires a downside IVB break or a failed auction back inside the range. The sell-side big trades at ~20150 show distribution/absorption near POC (20151.5), but there is no confirmed first drive short, no retracement to IVB high to test as support, and no second drive setup materializing — we are still in the first leg up. Day type is balance with price above IVB; waiting for either a clear rejection back inside the range (failed auction short) or a pullback to IVB high ~20125 / LVN ~20134.5 with big buy absorption for a long second drive.
+  [DECISION] NO_TRADE - fabio_confidence=22 < 65
+
+  [CANDIDATE] 14:25 UTC | wall=20171.75 (bid) | near=va_high @ 20178.25
+             IB=20031.00-20125.00 | bar O=20143.25 H=20180.25 L=20136.50 C=20179.25 V=5609
+  [FABIO] querying... C:\Users\Mauro\Documents\nq-backtest\src\bar_aggregator.py:42: UserWarning: 1 bars contain trades with unknown side (N) - excluded from buy/sell volume
+  warnings.warn(f"{n_bars} bars contain trades with unknown side (N) - excluded from buy/sell volume")
+C:\Users\Mauro\Documents\nq-backtest\src\bar_aggregator.py:42: UserWarning: 1 bars contain trades with unknown side (N) - excluded from buy/sell volume
+  warnings.warn(f"{n_bars} bars contain trades with unknown side (N) - excluded from buy/sell volume")
+C:\Users\Mauro\Documents\nq-backtest\src\bar_aggregator.py:42: UserWarning: 1 bars contain trades with unknown side (N) - excluded from buy/sell volume
+  warnings.warn(f"{n_bars} bars contain trades with unknown side (N) - excluded from buy/sell volume")
+dir=none conf=22 setup=none
+         entry=None stop=None target=None
+         reason: Price is above IVB high (20125) and pushing into VA high (20178.25), but Big Trade confirmation is weak — only 1 trade totaling 0 contracts logged in last 3 bars, with the largest single trade being 38 contracts on the sell side at 10:15. The current bar's negative delta (-297) with price closing at the high (20179.25) suggests absorption but lacks the clustering of multiple Big Trade bubbles required for a valid wall. No confirmed second drive structure is present — there is no clean retracement back to IVB edge or LVN followed by rejection, just a choppy grind up through value area. Day type is balance, which is a low-edge condition for this model.
+  [DECISION] NO_TRADE - fabio_confidence=22 < 65
+  [NLM] question queued for 2025-05-02 -> nlm_pending.jsonl
+  -> 0 trades
+Processing glbx-mdp3-20250504.trades.csv...
+  -> 0 trades
+Processing glbx-mdp3-20250505.trades.csv...
+
+  [CANDIDATE] 14:10 UTC | wall=20056.25 (bid) | near=ib_high @ 20053.25
+             IB=19985.25-20053.25 | bar O=20067.00 H=20080.25 L=20042.00 C=20054.25 V=5803
+  [FABIO] querying... dir=none conf=20 setup=none
+         entry=None stop=None target=None
+         reason: Price is above IVB high (20053.25) confirming trend_up bias, so shorting against the breakout direction violates the model. The 10:00 bar showed a strong institutional push to 20111 with 131 big contracts (buy=57, sell=74) but price has since pulled back to 20054.25, sitting just above the IVB edge — this looks like a retracement test, not a short squeeze. No valid second-drive short setup exists when day type is trend_up and price is holding above the IVB breakout level.
+  [DECISION] NO_TRADE - fabio_confidence=20 < 65
+
+  [CANDIDATE] 14:35 UTC | wall=20020.25 (ask) | near=lvn @ 20069.75
+             IB=19985.25-20053.25 | bar O=20018.00 H=20079.50 L=20009.00 C=20069.00 V=7139
+  [FABIO] querying... dir=none conf=22 setup=none
+         entry=None stop=None target=None
+         reason: Price is above IVB high (20053.25) so a long bias is directionally correct, but the current bar shows a single big trade cluster (114 contracts) at 20020.25 — well below current price — with no institutional aggression visible at the current level (~20069). The 10:35 bar is a wide-range reversal candle from 20009 to 20079.50 with negative delta (-267), suggesting sellers absorbed the rally; there is no clean wall of Big Trades beneath current price to use as a stop anchor. No valid second-drive structure is present: the retracement into the IVB (10:30-10:35 lows near 20009-20018) was sharp and the bounce has not yet been tested and re-confirmed with institutional buying at a clean LVN. Wait for a retracement to 20062.5 (POC) or 20053.25 (IVB high) with new Big Trade clusters before considering a long entry.
+  [DECISION] NO_TRADE - fabio_confidence=22 < 65
+  [NLM] question queued for 2025-05-05 -> nlm_pending.jsonl
+  -> 0 trades
+
+=== BACKTEST RESULTS ===
+Total trades:   1
+Win rate:       100.0%
+Profit factor:  0.00
+Total P&L:      $1,035.00
+Avg R:          1.08

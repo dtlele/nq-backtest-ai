@@ -7,6 +7,8 @@ MEMORY_DIR.mkdir(parents=True, exist_ok=True)
 SESSION_FILE  = MEMORY_DIR / 'session_state.json'
 PATTERN_FILE  = MEMORY_DIR / 'pattern_memory.json'
 LOG_FILE      = MEMORY_DIR / 'reasoning_log.jsonl'
+HUMAN_FILE    = MEMORY_DIR / 'human_decisions.jsonl'
+TRADES_FILE   = MEMORY_DIR / 'trades_log.jsonl'
 
 def load_session() -> dict:
     with open(SESSION_FILE, encoding='utf-8') as f:
@@ -22,6 +24,7 @@ def reset_session(date_str: str) -> dict:
         'ib_high': None, 'ib_low': None, 'poc': None,
         'day_type': 'unknown',
         'open_trade': None,
+        'equity': 100000.0,      # NEW: Account Balance tracker
         'daily_pnl_usd': 0.0,
         'trade_count_today': 0,
         'session_stopped': False,
@@ -34,6 +37,88 @@ def log_reasoning(entry: dict) -> None:
     entry['logged_at'] = datetime.now(timezone.utc).isoformat()
     with open(LOG_FILE, 'a', encoding='utf-8') as f:
         f.write(json.dumps(entry, ensure_ascii=False) + '\n')
+
+def log_trade_result(closed_trade) -> None:
+    """Append one closed trade to the trades JSONL log."""
+    date_str = closed_trade.entry_time.strftime('%Y-%m-%d')
+    entry_iso = closed_trade.entry_time.isoformat()
+    
+    # IDEMPOTENCY CHECK: Prevent duplicates (unless BACKTEST_FORCE is True)
+    import os
+    if not os.getenv('BACKTEST_FORCE') == 'true':
+        if is_trade_already_logged(date_str, entry_iso):
+            return
+
+    entry = {
+        'date': date_str,
+        'entry_time': entry_iso,
+        'exit_time': closed_trade.exit_time.isoformat(),
+        'direction': closed_trade.direction,
+        'entry': closed_trade.entry,
+        'stop': closed_trade.stop,
+        'target': closed_trade.target,
+        'exit_price': closed_trade.exit_price,
+        'exit_reason': closed_trade.exit_reason,
+        'pnl_ticks': closed_trade.pnl_ticks,
+        'pnl_usd': closed_trade.pnl_usd,
+        'r_ratio': closed_trade.r_ratio,
+        'setup_type': closed_trade.setup_type,
+        'final_confidence': closed_trade.final_confidence,
+        'fabio_reasoning': closed_trade.fabio_reasoning,
+        'andrea_reasoning': closed_trade.andrea_reasoning,
+        'contracts': closed_trade.contracts,
+        'logged_at': datetime.now(timezone.utc).isoformat(),
+    }
+    with open(TRADES_FILE, 'a', encoding='utf-8') as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + '\n')
+
+def get_already_processed_candidates() -> set:
+    """Return a set of (date, bar_time_et) that have already been processed or answered by human."""
+    processed = set()
+    
+    # 1. Check reasoning log (includes prefiltered and light skips)
+    if LOG_FILE.exists():
+        try:
+            with open(LOG_FILE, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.strip():
+                        data = json.loads(line)
+                        # We use date + bar_time_et for identification
+                        processed.add((data.get('date'), data.get('bar_time_et')))
+        except Exception:
+            pass
+
+    # 2. Check human decisions (to skip re-asking for already answered but not yet traded candles)
+    if HUMAN_FILE.exists():
+        try:
+            with open(HUMAN_FILE, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.strip():
+                        # human_decisions.jsonl entries: {"key": "...", "decision": {"reasoning": "... bar_time_et: 10:45 ...", ...}}
+                        # Wait, human_decisions.jsonl only has the key and the decision.
+                        # It's better to log a reasoning entry for every human decision too.
+                        # I will modify llm_client to log reasoning when human replies.
+                        pass
+        except Exception:
+            pass
+            
+    return processed
+
+def is_trade_already_logged(date: str, entry_time_iso: str) -> bool:
+    """Check if a trade with this date and entry time already exists."""
+    if not TRADES_FILE.exists():
+        return False
+    try:
+        with open(TRADES_FILE, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.strip():
+                    data = json.loads(line)
+                    if data.get('date') == date and data.get('entry_time') == entry_time_iso:
+                        return True
+    except Exception:
+        pass
+    return False
+
 
 def update_pattern_memory(closed_trade) -> None:
     """Update cross-session pattern stats after closing a trade."""

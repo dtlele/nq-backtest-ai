@@ -15,15 +15,16 @@ def build_consensus(fabio: FabioSignal, andrea: AndreaSignal) -> ConsensusSignal
             decision='no_trade',
             no_trade_reason=reason,
         )
-    # Gate 2: Andrea veto
-    if not andrea.confirmation and andrea.confidence < ANDREA_VETO_THRESHOLD:
-        return ConsensusSignal(
-            direction='none', entry=0, stop=0, target=0,
-            r_ratio=0, final_confidence=fabio.confidence,
-            fabio=fabio, andrea=andrea,
-            decision='no_trade',
-            no_trade_reason=f'andrea_veto (confidence={andrea.confidence})',
-        )
+    # Gate 2: Andrea veto - DISABLED for observation only (as per initial agreement)
+    # if andrea.confidence < ANDREA_VETO_THRESHOLD:
+    #     return ConsensusSignal(
+    #         direction='none', entry=0, stop=0, target=0,
+    #         r_ratio=0, final_confidence=andrea.confidence,
+    #         fabio=fabio, andrea=andrea,
+    #         decision='no_trade',
+    #         no_trade_reason=f'andrea_veto ({andrea.confidence} < {ANDREA_VETO_THRESHOLD})',
+    #     )
+
     # Trade approved
     boost = 1.1 if andrea.confirmation else 0.85
     final_conf = min(100, int(fabio.confidence * boost))

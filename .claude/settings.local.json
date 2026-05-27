@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(notepad:*)",
+      "Bash(mkdir:*)",
+      "Bash(python -c \":*)"
+    ]
+  }
+}

@@ -23,6 +23,16 @@ def filter_ny_window(bars: list) -> list:
             result.append(b)
     return result
 
+def filter_overnight_window(bars: list) -> list:
+    """Keep bars before NY open (09:30 ET)."""
+    result = []
+    for b in bars:
+        t = _to_et(b)
+        ny_open = t.replace(hour=9, minute=30, second=0, microsecond=0)
+        if t < ny_open:
+            result.append(b)
+    return result
+
 def compute_ib(bars: list) -> tuple:
     """Return (ib_high, ib_low) from first IB_DURATION_MIN of NY open."""
     ib_bars = []
@@ -38,9 +48,10 @@ def compute_ib(bars: list) -> tuple:
 
 def is_fabio_active(bar: Bar) -> bool:
     t = _to_et(bar)
-    active_time = t.replace(hour=FABIO_ACTIVE_H, minute=FABIO_ACTIVE_M,
-                             second=0, microsecond=0)
-    return t >= active_time
+    # Fabio's Core Window: 09:35 ET to 12:30 ET for new entries
+    start_time = t.replace(hour=9, minute=35, second=0, microsecond=0)
+    end_time   = t.replace(hour=12, minute=30, second=0, microsecond=0)
+    return start_time <= t <= end_time
 
 def classify_day_type(bars: list) -> str:
     if len(bars) < 3:
@@ -55,9 +66,11 @@ def classify_day_type(bars: list) -> str:
         return 'trend_up'
     if ratio > 0.6 and slope < 0:
         return 'trend_down'
+    if 0.4 <= ratio <= 0.6:
+        return 'transition_state'
     return 'balance'
 
-def build_session_context(date_str: str, bars: list, vp) -> SessionContext:
+def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None) -> SessionContext:
     ib_high, ib_low = compute_ib(bars)
     return SessionContext(
         date=date_str,
@@ -66,5 +79,6 @@ def build_session_context(date_str: str, bars: list, vp) -> SessionContext:
         ib_range=round(ib_high - ib_low, 2),
         ib_complete=ib_high > 0,
         vp=vp,
+        prev_day_vp=prev_day_vp,
         day_type=classify_day_type(bars),
     )

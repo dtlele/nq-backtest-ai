@@ -1,70 +1,61 @@
-import json, os
+import json
 from pathlib import Path
-import anthropic
-from dotenv import load_dotenv
-from src import CandidateBar, FabioSignal, AndreaSignal, ANDREA_NOTEBOOK_ID
+from src import CandidateBar, FabioSignal, AndreaSignal, ANDREA_NOTEBOOK_ID, Bar
 from src.agents.nlm_client import nlm_ask
+from src.agents.llm_client import llm_ask
 from src.signal_context import build_andrea_question
+from src.agents.topic_router import select_andrea_topics, build_tiered_knowledge
 
-load_dotenv()
+KNOWLEDGE_FILE = Path(__file__).parent.parent.parent / 'knowledge' / 'andrea_distilled.json'
 
-KNOWLEDGE_FILE = Path(__file__).parent.parent.parent / 'knowledge' / 'andrea_knowledge.json'
-RELEVANT_TOPICS = [
-    'ibob_overview', 'ibob_candle_close',
-    'ibob_bubble_body_vs_wick', 'ibob_diagonal_imbalances',
-    'ibob_stop_target', 'ibob_invalidation',
-    'simplified_entry_mechanical',
-]
+_knowledge_cache = None
 
-def _load_knowledge() -> str:
+def _load_knowledge_store() -> dict:
+    """Load and merge all Andrea knowledge into a single dict (cached)."""
+    global _knowledge_cache
+    if _knowledge_cache is not None:
+        return _knowledge_cache
     with open(KNOWLEDGE_FILE, encoding='utf-8') as f:
         data = json.load(f)
-    # Topics may be in either section — combine both
-    combined = {}
-    combined.update(data.get('topics', {}))
-    combined.update(data.get('simplified_strategy', {}))
-    return '\n'.join(
-        f"### {t}\n{combined[t]}\n"
-        for t in RELEVANT_TOPICS if t in combined
-    )
+    store = {}
+    store.update(data.get('knowledge_by_topic', {}))
+    store.update(data.get('simplified_strategy', {}))
+    _knowledge_cache = store
+    return store
 
-SYSTEM_PROMPT = """You are Andrea Cimi's methodology agent providing confirmation analysis for NQ futures.
-You check IBOB (Initial Balance Outside Bar) conditions: candle close outside IB, big bubble in candle body (not wick), 2-3 diagonal imbalances in footprint.
-You confirm or veto Fabio Valentini's primary signal.
+SYSTEM_PROMPT = """You are Andrea Cimi's methodology agent providing confirmation analysis for NQ futures (E-mini). 
+You use Auction Market Theory to validate Fabio's setups.
+
+STRUCTURAL VALIDATION (NQ 2025):
+- LEDGE PROTECTION: Every trade must have a 'Structural Invalidation Point' (Ledge). This is the transition from a High Volume Node (HVN) to a Low Volume Node (LVN). The stop MUST sit behind this ledge.
+- PRICE ACCEPTANCE: A breakout is only valid if price builds a new range (High Volume Node) outside the previous Value Area.
+- WICK REJECTION FILTER: If price pokes a level but the BODY of the M1 candle does not close outside, it is a 'Liquidity Sweep' (Fake), not a breakout.
+
+CONFIRMATION RULES:
+1. MOMENTUM: Confirm ONLY if price shows initiative delta (>10%) AND acceptance (body close) past the structural wall.
+2. REVERSAL (FAILED AUCTION): Confirm if price probes an extreme (VAH/VAL/IB) and closes BACK INSIDE with increasing volume. Stop must be behind the failed wick.
+3. ANTI-NOISE STOP: Validate that Fabio's proposed stop is behind a structural barrier (Cluster/LVN). If not, propose a 'Structural SL' level in your reasoning.
+4. TOXIC FLOW: If M1 volume is < 300 contracts, VETO the trade as 'Thin Liquidity/Toxic Flow'.
 
 Respond ONLY with valid JSON:
 {
   "confirmation": true | false,
   "confidence": <int 0-100>,
-  "setup_type": "ibob" | "failed_auction" | "none",
-  "reasoning": "<2 sentence explanation>"
-}
-"""
+  "setup_type": "ibob" | "failed_auction" | "reversal" | "none",
+  "structural_stop": <float | null>,
+  "reasoning": "<MAX 40 WORDS. Explain referencing structural ledges, M1 bodies vs wicks, and volume acceptance.>"
+}"""
 
-def confirm(candidate: CandidateBar, fabio_signal: FabioSignal) -> AndreaSignal:
-    knowledge = _load_knowledge()
-    nlm_question = build_andrea_question(candidate, fabio_signal)
-    nlm_answer = nlm_ask(nlm_question, ANDREA_NOTEBOOK_ID)
+def confirm(candidate: CandidateBar, fabio_signal: FabioSignal, m1_bars: list[Bar] = None) -> AndreaSignal:
+    store = _load_knowledge_store()
+    topics = select_andrea_topics(candidate, fabio_signal.setup_type, store)
+    rules_text, context_text = build_tiered_knowledge(topics, store)
+    question = build_andrea_question(candidate, fabio_signal, m1_bars=m1_bars)
 
-    user_msg = f"""## Andrea's Knowledge (IBOB Simplified)
-{knowledge}
+    # Bypass NotebookLM: inject distilled knowledge directly
+    user_msg = f"## TRADING RULES (DISTILLED KNOWLEDGE)\n{rules_text}\n{context_text}\n\n## TASK\n{question}\n\nDoes this bar confirm Fabio's signal? Respond with JSON only."
 
-## NotebookLM Context
-{nlm_answer}
-
-## Bar Context + Fabio's Signal
-{nlm_question}
-
-Does this bar confirm Fabio's signal? Respond with JSON only."""
-
-    client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
-    response = client.messages.create(
-        model='claude-haiku-4-5-20251001',
-        max_tokens=256,
-        system=SYSTEM_PROMPT,
-        messages=[{'role': 'user', 'content': user_msg}],
-    )
-    raw = response.content[0].text.strip()
+    raw = llm_ask(SYSTEM_PROMPT, user_msg)
     if raw.startswith('```'):
         raw = raw.split('```')[1].lstrip('json').strip()
     try:
@@ -74,12 +65,29 @@ Does this bar confirm Fabio's signal? Respond with JSON only."""
             confirmation=False, confidence=0,
             setup_type='none',
             reasoning=f'JSON parse error: {raw[:100]}',
-            nlm_answer=nlm_answer,
+            nlm_answer="Bypassed",
         )
+    
+    confidence = int(data.get('confidence', 0))
+    # Compute stop distance in ticks (NQ tick = 0.25)
+    stop_distance_ticks = abs(fabio_signal.entry - fabio_signal.stop) / 0.25
+    # Veto trades with very tight stops (<10 ticks)
+    if stop_distance_ticks < 10:
+        confirmation = False
+        confidence = min(confidence, 30)
+    else:
+        # ROBUSTNESS: If manual mailbox input lacks "confirmation" but has high confidence + direction, assume True.
+        # Check for both 'confirmation' and legacy 'confirm' keys
+        confirmation = bool(data.get('confirmation') or data.get('confirm'))
+        # Preserve existing robustness heuristic
+        if not confirmation and confidence >= 65 and data.get('direction', 'none') != 'none':
+            confirmation = True
+
     return AndreaSignal(
-        confirmation = bool(data.get('confirmation', False)),
-        confidence   = int(data.get('confidence', 0)),
+        confirmation = confirmation,
+        confidence   = confidence,
         setup_type   = data.get('setup_type', 'none'),
         reasoning    = data.get('reasoning', ''),
-        nlm_answer   = nlm_answer,
+        nlm_answer   = "Bypassed",
+        structural_stop = data.get('structural_stop')
     )

@@ -1,0 +1,17 @@
+{
+  "total_trades": 4,
+  "wins": 1,
+  "losses": 3,
+  "win_rate": 0.25,
+  "profit_factor": 0.06,
+  "total_pnl_usd": -1205.7,
+  "avg_pnl_usd": -301.43,
+  "avg_r": -0.65,
+  "by_setup": {
+    "punch_continuation": {
+      "count": 4,
+      "pnl_usd": -1205.7,
+      "wins": 1
+    }
+  }
+}

@@ -1,0 +1,21 @@
+C:\Users\Mauro\Documents\nq-backtest\src\bar_aggregator.py:42: UserWarning: 2 bars contain trades with unknown side (N) - excluded from buy/sell volume
+  warnings.warn(f"{n_bars} bars contain trades with unknown side (N) - excluded from buy/sell volume")
+C:\Users\Mauro\Documents\nq-backtest\src\bar_aggregator.py:42: UserWarning: 2 bars contain trades with unknown side (N) - excluded from buy/sell volume
+  warnings.warn(f"{n_bars} bars contain trades with unknown side (N) - excluded from buy/sell volume")
+Processing glbx-mdp3-20250430.trades.csv...
+
+  [CANDIDATE] 14:35 UTC | wall=19331.00 (bid) | near=ib_high @ 19304.50
+             IB=19135.00-19304.50 | bar O=19322.00 H=19322.50 L=19280.00 C=19306.00 V=8542
+  [FABIO] querying... dir=none conf=18 setup=none
+         entry=None stop=None target=None
+         reason: Price is barely 1.5 points above the IVB high (19304.5) on a balance day — Fabio's model explicitly has no edge in balance/equilibrium conditions. The 10:30 bar showed a clean institutional short signal (52 contracts all sell-side near 19344), but the 10:35 bar's strong positive delta (+672) and recovery above the IVB high/POC cluster (19298-19304) indicate buyers absorbed the sell pressure, invalidating a failed-auction short. No confirmed full-body close below IVB high and no clean second-drive sequence have formed.
+  [DECISION] NO_TRADE - fabio_confidence=18 < 65
+
+  [CANDIDATE] 15:25 UTC | wall=19417.00 (bid) | near=va_high @ 19414.50
+             IB=19135.00-19304.50 | bar O=19397.25 H=19425.25 L=19379.25 C=19413.00 V=6863
+  [FABIO] querying... dir=short conf=52 setup=squeeze
+         entry=19413.0 stop=19427.0 target=19340.0
+         reason: Price is at VA high (19414.5) with a 57-contract sell-side big trade on the current bar at ~19417, suggesting institutional selling at the upper value boundary. However, day type is 'balance' and the IVB breakout was to the upside — shorting against the IVB breakout direction reduces confidence. No confirmed second drive sequence: the bar sequence shows a grind higher without a clean retracement-and-test of an LVN, so this lacks the full second-drive structure Fabio requires.
+  [DECISION] NO_TRADE - fabio_confidence=52 < 65
+  -> 0 trades
+No trades generated.

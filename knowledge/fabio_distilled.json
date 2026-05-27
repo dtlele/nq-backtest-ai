@@ -1,0 +1,27 @@
+{
+  "simplified_strategy": {
+    "simplified_model_overview": "Model is based on finding Institutional Absorption and trading the Second Drive.",
+    "simplified_entry_trigger": "Enter at MARKET immediately when Big Trades hit a wall and are absorbed. Do not wait for candle close.",
+    "simplified_stop_exact": "Stop Loss must be 2-3 ticks behind the structural wall (the Big Trade absorption cluster). Max 120 ticks.",
+    "simplified_ivb_formation": "IVB is the first 1 hour of trading. Breakout of IVB sets the day's trend.",
+    "simplified_second_drive_exact": "Wait for the first drive to stall (pullback), and enter on the second drive resuming the trend.",
+    "simplified_no_trade_top3": "Do not trade inside the IB on a balance day. Do not trade if volume < 300.",
+    "ib_breakout_rules": "Valid breakout requires a candle close outside the Initial Balance.",
+    "ibob_overview": "Initial Balance is the first 60 mins. Breakouts define the session bias.",
+    "ibob_invalidation": "If price closes back inside the IB after a breakout, it is a failed auction (reversal).",
+    "ibob_stop_target": "Stop behind the breakout candle or structure. Target is 1.5x to 2x the IB extension.",
+    "ib_bias": "Bias follows the direction of the IB breakout."
+  },
+  "knowledge_by_topic": {
+    "squeeze_definition": "A squeeze occurs when traders are trapped against a structural wall, forcing them to cover.",
+    "squeeze_entry_trigger": "Enter when the trapped side shows exhaustion (delta divergence).",
+    "simplified_day_type_quick": "Trend Day: one-sided. Balance Day: rotates around POC.",
+    "aplus_setup": "Trend day + pullback to VWAP/POC + absorption = A+ setup.",
+    "punches_to_wall": "Look for 3+ Big Trades hitting the same level and failing to break it.",
+    "punch_in_wall_trend_continuation": "CRITICAL: On TREND days (trend_up or trend_down) or IMBALANCE sessions, 'Punches to the Wall' are NOT reversal signals — they are CONTINUATION signals. TREND_UP + strong negative delta at highs = sellers absorbed by institutional buyers. Next 1-3 candles: price stabilizes → LONG continuation entry. TREND_DOWN + strong positive delta at lows = buyers absorbed by institutional sellers. Next 1-3 candles: price stabilizes → SHORT continuation entry. NEVER call a punch at the highs a short signal on a trend_up day. It is a reload zone for longs.",
+    "big_trades_filter": "Big trades must be >30 contracts to matter.",
+    "coherence_of_information": "Ensure M5 trend, M1 delta, and Bookmap liquidity align.",
+    "counter_trend_rules": "Counter trend requires a hard structural stop and clear absorption of the dominant trend.",
+    "entry_mechanics": "Market order exactly at the moment of absorption."
+  }
+}

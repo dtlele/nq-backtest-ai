@@ -14,7 +14,7 @@ def _candidate():
               500, 11.1, 500, 19999.5, big)
     vp = VolumeProfile(poc=20000.0, va_high=20050.0, va_low=19950.0,
                        hvn_levels=[20030.0], lvn_levels=[20000.0])
-    ctx = SessionContext('2025-04-30', 20020.0, 19980.0, 40.0, True, vp, 'balance')
+    ctx = SessionContext('2025-04-30', 20020.0, 19980.0, 40.0, True, vp, day_type='balance')
     return CandidateBar(bar, ctx, 20000.0, 'ask', 1, 50, 'lvn', 20000.0, 15, True)
 
 MOCK_CLAUDE_RESPONSE = json.dumps({
@@ -28,12 +28,8 @@ MOCK_CLAUDE_RESPONSE = json.dumps({
 })
 
 def test_analyze_returns_fabio_signal(tmp_path):
-    mock_msg = MagicMock()
-    mock_msg.content = [MagicMock(text=MOCK_CLAUDE_RESPONSE)]
-    with patch('src.agents.fabio_agent.nlm_ask', return_value="NLM context here"):
-        with patch('anthropic.Anthropic') as MockClaude:
-            MockClaude.return_value.messages.create.return_value = mock_msg
-            signal = analyze(_candidate())
+    with patch('src.agents.fabio_agent.llm_ask', return_value=MOCK_CLAUDE_RESPONSE):
+        signal = analyze(_candidate())
     assert isinstance(signal, FabioSignal)
     assert signal.direction == 'long'
     assert signal.confidence == 78
@@ -46,11 +42,7 @@ def test_analyze_returns_none_signal_on_no_trade():
         "setup_type": "none",
         "reasoning": "No clear setup."
     })
-    mock_msg = MagicMock()
-    mock_msg.content = [MagicMock(text=no_trade_response)]
-    with patch('src.agents.fabio_agent.nlm_ask', return_value="context"):
-        with patch('anthropic.Anthropic') as MockClaude:
-            MockClaude.return_value.messages.create.return_value = mock_msg
-            signal = analyze(_candidate())
+    with patch('src.agents.fabio_agent.llm_ask', return_value=no_trade_response):
+        signal = analyze(_candidate())
     assert signal.direction == 'none'
     assert signal.confidence == 30

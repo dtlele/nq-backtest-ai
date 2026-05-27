@@ -14,20 +14,24 @@ TICK_BUCKET_SIZE        = 0.25
 # ── Session / Timing (ET = America/New_York) ──────────────────────────────────
 NY_WINDOW_START_H       = 9
 NY_WINDOW_START_M       = 25
-NY_WINDOW_END_H         = 11
-NY_WINDOW_END_M         = 30
+NY_WINDOW_END_H         = 16
+NY_WINDOW_END_M         = 0
 FABIO_ACTIVE_H          = 9
-FABIO_ACTIVE_M          = 40
-IB_DURATION_MIN         = 15       # Fabio's IVB = first 15 min
+FABIO_ACTIVE_M          = 35
+IB_DURATION_MIN         = 30       # Fabio's IVB = first 30 min (per recent videos)
 
 # ── Candidate detection ───────────────────────────────────────────────────────
-MIN_VOLUME_PER_BAR      = 3000
-VA_PROXIMITY_TICKS      = 4        # within 4 ticks of a VP level = "near"
-BIG_TRADE_LOOKBACK_BARS = 3        # check current + prior 2 bars for wall
+MIN_VOLUME_PER_BAR      = 3000     # Momentum Floor for NQ Full
+MIN_REVERSAL_VOLUME     = 1500     # Reversal Floor (Requires Absorption)
+VA_PROXIMITY_TICKS      = 12       # 12 ticks = 3 pts — "near" for M5 bar closes (expanded for 2025 volatility)
+STOP_LOSS_BUFFER_TICKS = 4        # Institutional safety margin behind the wall
+BIG_TRADE_LOOKBACK_BARS = 3        # 3 M5 bars = 15 min lookback for wall cluster
+RECENT_BARS_CONTEXT     = 6        # M5 bars of context sent to agents (30 min)
 
 # ── Agent thresholds ──────────────────────────────────────────────────────────
-FABIO_MIN_CONFIDENCE    = 65
-ANDREA_VETO_THRESHOLD   = 40
+FABIO_MIN_CONFIDENCE       = 65
+ANDREA_VETO_THRESHOLD      = 40
+LIGHT_CONFIDENCE_THRESHOLD = 50   # two-pass: skip full analysis if light pass below this
 
 # ── NotebookLM IDs ────────────────────────────────────────────────────────────
 FABIO_NOTEBOOK_ID       = "4c868e52"
@@ -73,7 +77,8 @@ class SessionContext:
     ib_range: float
     ib_complete: bool
     vp: Optional[VolumeProfile]
-    day_type: str  # 'trend_up'|'trend_down'|'balance'|'unknown'
+    prev_day_vp: Optional[VolumeProfile] = None  # yesterday's session VP
+    day_type: str = 'unknown'  # 'trend_up'|'trend_down'|'balance'|'unknown'
 
 @dataclass
 class CandidateBar:
@@ -87,6 +92,12 @@ class CandidateBar:
     proximity_level: float     # the exact VP level price
     bars_in_session: int       # how many bars so far today
     is_second_test: bool       # True = price already tested this level today
+    setup_category: str = 'momentum'  # 'momentum'|'reversal'
+    recent_bars: list = field(default_factory=list)  # last N M5 bars incl. candidate
+    market_state: str = 'balance'  # 'balance'|'imbalance'
+    poc_migration: str = 'flat'    # 'up'|'down'|'flat'
+    auction_type: str = 'responsive' # 'responsive'|'initiative'
+    excess_tail: bool = False
 
 @dataclass
 class FabioSignal:
@@ -97,7 +108,8 @@ class FabioSignal:
     target: Optional[float]
     setup_type: str            # 'squeeze'|'ivb_breakout'|'none'
     reasoning: str             # Claude's reasoning text
-    nlm_answer: str            # raw NLM response
+    market_narrative_update: str = "" # NEW: Continuous story update
+    nlm_answer: str = ""            # raw NLM response
 
 @dataclass
 class AndreaSignal:
@@ -105,7 +117,8 @@ class AndreaSignal:
     confidence: int            # 0-100; below ANDREA_VETO_THRESHOLD = veto
     setup_type: str            # 'ibob'|'failed_auction'|'none'
     reasoning: str
-    nlm_answer: str
+    nlm_answer: str = ""
+    structural_stop: Optional[float] = None # Added for V3.1 Structural SL
 
 @dataclass
 class ConsensusSignal:
@@ -128,6 +141,7 @@ class OpenTrade:
     target: float
     entry_bar: Bar
     consensus: ConsensusSignal
+    contracts: int = 1         # NEW: Dynamic position size
 
 @dataclass
 class ClosedTrade:
@@ -146,3 +160,4 @@ class ClosedTrade:
     setup_type: str
     final_confidence: int
     r_ratio: float
+    contracts: int = 1         # NEW: Contracts used for this trade

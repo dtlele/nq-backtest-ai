@@ -13,7 +13,7 @@ def _candidate() -> CandidateBar:
               500, 11.1, 500, 19999.5, big)
     vp = VolumeProfile(poc=20000.0, va_high=20050.0, va_low=19950.0,
                        hvn_levels=[20030.0], lvn_levels=[20000.0])
-    ctx = SessionContext('2025-04-30', 20020.0, 19980.0, 40.0, True, vp, 'balance')
+    ctx = SessionContext('2025-04-30', 20020.0, 19980.0, 40.0, True, vp, day_type='balance')
     return CandidateBar(bar, ctx, 20000.0, 'ask', 1, 50, 'lvn', 20000.0, 15, False)
 
 def test_fabio_question_contains_key_data():

@@ -7,18 +7,24 @@ Usage:
   python run_backtest.py --days 1 --dry-run  # no API calls, just detect candidates
 """
 import argparse
+from dotenv import load_dotenv
+load_dotenv()
 from src.backtest_runner import run_backtest, DATA_DIR
 from src.metrics_reporter import compute_metrics, save_report
 
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--days',    type=int, default=0, help='0=all')
+    p.add_argument('--start-date', type=str, default=None, help='YYYYMMDD start date')
     p.add_argument('--dry-run', action='store_true')
+    p.add_argument('--quiet', '-q', action='store_true',
+                   help='Compact output: 1 line per candidate, verbose only on trades')
     p.add_argument('--data-dir', default=DATA_DIR)
     p.add_argument('--output',   default='output/reports')
+    p.add_argument('--fabio-only', action='store_true', help='Skip Andrea confirmation consensus')
     args = p.parse_args()
 
-    trades = run_backtest(args.data_dir, args.days, args.dry_run)
+    trades = run_backtest(args.data_dir, args.days, args.dry_run, args.quiet, args.start_date, fabio_only=args.fabio_only)
     if not trades:
         print("No trades generated.")
         return

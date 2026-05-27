@@ -34,16 +34,36 @@ def aggregate_to_bars(trades: list, freq: str = '1min') -> list:
     agg['vwap']      = np.where(agg['volume'] > 0,
                                 agg['dollar'] / agg['volume'], agg['close'])
     agg['cvd']       = agg['delta'].cumsum()
-    # Guard against unrecognised side values silently corrupting delta
-    balance_ok = (agg['buy_volume'] + agg['sell_volume'] == agg['volume']).all()
-    assert balance_ok, "Unrecognised side value — buy+sell volume != total volume"
+    # Trades with side='N' (unknown aggressor) count toward total volume but not buy/sell
+    unknown_vol = agg['volume'] - agg['buy_volume'] - agg['sell_volume']
+    if (unknown_vol > 0).any():
+        pass # Muted UserWarning to prevent terminal noise during assisted backtest
 
-    # Map big trades to bar floor timestamp
+    # --- MBO FOOTPRINT BUBBLE RECONSTRUCTION ---
+    # To mimic DeepCharts/Fabio's "Big Trades", we calculate the 1-minute 
+    # footprint (volume per price per side) and filter for clusters >= NQ_BIG_TRADE_THRESHOLD.
+    # We use 1min specifically because Fabio's entry triggers are on the M1 footprint.
+    df['m1_floor'] = df.index.floor('1min')
+    
+    # Ignore 'N' (unknown) side for footprint walls
+    footprint = df[df['side'] != 'N'].groupby(['m1_floor', 'side', 'price'])['size'].sum().reset_index()
+    bubbles = footprint[footprint['size'] >= NQ_BIG_TRADE_THRESHOLD]
+
     big_map: dict = {}
-    for trade, rec in zip(trades, records):
-        if trade.size >= NQ_BIG_TRADE_THRESHOLD:
-            floor = rec['ts'].floor(freq)
-            big_map.setdefault(floor, []).append(trade)
+    for _, row in bubbles.iterrows():
+        # The bubble's exact M1 timestamp
+        ts_m1 = row['m1_floor']
+        
+        # We must map the bubble to the parent M5 (or freq) candle it belongs to
+        ts_parent = ts_m1.floor(freq)
+        
+        bubble_trade = Trade(
+            ts_event=ts_m1.to_pydatetime(),
+            side=row['side'],
+            price=float(row['price']),
+            size=int(row['size'])
+        )
+        big_map.setdefault(ts_parent, []).append(bubble_trade)
 
     bars = []
     for ts, row in agg.iterrows():

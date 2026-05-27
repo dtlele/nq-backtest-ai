@@ -1,0 +1,8 @@
+{"date": "2025-09-02", "entry_time": "2025-09-02T14:25:00+00:00", "direction": "long", "entry": 23262.5, "stop": 23215.0, "target": 23350.0, "pnl_ticks": -190.0, "setup_type": "ivb_breakout", "final_confidence": 82}
+{"date": "2025-09-03", "entry_time": "2025-09-03T14:05:00+00:00", "direction": "short", "entry": 23433.25, "stop": 23461.0, "target": 23380.0, "pnl_ticks": -111.0, "setup_type": "reversal", "final_confidence": 71}
+{"date": "2025-09-04", "entry_time": "2025-09-04T14:35:00+00:00", "direction": "long", "entry": 23520.0, "stop": 23505.0, "target": 23585.0, "pnl_ticks": -60.0, "setup_type": "ivb_breakout", "final_confidence": 82}
+{"date": "2025-09-18", "entry_time": "2025-09-18T14:06:00+00:00", "direction": "long", "entry": 24723.0, "stop": 24694.0, "target": 24760.0, "pnl_ticks": 148.0, "setup_type": "squeeze", "final_confidence": 92}
+{"date": "2025-09-24", "entry_time": "2025-09-24T14:00:00+00:00", "direction": "long", "entry": 24837.5, "stop": 24780.0, "target": 24917.5, "pnl_ticks": 320.0, "setup_type": "squeeze", "final_confidence": 93}
+{"date": "2025-09-26", "entry_time": "2025-09-26T14:05:00+00:00", "direction": "short", "entry": 24621.75, "stop": 24680.0, "target": 24551.75, "pnl_ticks": 280.0, "setup_type": "absorption", "final_confidence": 85}
+{"date": "2025-09-26", "entry_time": "2025-09-26T14:40:00+00:00", "direction": "long", "entry": 24626.75, "stop": 24580.0, "target": 24700.0, "pnl_ticks": 293.0, "setup_type": "squeeze", "final_confidence": 75}
+{"date": "2025-09-30", "entry_time": "2025-09-30T14:45:00+00:00", "direction": "long", "entry": 24829.0, "stop": 24780.0, "target": 24920.0, "pnl_ticks": 364.0, "setup_type": "squeeze", "final_confidence": 95}
