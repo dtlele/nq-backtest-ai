@@ -24,48 +24,63 @@ def _load_knowledge_store() -> dict:
     return store
 
 def _get_system_prompt() -> str:
-    prompt_file = Path(__file__).parent / 'fabio_system_prompt.txt'
-    if not prompt_file.exists():
-        with open(prompt_file, 'w', encoding='utf-8') as f:
-            f.write(DEFAULT_SYSTEM_PROMPT)
-    with open(prompt_file, 'r', encoding='utf-8') as f:
-        return f.read().strip()
+    prompt = "You are Fabio Valentini's PREDATORY trading methodology agent analyzing NQ futures (E-mini).\nYou follow a high-conviction institutional approach based on Volume Profile and Order Flow, aiming strictly for high-probability Triple A (A+) setups.\n\n"
+    
+    # Load Active Dynamic Rules (Live corrections)
+    try:
+        from src.agents.dynamic_rules_manager import get_active_rules
+        active_rules = get_active_rules()
+        if active_rules:
+            prompt += "ACTIVE LIVE CORRECTIONS / DYNAMIC RULES (MUST STRICTLY FOLLOW):\n"
+            for r in active_rules:
+                prompt += f"- [{r['rule_id']}] Topic: {r['topic']}\n"
+                prompt += f"  Description: {r['description']}\n"
+                prompt += f"  Required Action: {r['action']}\n"
+            prompt += "\n"
+    except Exception as e:
+        print(f"Error loading active dynamic rules: {e}")
 
-DEFAULT_SYSTEM_PROMPT = """You are Fabio Valentini's PREDATORY trading methodology agent analyzing NQ futures (E-mini). 
-You follow a high-conviction institutional approach based on Volume Profile and Order Flow, aiming strictly for high-probability Triple A (A+) setups.
 
-CORE SETUP CLASSIFICATIONS (TRIPLE A SETUPS):
-1. IVB_BREAKOUT (Trend Momentum - High Probability):
-   - Trigger: Decisive breakout of the Initial Balance High (IBH) or Low (IBL) on a TREND day, OR the subsequent pullback and "second drive" reload that continues the initial breakout.
-   - Confirmation: Supported by heavy volume (>3,000 contracts on M5) and strong delta in the breakout/continuation direction. Never trade the very first wick; wait for the body close or immediate order flow acceleration to confirm price acceptance.
-2. VAH_REJECTION_SHORT / VAL_REJECTION_LONG (Mean Reversion - High Win Rate):
-   - Trigger: Price tests the Value Area High (VAH) or Value Area Low (VAL) on a BALANCE or TRANSITION day.
-   - Confirmation: Clear absorption. Big Trades (>30-50 contracts) strike the level (green bubbles at VAH / red bubbles at VAL) but price fails to progress (wick rejection). Enter immediately on the reversal confirmation, targeting the central POC.
+    # Load Core Setups
+    strategies_file = Path(__file__).parent.parent.parent / 'knowledge' / 'strategies.json'
+    if strategies_file.exists():
+        try:
+            with open(strategies_file, 'r', encoding='utf-8') as f:
+                strats = json.load(f).get('strategies', [])
+                if strats:
+                    prompt += "CORE SETUP CLASSIFICATIONS (TRIPLE A SETUPS):\n"
+                    for i, s in enumerate(strats, 1):
+                        prompt += f"{i}. {s['name']} ({s['description']}):\n"
+                        prompt += f"   - Trigger: {s['trigger']}\n"
+                        prompt += f"   - Confirmation: {s['confirmation']}\n"
+                    prompt += "\n"
+        except Exception as e:
+            print(f"Error loading strategies.json: {e}")
 
-PUNCH IN THE WALL MECHANICS (INTEGRATED IN TREND BREAKOUTS):
-On directional trend days, counter-trend aggression is absorbed at key levels:
-- NEGATIVE DELTA at new HIGHS = sellers "punching the wall" of institutional buyers (reload zone for longs).
-- POSITIVE DELTA at new LOWS = buyers "punching the wall" of institutional sellers (reload zone for shorts).
-This is evaluated strictly within the context of the IVB_BREAKOUT continuation phase (second drive). Enter immediately near the absorption cluster. Do not wait for the candle to close. Lock in a tight entry within 10-20 ticks of the big-trade wall to secure a massive risk-to-reward ratio.
+    # Load Mechanics
+    mechanics_file = Path(__file__).parent.parent.parent / 'knowledge' / 'amt_mechanics.json'
+    if mechanics_file.exists():
+        try:
+            with open(mechanics_file, 'r', encoding='utf-8') as f:
+                mechs = json.load(f).get('mechanics', [])
+                for m in mechs:
+                    prompt += f"{m['topic']}:\n{m['description']}\n\n"
+        except Exception as e:
+            print(f"Error loading amt_mechanics.json: {e}")
 
-V3 PREDATORY EXECUTION RULES (M5 CONTEXT + M1 TIMING):
-1. UNIFIED REACTION: Do NOT wait for M5 or M1 candlestick closure. 
-2. INSTANT ENTRY ON ABSORPTION: Enter via MARKET ORDER the exact moment you identify institutional absorption on the M1 Footprint (Big Trades hitting a wall and failing to progress).
-3. PREDATOR ENTRY: Your entry must be within 10-20 ticks of the Big Trade cluster. Late entries are strictly prohibited.
-4. INVALIDATION STOP: Use tight, structural stops placed 2-3 ticks behind the institutional big-trade wall. If the wall is breached, accept the invalidation immediately.
-5. HTF ALIGNMENT: Prioritize setups aligned with the dominant trend. Avoid fading strong one-timeframe-moves unless clear exhaustion is confirmed.
-
-Respond ONLY with valid JSON matching this schema:
+    # JSON Schema definition
+    prompt += """Respond ONLY with valid JSON matching this schema:
 {
   "direction": "long" | "short" | "none",
   "confidence": <int 0-100>,
   "entry": <float or null>,
   "stop": <float or null>,
   "target": <float or null>,
-  "setup_type": "squeeze" | "reversal" | "ivb_breakout" | "none",
+  "setup_type": "squeeze" | "reversal" | "ivb_breakout" | "exhaustion" | "imbalance_hunting" | "none",
   "reasoning": "<MAX 100 WORDS. Provide a detailed Order Flow narrative. Explain exactly which side is trapped (Effort vs No Result), how the delta confirms the absorption or initiative, and justify the exact structural placement of the stop loss behind a verified volume node or Big Trade wall.>",
-  "market_narrative_update": "<Provide an evolving narrative of the trading session. Evaluate the overall Trend, the Volume Profile structure, and the behavior since the New York Open. How has the macro context shifted since the last M5 analysis?>"
+  "market_narrative_update": "<Provide an evolving narrative of the trading session. CRITICAL: Review your previous reasonings (Session Context) against what the market actually did afterwards (Bars Since Last). If you were wrong or missed a move, explicitly acknowledge the mistake and adjust your current bias/logic. How has the macro context shifted?>"
 }"""
+    return prompt
 
 def light_analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> int:
     """
@@ -74,13 +89,13 @@ def light_analyze(candidate: CandidateBar, session_context: list = None, m1_bars
     Scoring logic (AMT + Fabio volume rules):
       +30  wall_max_size >= 50 (strong institutional conviction)
       +20  wall_max_size >= 30 (minimum institutional signal)
+      +60  setup_category == 'imbalance_hunting' (always evaluate M1 footprints outside IB)
       +20  setup_category == 'momentum' (high-vol breakout)
       +15  setup_category == 'reversal' (absorption at extreme)
       +10  market_state == 'imbalance' (directional day)
       +10  auction_type == 'initiative' (outside IB/prev VA)
       +10  is_second_test == True (second drive / reload)
       +10  poc_migration != 'flat' (VP shifting = trending)
-      + 5  excess_tail == True (price rejection = structural)
       -20  setup_category == 'pullback' AND wall_max_size < 20 (weak pullback)
       -20  market_state == 'balance' AND auction_type == 'responsive' (chop inside value)
 
@@ -101,7 +116,9 @@ def light_analyze(candidate: CandidateBar, session_context: list = None, m1_bars
 
     # --- Setup category ---
     cat = candidate.setup_category
-    if cat == 'momentum':
+    if cat == 'imbalance_hunting':
+        score += 60
+    elif cat == 'momentum':
         score += 20
     elif cat == 'reversal':
         score += 15
@@ -121,10 +138,6 @@ def light_analyze(candidate: CandidateBar, session_context: list = None, m1_bars
     # --- VP migration (trending day) ---
     if candidate.poc_migration != 'flat':
         score += 10
-
-    # --- Price rejection (structural excess tail) ---
-    if candidate.excess_tail:
-        score += 5
 
     # --- Penalties ---
     if cat == 'pullback' and wms < 20:
@@ -184,6 +197,23 @@ You must analyze the open trade details and the latest M5 candle/M1 footprint to
 2. "trail": Move the stop loss structurally closer (trailing stop) behind a newly verified institutional big-trade wall or Volume Node (LVN/POC). Never move a stop further away (increasing risk).
 3. "early_exit": Exit the trade immediately at the market close of the current M5 candle because the setup has been structurally invalidated (e.g. buyers failed to hold a key wall).
 4. "reverse": Exit the current trade immediately and open the exact opposite position because a strong reverse institutional setup has formed (e.g. extreme absorption + delta flip).
+
+--- ACTIVE POSITION MANAGEMENT (APM) ---
+You are currently managing an OPEN trade. You must decide whether to HOLD, TRAIL, REVERSE, or EARLY_EXIT.
+Focus on identifying Reversal signatures and Trailing opportunities.
+
+1. REVERSAL SIGNATURES (Early Exit / Reverse):
+   - **Delta Divergence / Absorption**: If price moves aggressively AGAINST the delta (e.g., Delta is heavily negative, but the candle closes near its high), this means the aggressive side is being absorbed by passive limit orders. This is a massive reversal signal. EXIT EARLY or REVERSE.
+   - **Massive Ask/Bid Clusters**: If you see a cluster > 100 contracts on the opposite side of your trade near a structural level (e.g., `161 A@21450.0` while you are short), it is a major reversal wall. EXIT EARLY.
+
+2. TRAILING STOPS (Protecting Profits):
+   - The market is unforgiving. "Better a small profit than a stop loss, even a BE is good."
+   - If the trade is deeply in profit (e.g. > 40-50 points NQ), you MUST protect it. Output decision='trail' and provide a `new_stop` at least at Break-Even, or tighter (e.g., above the most recent M1 lower high for shorts).
+   - If the trade misses the target by a few points and then prints a reversal candle (e.g., positive delta at the lows for a short), DO NOT HOLD. Trail the stop aggressively or exit early.
+   - You can output `decision='trail'`, `new_stop=<price>` to adjust the stop loss dynamically.
+   - Only hold if the trend is strongly accelerating with confirming delta and no absorption.
+
+Make your decision purely based on the M1 order flow and these APM rules.
 
 Respond ONLY with valid JSON matching this schema:
 {
