@@ -213,9 +213,8 @@ Based on the M1 data, find the precise entry, stop, and target. Respond with JSO
     stop_val = float(data.get('stop', consensus.stop))
     target_val = float(data.get('target', consensus.target))
 
-    # RULE: Minimum Stop Loss Distance (40 ticks / 10 points)
-    # Prevent tight stop-outs from noise by enforcing a structural floor.
-    MIN_STOP_TICKS = 40
+    # RULE: Minimum Stop Loss Distance (40 ticks / 10 points) -> DISABLED to allow Fabio's precision ultra-tight stops
+    MIN_STOP_TICKS = 0
     NQ_TICK_SIZE = 0.25
     MIN_STOP_DIST = MIN_STOP_TICKS * NQ_TICK_SIZE
     

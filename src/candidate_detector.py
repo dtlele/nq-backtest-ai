@@ -178,8 +178,12 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
 
         if abs(price - sess_high) < abs(price - sess_low):
             excess_t = has_high_excess
+            # Rejection of highs: buyers hit the wall (ask)
+            exhaustion_sig = excess_t and (wall_side == 'ask')
         else:
             excess_t = has_low_excess
+            # Rejection of lows: sellers hit the wall (bid)
+            exhaustion_sig = excess_t and (wall_side == 'bid')
 
         auc_type = "responsive"
         if setup_cat == "momentum" or setup_cat == "pullback":
@@ -210,6 +214,7 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
             poc_migration=poc_mig,
             auction_type=auc_type,
             excess_tail=excess_t,
+            exhaustion_signal=exhaustion_sig,
         ))
         
     return candidates

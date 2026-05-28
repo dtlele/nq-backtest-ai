@@ -1,44 +1,45 @@
 {
   "dynamic_rules": [
     {
-      "rule_id": "AMT_RULE_032",
-      "topic": "Trade Entry",
-      "description": "Avoid entering trades when the bar's volume is below the session average and the delta is neutral or conflicting, as it indicates lack of conviction.",
+      "rule_id": "AMT_RULE_165",
+      "topic": "Stop Placement",
+      "description": "In breakout setups, ensure stops are placed beyond key absorption levels rather than just at the Value Area Low (VAL) or Value Area High (VAH) to avoid premature stop-outs.",
+      "action": "adjust_stop_placement_beyond_absorption_levels"
+    },
+    {
+      "rule_id": "AMT_RULE_166",
+      "topic": "Risk Management",
+      "description": "Reduce contract size by 50% when trading IVB breakout setups with an R-ratio below 1.5, as this indicates a low reward-to-risk potential.",
+      "action": "reduce_contracts_low_r_ratio_ivb_breakout"
+    },
+    {
+      "rule_id": "AMT_RULE_167",
+      "topic": "Setup Validation",
+      "description": "Avoid IVB breakout setups when delta remains positive and price fails to advance despite absorption, as this indicates trapped buyers and potential reversal risk.",
       "action": "skip_trade"
     },
     {
-      "rule_id": "AMT_RULE_033",
-      "topic": "Confidence Threshold",
-      "description": "Do not proceed with trades when the confidence level is below 50, as it suggests insufficient evidence for a high-probability setup.",
-      "action": "skip_trade"
-    },
-    {
-      "rule_id": "AMT_RULE_034",
-      "topic": "Proximity to Key Levels",
-      "description": "Exercise caution when price is near overnight POC, VAH, or LVN, as these levels often act as strong support or resistance.",
+      "rule_id": "AMT_RULE_168",
+      "topic": "Market Context",
+      "description": "During transition state days, be cautious with IVB breakouts unless there is clear initiative phase confirmation (aggressive delta flip) following absorption.",
       "action": "reduce_contracts_or_skip"
     },
     {
-      "rule_id": "AMT_RULE_035",
-      "topic": "Initiative Delta Confirmation",
-      "description": "Do not enter trades unless the delta flips to confirm the initiative phase post-absorption, ensuring a higher probability of continuation.",
-      "action": "skip_trade"
+      "rule_id": "AMT_RULE_169",
+      "topic": "Stop Placement",
+      "description": "Place stops at least 2 ticks beyond the nearest significant absorption level, especially during trend_up days, to avoid premature stop-outs.",
+      "action": "adjust_stop_placement_beyond_nearest_absorption"
     },
     {
-      "rule_id": "AMT_RULE_036",
-      "topic": "Volume Acceptance",
-      "description": "Avoid trades where the price is closed inside the Initial Balance (IB) without volume acceptance above the IB high, indicating lack of conviction.",
-      "action": "skip_trade"
-    },
-    {
-      "rule_id": "AMT_RULE_037",
-      "topic": "Transition State Caution",
-      "description": "Exercise additional caution during transition states (day_type=transition_state) as these periods often exhibit lower conviction and higher reversals.",
-      "action": "reduce_contracts_or_skip"
+      "rule_id": "AMT_RULE_170",
+      "topic": "Entry Timing",
+      "description": "Avoid entering trades during macro news windows (09:45 EST and 10:00 EST) unless there is clear confirmation of institutional absorption and delta flip.",
+      "action": "skip_trade_macro_window"
     }
   ],
   "session_learnings": [
-    "Correctly skipped a trade due to low confidence (35 <= 50) during a transition state day.",
-    "Transition states require additional caution due to lower conviction and higher likelihood of reversals."
+    "During macro news windows, liquidity voids can lead to artificial delta movements; caution is advised.",
+    "Consistent absorption with negative delta and price progression indicates strong institutional support.",
+    "Skipping low-confidence setups during trend_up days aligns with avoidance of weak reversals."
   ]
 }

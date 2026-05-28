@@ -48,20 +48,46 @@ def _close(trade: OpenTrade, exit_price: float,
         contracts        = trade.contracts, # Log contracts used
     )
 
-def step_trade(trade: OpenTrade, bars: list) -> 'ClosedTrade | None':
-    """Walk forward through bars. Return ClosedTrade if exited, else None."""
-    for bar in bars:
+def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False) -> 'ClosedTrade | None':
+    """Walk forward through bars. Return ClosedTrade if exited, else None.
+    
+    first_bar_after_entry: if True, the first bar in the list is the same M5 bar
+    where the entry occurred. In this case, we use a causality-safe check: a stop
+    is only triggered if the close confirms the breach (price did not recover),
+    preventing false stops when the bar's extreme occurred before our entry time.
+    Target hits are still valid (price reaching target after entry is always good).
+    """
+    for i, bar in enumerate(bars):
+        is_first = first_bar_after_entry and (i == 0)
+        
         if trade.direction == 'long':
             if bar.high >= trade.target:
                 return _close(trade, trade.target, 'target', bar)
             if bar.low <= trade.stop:
-                return _close(trade, trade.stop, 'stop', bar)
+                if is_first:
+                    # Causality check: only stop out if close is also below stop
+                    # (meaning the adverse move persisted after our entry)
+                    if bar.close <= trade.stop:
+                        return _close(trade, trade.stop, 'stop', bar)
+                    # else: low touched stop but price recovered — not a real stop
+                else:
+                    return _close(trade, trade.stop, 'stop', bar)
         else:  # short
             if bar.low <= trade.target:
                 return _close(trade, trade.target, 'target', bar)
             if bar.high >= trade.stop:
-                return _close(trade, trade.stop, 'stop', bar)
+                if is_first:
+                    # Causality check: only stop out if close is also above stop
+                    if bar.close >= trade.stop:
+                        return _close(trade, trade.stop, 'stop', bar)
+                    # else: high touched stop but price recovered — not a real stop
+                else:
+                    return _close(trade, trade.stop, 'stop', bar)
     return None
 
 def close_eod(trade: OpenTrade, last_bar: Bar) -> ClosedTrade:
     return _close(trade, last_bar.close, 'eod', last_bar)
+
+def close_early(trade: OpenTrade, exit_bar: Bar, reason: str) -> ClosedTrade:
+    """Closes an open trade at the current bar's close price (active management exit)."""
+    return _close(trade, exit_bar.close, f"early_{reason[:20]}", exit_bar)

@@ -1,9 +1,12 @@
 import pytz
 from datetime import datetime, timezone, timedelta
-from src import (Bar, SessionContext, VolumeProfile,
-                 NY_WINDOW_START_H, NY_WINDOW_START_M,
-                 NY_WINDOW_END_H, NY_WINDOW_END_M,
-                 FABIO_ACTIVE_H, FABIO_ACTIVE_M, IB_DURATION_MIN)
+from typing import List
+from src import (
+    Bar, SessionContext, VolumeProfile,
+    NY_WINDOW_START_H, NY_WINDOW_START_M,
+    NY_WINDOW_END_H, NY_WINDOW_END_M,
+    FABIO_ACTIVE_H, FABIO_ACTIVE_M, IB_DURATION_MIN,
+)
 
 ET = pytz.timezone('America/New_York')
 
@@ -70,9 +73,25 @@ def classify_day_type(bars: list) -> str:
         return 'transition_state'
     return 'balance'
 
+def update_day_type(ctx: SessionContext, bars: list) -> str:
+    """Recompute day type based on bars processed so far and store history.
+    Keeps a limited history of the last 200 updates to avoid unbounded growth.
+    """
+    new_type = classify_day_type(bars)
+    ctx.day_type = new_type
+    if not hasattr(ctx, 'day_type_history') or ctx.day_type_history is None:
+        ctx.day_type_history = []  # type: List[str]
+    ctx.day_type_history.append(new_type)
+    # keep only the last 200 entries
+    MAX_HISTORY = 200
+    if len(ctx.day_type_history) > MAX_HISTORY:
+        ctx.day_type_history = ctx.day_type_history[-MAX_HISTORY:]
+    return new_type
+
 def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None) -> SessionContext:
     ib_high, ib_low = compute_ib(bars)
-    return SessionContext(
+    initial_day_type = classify_day_type(bars)
+    ctx = SessionContext(
         date=date_str,
         ib_high=ib_high,
         ib_low=ib_low,
@@ -80,5 +99,8 @@ def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None) -> Se
         ib_complete=ib_high > 0,
         vp=vp,
         prev_day_vp=prev_day_vp,
-        day_type=classify_day_type(bars),
+        day_type=initial_day_type,
+        # initialize history list
+        day_type_history=[initial_day_type],
     )
+    return ctx

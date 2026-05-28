@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Optional, List
 from datetime import datetime
 from typing import Optional
 
@@ -79,6 +80,7 @@ class SessionContext:
     vp: Optional[VolumeProfile]
     prev_day_vp: Optional[VolumeProfile] = None  # yesterday's session VP
     day_type: str = 'unknown'  # 'trend_up'|'trend_down'|'balance'|'unknown'
+    day_type_history: List[str] = field(default_factory=list)  # history of day_type over session
 
 @dataclass
 class CandidateBar:
@@ -98,6 +100,7 @@ class CandidateBar:
     poc_migration: str = 'flat'    # 'up'|'down'|'flat'
     auction_type: str = 'responsive' # 'responsive'|'initiative'
     excess_tail: bool = False
+    exhaustion_signal: bool = False
 
 @dataclass
 class FabioSignal:

@@ -137,6 +137,9 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
     if feedback:
         question += feedback
         
+    if candidate.exhaustion_signal:
+        question += "\n\nEXHAUSTION SIGNAL DETECTED: This candidate shows an excess tail with strong opposed delta absorbed at a structural level. Consider fading the trend."
+        
     return question
 
 def build_andrea_question(candidate: CandidateBar,

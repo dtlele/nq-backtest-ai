@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 from src.agents.llm_client import llm_ask
 from src.agent_memory import LOG_FILE, TRADES_FILE
+# Import dynamic rules manager utilities
+from src.agents.dynamic_rules_manager import load_dynamic_rules, save_dynamic_rules, validate_dynamic_rule
 
 DYNAMIC_RULES_FILE = Path(__file__).parent.parent.parent / 'knowledge' / 'dynamic_rules.json'
 
@@ -53,6 +55,20 @@ def save_dynamic_rules(rules: dict) -> None:
 def audit_session(date_str: str) -> dict:
     """Read logs for date_str, call Gemini to audit, and update dynamic_rules.json."""
     existing_rules = load_dynamic_rules()
+
+# Validation helper (if not already imported from manager)
+# def validate_dynamic_rule(rule: dict) -> bool:
+#     """Validate a dynamic rule structure."""
+#     required_keys = {'rule_id', 'topic', 'description', 'action'}
+#     if not isinstance(rule, dict):
+#         return False
+#     if not required_keys.issubset(rule.keys()):
+#         return False
+#     for k in required_keys:
+#         if not isinstance(rule[k], str) or not rule[k].strip():
+#         return False
+#     # Simple action validation could be added here
+#     return True
     
     # Read trades log
     trades = []
@@ -111,7 +127,8 @@ Respond with JSON only."""
     try:
         updated_data = json.loads(raw_response)
         if "dynamic_rules" in updated_data:
-            # Save the new rules and learnings
+            valid_rules = [r for r in updated_data["dynamic_rules"] if validate_dynamic_rule(r)]
+            updated_data["dynamic_rules"] = valid_rules
             save_dynamic_rules(updated_data)
             print(f"  [AUDIT] Success! Dynamic Rules updated. Total rules: {len(updated_data['dynamic_rules'])}")
             return updated_data

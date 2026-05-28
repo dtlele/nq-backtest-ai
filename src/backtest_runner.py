@@ -17,13 +17,13 @@ from pathlib import Path
 from src.data_loader import load_day, list_data_files
 from src.bar_aggregator import aggregate_to_bars
 from src.volume_profile import compute_volume_profile
-from src.session_context import filter_ny_window, filter_overnight_window, build_session_context
+from src.session_context import filter_ny_window, filter_overnight_window, build_session_context, update_day_type
 from src.candidate_detector import detect_candidates
-from src.agents.fabio_agent import analyze as fabio_analyze, light_analyze as fabio_light
+from src.agents.fabio_agent import analyze as fabio_analyze, light_analyze as fabio_light, manage_active_trade
 from src.agents.andrea_agent import confirm as andrea_confirm
 from src.agents.precision_entry import refine_entry, get_m1_context
 from src.consensus import build_consensus
-from src.trade_simulator import open_trade, step_trade, close_eod
+from src.trade_simulator import open_trade, step_trade, close_eod, close_early
 from src.agent_memory import (
     reset_session, log_reasoning, update_pattern_memory, log_trade_result,
     get_already_processed_candidates, is_trade_already_logged,
@@ -104,6 +104,10 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
     session_buffer = []     # OPT 4: cross-bar context (last 5 analyses)
     market_narrative = "Inizio giornata. Nessuna narrativa."
     last_eval_idx = 0
+    
+    # Money Management state
+    daily_stops_count = 0
+    last_stop_time = None
 
     bar_ts_to_idx = {b.timestamp: i for i, b in enumerate(bars_ny)}
     
@@ -130,26 +134,188 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
             # but for now skipping is enough to prevent duplicates.
             continue
 
-        # If a trade is open, try to advance it up to this bar
+        # If a trade is open, manage it actively candle-by-candle (APM)
         if open_t is not None:
-            check_bars = bars_ny[trade_start_i + 1: bar_idx + 1]
-            result = step_trade(open_t, check_bars)
+            # 1. Advance the trade through quiet intermediate bars up to (but excluding) the current candidate bar
+            intermediate_bars = bars_ny[trade_start_i + 1 : bar_idx]
+            result = step_trade(open_t, intermediate_bars)
+            
             if result:
+                # Settle mechanically during intermediate bars
                 closed_trades.append(result)
                 update_pattern_memory(result)
-                
-                # UPDATE EQUITY
                 state = load_session()
                 state['equity'] += result.pnl_usd
                 save_session(state)
-                
-                # PREVENTION: Only log if not already there
                 if not is_trade_already_logged(date_str, result.entry_time.isoformat()):
                     log_trade_result(result)
+                if result.exit_reason == 'stop':
+                    daily_stops_count += 1
+                    last_stop_time = result.exit_time
+                    print(f"  [MONEY MANAGEMENT] Stop hit (intermediate). Daily stops: {daily_stops_count}.")
+                
+                # Update session buffer
+                close_time_str = result.exit_time.strftime('%H:%M UTC')
+                session_buffer.append(
+                    f"⚠️ [TRADE CLOSED] {close_time_str} {result.direction.upper()} exit={result.exit_reason} pnl={result.pnl_usd:.1f}$"
+                )
+                if len(session_buffer) > MAX_SESSION_BUFFER:
+                    session_buffer.pop(0)
+                
                 open_t = None
                 trade_start_i = None
             else:
-                continue  # still open, skip new candidate
+                # 2. Advance the trade through the current candidate bar itself to see if it hit stop/target mechanically
+                result = step_trade(open_t, [candidate.bar], first_bar_after_entry=True)
+                if result:
+                    # Settle mechanically at the candidate bar
+                    closed_trades.append(result)
+                    update_pattern_memory(result)
+                    state = load_session()
+                    state['equity'] += result.pnl_usd
+                    save_session(state)
+                    if not is_trade_already_logged(date_str, result.entry_time.isoformat()):
+                        log_trade_result(result)
+                    if result.exit_reason == 'stop':
+                        daily_stops_count += 1
+                        last_stop_time = result.exit_time
+                        print(f"  [MONEY MANAGEMENT] Stop hit (at candidate). Daily stops: {daily_stops_count}.")
+                    
+                    close_time_str = result.exit_time.strftime('%H:%M UTC')
+                    session_buffer.append(
+                        f"⚠️ [TRADE CLOSED] {close_time_str} {result.direction.upper()} exit={result.exit_reason} pnl={result.pnl_usd:.1f}$"
+                    )
+                    if len(session_buffer) > MAX_SESSION_BUFFER:
+                        session_buffer.pop(0)
+                        
+                    open_t = None
+                    trade_start_i = None
+                else:
+                    # 3. The trade survived the candidate bar! Run Fabio Active Position Management (APM)
+                    print(f"  [MANAGEMENT] Active {open_t.direction.upper()} trade open at {bar_ts}. Consulting Fabio APM...")
+                    m1_context = get_m1_context(bars_1min_ny, candidate.bar)
+                    
+                    apm = manage_active_trade(
+                        trade=open_t,
+                        candidate=candidate,
+                        session_context=session_buffer,
+                        m1_bars=m1_context,
+                        market_narrative=market_narrative,
+                        bars_since_last=bars_since_last
+                    )
+                    
+                    decision = apm.get("decision", "hold")
+                    reasoning = apm.get("reasoning", "")
+                    print(f"  [MANAGEMENT] Fabio APM decision: {decision.upper()} | Reasoning: {reasoning}")
+                    
+                    if decision == 'early_exit':
+                        result = close_early(open_t, candidate.bar, reasoning)
+                        closed_trades.append(result)
+                        update_pattern_memory(result)
+                        state = load_session()
+                        state['equity'] += result.pnl_usd
+                        save_session(state)
+                        if not is_trade_already_logged(date_str, result.entry_time.isoformat()):
+                            log_trade_result(result)
+                        
+                        # Feed the early exit into the session buffer
+                        session_buffer.append(f"⚠️ [EARLY EXIT] {bar_ts} {open_t.direction.upper()} exit=early pnl={result.pnl_usd:.1f}$ ({reasoning[:40]})")
+                        if len(session_buffer) > MAX_SESSION_BUFFER:
+                            session_buffer.pop(0)
+                        
+                        open_t = None
+                        trade_start_i = None
+                        
+                    elif decision == 'reverse':
+                        # 1. Close current position at current bar close
+                        result = close_early(open_t, candidate.bar, "reversed")
+                        closed_trades.append(result)
+                        update_pattern_memory(result)
+                        state = load_session()
+                        state['equity'] += result.pnl_usd
+                        save_session(state)
+                        if not is_trade_already_logged(date_str, result.entry_time.isoformat()):
+                            log_trade_result(result)
+                        
+                        # 2. Extract reverse parameters
+                        rev_dir = 'short' if open_t.direction == 'long' else 'long'
+                        rev_entry = candidate.bar.close
+                        
+                        # Set default trailing offsets if not proposed by LLM
+                        rev_stop = apm.get("new_stop")
+                        if not rev_stop:
+                            rev_stop = rev_entry - 30 * 0.25 if rev_dir == 'long' else rev_entry + 30 * 0.25
+                        
+                        rev_target = apm.get("new_target")
+                        if not rev_target:
+                            rev_target = rev_entry + 60 * 0.25 if rev_dir == 'long' else rev_entry - 60 * 0.25
+                        
+                        # Build a dummy consensus
+                        class _RevConsensus:
+                            def __init__(self):
+                                self.direction = rev_dir
+                                self.entry = rev_entry
+                                self.stop = rev_stop
+                                self.target = rev_target
+                                risk = abs(self.entry - self.stop)
+                                reward = abs(self.target - self.entry)
+                                self.r_ratio = round(reward / risk, 2) if risk > 0 else 2.0
+                                class _Sub:
+                                    setup_type = 'reverse_continuation'
+                                    reasoning = apm.get("reasoning", "")
+                                self.fabio = _Sub()
+                                self.andrea = _Sub()
+                                self.final_confidence = 75
+                        
+                        rev_consensus = _RevConsensus()
+                        rev_contracts = calculate_contracts(rev_entry, rev_stop, state['equity'], risk_pct=0.005)
+                        if daily_stops_count > 0:
+                            rev_contracts = max(1, rev_contracts // 2)
+                        
+                        # Open reverse position
+                        open_t = open_trade(rev_consensus, candidate.bar, contracts=rev_contracts)
+                        trade_start_i = bar_idx
+                        print(f"  [REVERSE OPEN] 🔄 Opened reverse {rev_dir.upper()} at {rev_entry} | stop={rev_stop} target={rev_target} contracts={rev_contracts}")
+                        
+                        # Feed the reversal into the session buffer
+                        session_buffer.append(f"🔄 [REVERSED] {bar_ts} {rev_dir.upper()} entry={rev_entry} stop={rev_stop} ({reasoning[:40]})")
+                        if len(session_buffer) > MAX_SESSION_BUFFER:
+                            session_buffer.pop(0)
+                            
+                    elif decision == 'trail':
+                        new_stop = apm.get("new_stop")
+                        new_target = apm.get("new_target")
+                        
+                        if new_stop:
+                            is_valid = False
+                            if open_t.direction == 'long' and new_stop > open_t.stop:
+                                is_valid = True
+                            elif open_t.direction == 'short' and new_stop < open_t.stop:
+                                is_valid = True
+                                
+                            if is_valid:
+                                print(f"  [TRAILING SL] Moving stop from {open_t.stop:.2f} -> {new_stop:.2f}")
+                                open_t.stop = new_stop
+                                session_buffer.append(f"🛡️ [TRAILED SL] {bar_ts} stop={new_stop:.2f}")
+                                if len(session_buffer) > MAX_SESSION_BUFFER:
+                                    session_buffer.pop(0)
+                                    
+                        if new_target:
+                            print(f"  [TRAILING TP] Adjusting target from {open_t.target:.2f} -> {new_target:.2f}")
+                            open_t.target = new_target
+                            
+                    else: # 'hold'
+                        pass
+                        
+            # Skip searching for new trades if we still have an active open position
+            if open_t is not None:
+                continue
+
+        # ── MONEY MANAGEMENT CHECKS ──────────────────────────────────
+        if daily_stops_count >= 3:
+            if not quiet:
+                print(f"  {bar_ts} [DAILY STOP OUT] 3 stops hit today. Skipping candidate {bar_et} ET.")
+            continue
 
         if dry_run:
             import pytz
@@ -247,19 +413,28 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
             print(f"  [FABIO V3] predatory analysis...", end=' ', flush=True)
         fabio_signal = fabio_analyze(candidate, session_context=session_buffer, m1_bars=m1_bars, market_narrative=market_narrative, bars_since_last=bars_since_last)
         
-        # Hard-coded enforcement of AMT_RULE_001: No counter-trend setups on trend days
+        # Softened AMT rule: allow counter‑trend if exhaustion signal is present
         if ctx.day_type == 'trend_up' and fabio_signal.direction == 'short':
-            fabio_signal.direction = 'none'
-            fabio_signal.confidence = 0
-            fabio_signal.reasoning = "[RULE FORCED] Day type is trend_up. Counter-trend short setups are strictly prohibited by AMT_RULE_001."
+            if candidate.excess_tail:
+                # Allow short with a note
+                fabio_signal.reasoning += " [AMT_RULE softened: excess tail detected]"
+            else:
+                fabio_signal.direction = 'none'
+                fabio_signal.confidence = 0
+                fabio_signal.reasoning = "[RULE FORCED] Day type is trend_up. Counter‑trend short blocked (no excess tail)."
         elif ctx.day_type == 'trend_down' and fabio_signal.direction == 'long':
-            fabio_signal.direction = 'none'
-            fabio_signal.confidence = 0
-            fabio_signal.reasoning = "[RULE FORCED] Day type is trend_down. Counter-trend long setups are strictly prohibited by AMT_RULE_001."
+            if candidate.excess_tail:
+                fabio_signal.reasoning += " [AMT_RULE softened: excess tail detected]"
+            else:
+                fabio_signal.direction = 'none'
+                fabio_signal.confidence = 0
+                fabio_signal.reasoning = "[RULE FORCED] Day type is trend_down. Counter-trend long blocked (no excess tail)."
 
         # Update Narrative State
         if fabio_signal.market_narrative_update:
             market_narrative = fabio_signal.market_narrative_update
+        # Update dynamic day type after processing this bar
+        update_day_type(ctx, bars_ny[:bar_idx+1])
         last_eval_idx = bar_idx
         if not quiet:
             print(f"dir={fabio_signal.direction} conf={fabio_signal.confidence} "
@@ -321,8 +496,14 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
 
         _append_session(session_buffer, bar_ts, fabio_signal)
 
-        if fabio_signal.confidence < FABIO_MIN_CONFIDENCE or fabio_signal.direction == 'none':
-            reason = f'fabio_confidence={fabio_signal.confidence} < {FABIO_MIN_CONFIDENCE}' if fabio_signal.confidence < FABIO_MIN_CONFIDENCE else 'fabio_direction_none'
+        # Dinamicamente richiedi prudenza maggiore (minimo 75% confidenza anziché 65%) dopo uno stop loss nella stessa sessione
+        required_confidence = FABIO_MIN_CONFIDENCE + 10 if daily_stops_count > 0 else FABIO_MIN_CONFIDENCE
+        if fabio_signal.confidence < required_confidence or fabio_signal.direction == 'none':
+            if fabio_signal.confidence < required_confidence:
+                caution_suffix = ' (Prudenza post-stop attiva)' if daily_stops_count > 0 else ''
+                reason = f'fabio_confidence={fabio_signal.confidence} < {required_confidence}{caution_suffix}'
+            else:
+                reason = 'fabio_direction_none'
             if not quiet:
                 print(f"  [DECISION] NO_TRADE - {reason}")
             else:
@@ -420,6 +601,11 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
             instrument='MNQ',
             setup_category=candidate.setup_category
         )
+        
+        # Dimezza il rischio (contracts) dopo uno stop nella stessa sessione per prudenza
+        if daily_stops_count > 0:
+            contracts = max(1, contracts // 2)
+            print(f"  [MONEY MANAGEMENT] Prudenza attiva: contratti dimezzati a {contracts} (precedente stop nella sessione)")
         
         open_t        = open_trade(consensus, candidate.bar, contracts=contracts)
         trade_start_i = bar_idx
