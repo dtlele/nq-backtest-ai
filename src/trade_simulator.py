@@ -87,13 +87,16 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
         if trade.direction == 'long':
             if bar.high >= trade.target:
                 return _close(trade, trade.target, 'target', bar)
+            # Only process stop if it makes sense (below entry, or trailed up)
+            # Wait, trailing stops can be above entry. 
+            # But bar.low <= trade.stop is the trigger. If trade.stop > bar.high, it triggers instantly.
+            # We just need to check if the stop is hit. The bug is that if stop is far above current price,
+            # bar.low <= trade.stop is instantly true. 
+            # Actually, if the LLM hallucinates a backward stop initially, it should be rejected at entry!
             if bar.low <= trade.stop:
                 if is_first:
-                    # Causality check: only stop out if close is also below stop
-                    # (meaning the adverse move persisted after our entry)
                     if bar.close <= trade.stop:
                         return _close(trade, trade.stop, 'stop', bar)
-                    # else: low touched stop but price recovered — not a real stop
                 else:
                     return _close(trade, trade.stop, 'stop', bar)
         else:  # short
@@ -101,10 +104,8 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
                 return _close(trade, trade.target, 'target', bar)
             if bar.high >= trade.stop:
                 if is_first:
-                    # Causality check: only stop out if close is also above stop
                     if bar.close >= trade.stop:
                         return _close(trade, trade.stop, 'stop', bar)
-                    # else: high touched stop but price recovered — not a real stop
                 else:
                     return _close(trade, trade.stop, 'stop', bar)
     return None

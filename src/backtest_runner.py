@@ -601,6 +601,22 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
         consensus.stop  = consensus.stop
         consensus.target = consensus.target
 
+        # VALIDATION: Reject backward stops (LLM Hallucinations)
+        if consensus.direction == 'long' and consensus.stop >= consensus.entry:
+            print(f"  [ERROR] LLM generated backward stop for LONG (Entry: {consensus.entry}, Stop: {consensus.stop}). Rejecting trade.")
+            log_entry['decision'] = 'skip'
+            log_entry['fabio_reasoning'] += " [REJECTED: Backward Stop]"
+            if not is_trade_already_logged(date_str, log_entry['entry_time']):
+                log_reasoning(log_entry)
+            continue
+        if consensus.direction == 'short' and consensus.stop <= consensus.entry:
+            print(f"  [ERROR] LLM generated backward stop for SHORT (Entry: {consensus.entry}, Stop: {consensus.stop}). Rejecting trade.")
+            log_entry['decision'] = 'skip'
+            log_entry['fabio_reasoning'] += " [REJECTED: Backward Stop]"
+            if not is_trade_already_logged(date_str, log_entry['entry_time']):
+                log_reasoning(log_entry)
+            continue
+
         # Log entry handling – ensure Andrea reasoning exists
         log_entry['decision'] = 'trade'
         if fabio_only:

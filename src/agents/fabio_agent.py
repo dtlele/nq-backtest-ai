@@ -154,32 +154,59 @@ def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list
     question = build_fabio_question(candidate, session_context=session_context, m1_bars=m1_bars, market_narrative=market_narrative, bars_since_last=bars_since_last)
     
     # Bypass NotebookLM: inject distilled knowledge directly
-    user_msg = f"## TRADING RULES (DISTILLED KNOWLEDGE)\n{rules_text}\n{context_text}\n\n## TASK\n{question}\n\nAnalyze this setup using the Rules above. Respond with JSON only."
+    base_user_msg = f"## TRADING RULES (DISTILLED KNOWLEDGE)\n{rules_text}\n{context_text}\n\n## TASK\n{question}\n\nAnalyze this setup using the Rules above. Respond with JSON only."
     
-    raw = llm_ask(_get_system_prompt(), user_msg)
-    if raw.startswith('```'):
-        raw = raw.split('```')[1].lstrip('json').strip()
+    user_msg = base_user_msg
+    last_error = ""
+    
+    for attempt in range(3):
+        raw = llm_ask(_get_system_prompt(), user_msg)
+        if raw.startswith('```'):
+            raw = raw.split('```')[1].lstrip('json').strip()
 
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
-        return FabioSignal(
-            direction='none', confidence=0,
-            entry=None, stop=None, target=None,
-            setup_type='none',
-            reasoning=f'JSON parse error: {raw[:100]}',
-            nlm_answer="Bypassed",
-        )
+        try:
+            data = json.loads(raw)
+            direction = data.get('direction', 'none')
+            entry = data.get('entry')
+            stop = data.get('stop')
+            
+            # Validation for backward stops
+            if direction == 'long' and entry is not None and stop is not None:
+                if stop >= entry:
+                    last_error = f"ERROR: You generated a backward stop for a LONG trade. Stop ({stop}) must be BELOW Entry ({entry}). Please recalculate and output valid JSON."
+                    user_msg = base_user_msg + f"\n\n{last_error}"
+                    continue
+                    
+            if direction == 'short' and entry is not None and stop is not None:
+                if stop <= entry:
+                    last_error = f"ERROR: You generated a backward stop for a SHORT trade. Stop ({stop}) must be ABOVE Entry ({entry}). Please recalculate and output valid JSON."
+                    user_msg = base_user_msg + f"\n\n{last_error}"
+                    continue
+                    
+            # If we get here, it's valid
+            return FabioSignal(
+                direction   = direction,
+                confidence  = int(data.get('confidence', 0)),
+                entry       = entry,
+                stop        = stop,
+                target      = data.get('target'),
+                setup_type  = data.get('setup_type', 'none'),
+                reasoning   = data.get('reasoning', ''),
+                market_narrative_update = data.get('market_narrative_update', ''),
+                nlm_answer  = "Bypassed",
+            )
+            
+        except json.JSONDecodeError as e:
+            last_error = f"JSON parse error: {e}"
+            user_msg = base_user_msg + f"\n\nERROR: {last_error}. Please output strictly valid JSON."
+
+    # If it fails 3 times, return none
     return FabioSignal(
-        direction   = data.get('direction', 'none'),
-        confidence  = int(data.get('confidence', 0)),
-        entry       = data.get('entry'),
-        stop        = data.get('stop'),
-        target      = data.get('target'),
-        setup_type  = data.get('setup_type', 'none'),
-        reasoning   = data.get('reasoning', ''),
-        market_narrative_update = data.get('market_narrative_update', ''),
-        nlm_answer  = "Bypassed",
+        direction='none', confidence=0,
+        entry=None, stop=None, target=None,
+        setup_type='none',
+        reasoning=f'Failed after 3 attempts. Last error: {last_error}',
+        nlm_answer="Bypassed",
     )
 
 def _get_management_system_prompt() -> str:
