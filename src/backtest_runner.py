@@ -655,6 +655,12 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
                 elif consensus.direction == 'short' and limit_price <= candidate.bar.close:
                     limit_price = candidate.bar.close + 4.0
 
+                # Sanity check: ensure stop loss is valid relative to the new limit price
+                if consensus.direction == 'long' and consensus.stop >= limit_price:
+                    consensus.stop = limit_price - 20.0
+                elif consensus.direction == 'short' and consensus.stop <= limit_price:
+                    consensus.stop = limit_price + 20.0
+
                 pending_t = PendingTrade(
                     direction=consensus.direction,
                     limit_price=limit_price,
