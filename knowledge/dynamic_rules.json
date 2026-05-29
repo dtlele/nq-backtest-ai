@@ -48,7 +48,7 @@
       "status": "active",
       "successes": 10,
       "failures": 0,
-      "probation_days": 27
+      "probation_days": 28
     },
     {
       "rule_id": "AMT_RULE_184",
@@ -58,7 +58,7 @@
       "status": "active",
       "successes": 10,
       "failures": 0,
-      "probation_days": 27
+      "probation_days": 28
     },
     {
       "rule_id": "AMT_RULE_185",
@@ -68,7 +68,7 @@
       "status": "active",
       "successes": 11,
       "failures": 0,
-      "probation_days": 22
+      "probation_days": 23
     },
     {
       "rule_id": "AMT_RULE_186",
@@ -78,7 +78,7 @@
       "status": "active",
       "successes": 11,
       "failures": 0,
-      "probation_days": 19
+      "probation_days": 20
     },
     {
       "rule_id": "AMT_RULE_187",
@@ -88,7 +88,7 @@
       "status": "active",
       "successes": 10,
       "failures": 0,
-      "probation_days": 18
+      "probation_days": 19
     },
     {
       "rule_id": "AMT_RULE_188",
@@ -98,7 +98,7 @@
       "status": "active",
       "successes": 9,
       "failures": 0,
-      "probation_days": 17
+      "probation_days": 18
     },
     {
       "rule_id": "AMT_RULE_191",
@@ -108,7 +108,7 @@
       "status": "active",
       "successes": 8,
       "failures": 0,
-      "probation_days": 11
+      "probation_days": 12
     },
     {
       "rule_id": "AMT_RULE_192",
@@ -118,7 +118,7 @@
       "status": "active",
       "successes": 8,
       "failures": 0,
-      "probation_days": 11
+      "probation_days": 12
     },
     {
       "rule_id": "AMT_RULE_193",
@@ -128,7 +128,7 @@
       "status": "active",
       "successes": 6,
       "failures": 0,
-      "probation_days": 13
+      "probation_days": 14
     },
     {
       "rule_id": "AMT_RULE_194",
@@ -138,7 +138,7 @@
       "status": "active",
       "successes": 6,
       "failures": 0,
-      "probation_days": 13
+      "probation_days": 14
     },
     {
       "rule_id": "AMT_RULE_195",
@@ -148,7 +148,7 @@
       "status": "active",
       "successes": 4,
       "failures": 0,
-      "probation_days": 7
+      "probation_days": 8
     },
     {
       "rule_id": "AMT_RULE_196",
@@ -158,7 +158,7 @@
       "status": "active",
       "successes": 5,
       "failures": 0,
-      "probation_days": 7
+      "probation_days": 8
     },
     {
       "rule_id": "AMT_RULE_197",
@@ -168,7 +168,7 @@
       "status": "active",
       "successes": 4,
       "failures": 0,
-      "probation_days": 7
+      "probation_days": 8
     },
     {
       "rule_id": "AMT_RULE_198",
@@ -178,32 +178,122 @@
       "status": "active",
       "successes": 2,
       "failures": 0,
-      "probation_days": 5
+      "probation_days": 6
     },
     {
       "rule_id": "AMT_RULE_199",
       "topic": "Imbalance Hunting Delta Confirmation",
       "description": "During imbalance_hunting setups, ensure delta confirms price direction. If delta shows trapped buyers despite price moving lower, reduce contracts or skip the trade.",
       "action": "reduce_contracts_or_skip",
-      "status": "probation",
-      "successes": 0,
+      "status": "active",
+      "successes": 1,
       "failures": 0,
-      "probation_days": 2
+      "probation_days": 0
     },
     {
       "rule_id": "AMT_RULE_200",
       "topic": "Early Exit Avoidance",
       "description": "Avoid early exits when momentum and delta alignment are still confirming the trade direction during imbalance_hunting setups to prevent premature profit-taking.",
       "action": "skip_trade",
+      "status": "active",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 0
+    },
+    {
+      "rule_id": "AMT_RULE_201",
+      "topic": "Delta Divergence in Imbalance Hunting",
+      "description": "During imbalance_hunting setups, if delta diverges from price direction (e.g., positive delta with price not advancing), skip the trade to avoid trapped liquidity.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 0
+    },
+    {
+      "rule_id": "AMT_RULE_202",
+      "topic": "Momentum Confirmation in Imbalance Hunting",
+      "description": "During imbalance_hunting setups, ensure momentum confirms the trade direction. If momentum is weak or conflicting, skip the trade to avoid false breakouts.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 0
+    },
+    {
+      "rule_id": "AMT_RULE_203",
+      "topic": "Early Exit Avoidance",
+      "description": "Avoid early exits when momentum and delta alignment are still confirming the trade direction during imbalance_hunting setups to prevent premature profit-taking.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 0
+    },
+    {
+      "rule_id": "AMT_RULE_205",
+      "topic": "Early Exit Avoidance in Profitable Trades",
+      "description": "Avoid early exits in profitable trades when momentum and delta alignment are still confirming the trade direction, to maximize profit potential.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 0
+    },
+    {
+      "rule_id": "AMT_RULE_206",
+      "topic": "Early Exit Prevention",
+      "description": "Avoid early exits when momentum and delta alignment are still confirming the trade direction, especially in profitable trades, to maximize profit potential.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 0
+    },
+    {
+      "rule_id": "AMT_RULE_208",
+      "topic": "Second Drive Confirmation",
+      "description": "Require a second drive (re-testing the level after a pullback) for IVB breakout trades to confirm true price acceptance and avoid false breakouts.",
+      "action": "skip_trade",
       "status": "probation",
       "successes": 0,
       "failures": 0,
-      "probation_days": 2
+      "probation_days": 0
+    },
+    {
+      "rule_id": "AMT_RULE_209",
+      "topic": "Early Exit Avoidance in Profitable Trades",
+      "description": "Avoid early exits in profitable trades when momentum and delta alignment are still confirming the trade direction, to maximize profit potential.",
+      "action": "skip_trade",
+      "status": "probation",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 0
+    },
+    {
+      "rule_id": "AMT_RULE_210",
+      "topic": "Early Exit Prevention in Profitable Trades",
+      "description": "Avoid early exits in profitable trades when momentum and delta alignment are still confirming the trade direction, to maximize profit potential.",
+      "action": "skip_trade",
+      "status": "probation",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 0
+    },
+    {
+      "rule_id": "AMT_RULE_211",
+      "topic": "Early Exit Prevention in Profitable Trades",
+      "description": "Avoid early exits in profitable trades when momentum and delta alignment are still confirming the trade direction, to maximize profit potential.",
+      "action": "skip_trade",
+      "status": "probation",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 0
     }
   ],
   "session_learnings": [
-    "Several trades were stopped out due to stops being placed at the absolute extreme of wicks, exposing them to retail liquidity pools and stop hunts.",
-    "Early exits were observed in profitable trades, indicating a need for better patience and confirmation of momentum and delta alignment before exiting.",
-    "The session highlighted the importance of confirming momentum and delta alignment during imbalance_hunting setups to avoid early stops and maximize profitable trades."
+    "Avoid early exits in profitable trades when momentum and delta alignment are still confirming the trade direction, to maximize profit potential.",
+    "Exercise additional caution during imbalance_hunting setups when delta is positive but price isn't advancing, as this may indicate trapped buyers rather than genuine selling pressure.",
+    "Require a second drive (re-testing the level after a pullback) for IVB breakout trades to confirm true price acceptance and avoid false breakouts."
   ]
 }

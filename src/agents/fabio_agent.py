@@ -77,7 +77,7 @@ def _get_system_prompt() -> str:
   "stop": <float or null>,
   "target": <float or null>,
   "setup_type": "squeeze" | "reversal" | "ivb_breakout" | "exhaustion" | "imbalance_hunting" | "none",
-  "reasoning": "<MAX 100 WORDS. Provide a detailed Order Flow narrative. Explain exactly which side is trapped (Effort vs No Result), how the delta confirms the absorption or initiative, and justify the exact structural placement of the stop loss behind a verified volume node or Big Trade wall.>",
+  "reasoning": "<MAX 100 WORDS. Provide a detailed Order Flow narrative. Explain exactly which side is trapped (Effort vs No Result), how the delta confirms the absorption or initiative, and justify the exact structural placement of the stop loss behind a verified volume node or Big Trade wall. ALWAYS ADD AN EXTRA 10 TICKS BUFFER BEHIND THE STRUCTURAL LEVEL TO PREVENT STOP RUNS.>",
   "market_narrative_update": "<Provide an evolving narrative of the trading session. CRITICAL: Review your previous reasonings (Session Context) against what the market actually did afterwards (Bars Since Last). If you were wrong or missed a move, explicitly acknowledge the mistake and adjust your current bias/logic. How has the macro context shifted?>"
 }"""
     return prompt
@@ -218,7 +218,7 @@ You must analyze the open trade details and the latest M5 candle/M1 footprint to
       - Place the new stop BEHIND the structural event — not 2-4 ticks behind a single bar's wall.
       - Minimum distance: behind the wick/extreme of the structural event candle, or behind the Big Trade cluster origin.
       - Never trail to break-even UNLESS a full structural event has occurred. "BE is good" does NOT override the structural requirement.
-      - If the structural event is a Big Trade wall, place stop at least 8-10 ticks behind the wall, not immediately adjacent.
+      - If the structural event is a Big Trade wall, place stop at least 15-20 ticks behind the wall, not immediately adjacent (buffer against stop hunts).
    
    If any of A, B, or C is NOT met → output "hold". Give the trade room to work.
 

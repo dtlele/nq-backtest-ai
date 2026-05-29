@@ -150,9 +150,11 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
         save_session(state)
         if not is_trade_already_logged(date_str, result.entry_time.isoformat()):
             log_trade_result(result)
-        if result.exit_reason == 'stop':
+        if result.exit_reason == 'stop' and result.pnl_ticks < 0:
             daily_stops_count += 1
-            print(f"  [MONEY MANAGEMENT] Stop hit. Daily stops: {daily_stops_count}.")
+            print(f"  [MONEY MANAGEMENT] Stop loss hit. Daily stops: {daily_stops_count}.")
+        elif result.exit_reason == 'stop':
+            print(f"  [MONEY MANAGEMENT] Trailing stop hit in profit (+{result.pnl_ticks:.1f} ticks).")
         close_time_str = result.exit_time.strftime('%H:%M UTC')
         session_buffer.append(f"⚠️ [TRADE CLOSED] {close_time_str} {result.direction.upper()} exit={result.exit_reason} pnl={result.pnl_usd:.1f}$")
         if len(session_buffer) > MAX_SESSION_BUFFER:
@@ -199,10 +201,12 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
                 if getattr(open_t, 'last_eval_time', None) is None:
                     open_t.last_eval_time = open_t.entry_bar.timestamp
                 last_eval_time = open_t.last_eval_time
-            elif pending_t is not None:
+            if pending_t is not None:
                 if getattr(pending_t, 'last_eval_time', None) is None:
                     pending_t.last_eval_time = pending_t.signal_bar.timestamp
-                last_eval_time = pending_t.last_eval_time
+                
+                if last_eval_time is None or pending_t.last_eval_time < last_eval_time:
+                    last_eval_time = pending_t.last_eval_time
                 
             m1_intermediate = [b for b in bars_1min_ny if last_eval_time < b.timestamp <= candidate.bar.timestamp]
             
@@ -216,9 +220,17 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
                     else:
                         filled = check_pending_fill(pending_t, m1_bar)
                         if filled:
-                            open_t = filled
+                            if open_t is not None:
+                                # SCALE-IN: Merge the filled trade into the existing open_t
+                                new_contracts = open_t.contracts + filled.contracts
+                                new_entry = ((open_t.entry * open_t.contracts) + (filled.entry * filled.contracts)) / new_contracts
+                                open_t.entry = new_entry
+                                open_t.contracts = new_contracts
+                                print(f"  [SCALE-IN FILLED] Limit order triggered! Avg entry now {new_entry:.2f} for {new_contracts} contracts.")
+                            else:
+                                open_t = filled
+                                print(f"  [PENDING FILLED] Limit order triggered at {open_t.entry}!")
                             pending_t = None
-                            print(f"  [PENDING FILLED] Limit order triggered at {open_t.entry}!")
                 
                 # 2. Process OPEN trades
                 if open_t is not None:
@@ -648,6 +660,27 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
             log_entry['trade_stop']      = consensus.stop
             log_entry['trade_target']    = consensus.target
             log_entry['contracts']       = contracts
+        elif open_t is None and pending_t is not None and pending_t.direction == consensus.direction:
+            print(f"  [MOMENTUM OVERRIDE] {consensus.direction.upper()} signal repeated while PENDING active. Executing Chaser at market.")
+            state = load_session()
+            override_contracts = max(1, pending_t.contracts // 2)
+            
+            # Create a market order mimicking pending_t but at current price and reduced size
+            open_t = open_trade(consensus, candidate.bar, contracts=override_contracts)
+            # FORCE the stop to be the pending_t structural stop (safeguard)
+            open_t.stop = pending_t.stop
+            
+            # Adjust pending_t contracts so the total doesn't exceed original plan if it fills later
+            pending_t.contracts = max(1, pending_t.contracts - override_contracts)
+            
+            print(f"  [TRADE OPEN] (Chaser Override) dir={consensus.direction} entry={candidate.bar.close} "
+                  f"stop={open_t.stop} target={open_t.target} contracts={override_contracts}")
+            
+            log_entry['trade_direction'] = consensus.direction
+            log_entry['trade_entry']     = candidate.bar.close
+            log_entry['trade_stop']      = open_t.stop
+            log_entry['trade_target']    = open_t.target
+            log_entry['contracts']       = override_contracts
         else:
             print(f"  [TRADE SKIPPED] Existing trade active (open or pending), new trade ignored.")
             
