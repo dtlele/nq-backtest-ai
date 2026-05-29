@@ -1,11 +1,11 @@
 {
-  "date": "2025-02-03",
+  "date": "2025-11-11",
   "ib_high": null,
   "ib_low": null,
   "poc": null,
   "day_type": "unknown",
   "open_trade": null,
-  "equity": 101836.0,
+  "equity": 99743.20000000001,
   "daily_pnl_usd": 0.0,
   "trade_count_today": 0,
   "session_stopped": false

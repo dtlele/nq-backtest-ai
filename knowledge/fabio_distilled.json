@@ -1,7 +1,7 @@
 {
   "simplified_strategy": {
-    "simplified_model_overview": "Model is based on finding Institutional Absorption and trading the Second Drive.",
-    "simplified_entry_trigger": "Enter at MARKET immediately when Big Trades hit a wall and are absorbed. Do not wait for candle close.",
+    "simplified_model_overview": "Model is based on finding Institutional Absorption OR strong Initiative Big Trades, and trading the Second Drive.",
+    "simplified_entry_trigger": "Enter at MARKET immediately when Big Trades hit a wall and are absorbed, OR when strong Initiative Big Trades are rewarded by price acceptance. Do not wait for candle close.",
     "simplified_stop_exact": "Stop Loss must be 2-3 ticks behind the structural wall (the Big Trade absorption cluster). Max 120 ticks.",
     "simplified_ivb_formation": "IVB is the first 1 hour of trading. Breakout of IVB sets the day's trend.",
     "simplified_second_drive_exact": "Wait for the first drive to stall (pullback), and enter on the second drive resuming the trend.",
@@ -22,6 +22,7 @@
     "big_trades_filter": "Big trades must be >30 contracts to matter.",
     "coherence_of_information": "Ensure M5 trend, M1 delta, and Bookmap liquidity align.",
     "counter_trend_rules": "Counter trend requires a hard structural stop and clear absorption of the dominant trend.",
-    "entry_mechanics": "Market order exactly at the moment of absorption."
+    "entry_mechanics": "Market order exactly at the moment of absorption or initiative acceptance.",
+    "initiative_vs_absorption": "While Institutional Absorption (passive limit orders stopping price) is a premium A+ setup, you MUST ALSO trade INITIATIVE setups. If you see strong INITIATIVE Big Trades (aggressive market orders pushing price) and the auction rewards them (price accepts the new level), enter in the direction of the initiative. Protect your Stop Loss behind the origin of those initiative Big Trades."
   }
 }

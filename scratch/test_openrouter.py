@@ -1,19 +1,39 @@
-from src.agents.llm_client import llm_ask
-import time
+import os
+from openai import OpenAI
+from dotenv import load_dotenv
+
+def test_openrouter():
+    load_dotenv()
+    
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        print("❌ OPENROUTER_API_KEY non trovata nell'ambiente (o nel file .env).")
+        return
+    
+    print(f"🔑 Chiave trovata: {api_key[:8]}...{api_key[-4:] if len(api_key) > 12 else ''}")
+    
+    try:
+        client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=api_key,
+        )
+        
+        print("⏳ Invio richiesta di test a OpenRouter (modello: google/gemini-2.5-flash)...")
+        response = client.chat.completions.create(
+            model="google/gemini-2.5-flash",
+            messages=[
+                {"role": "user", "content": "Rispondi solo con la parola 'OK'."}
+            ],
+            extra_headers={
+                "HTTP-Referer": "http://localhost",
+                "X-Title": "NQ Backtest Test",
+            }
+        )
+        
+        print(f"✅ Successo! Risposta: {response.choices[0].message.content}")
+        
+    except Exception as e:
+        print(f"❌ Errore durante la richiesta API: {e}")
 
 if __name__ == "__main__":
-    print("Testing OpenRouter (DeepSeek V3)...")
-    system_prompt = "You are a helpful AI assistant. Always respond concisely."
-    user_msg = "Please say 'Hello, OpenRouter works!' and tell me your model name."
-    
-    t0 = time.time()
-    try:
-        # Pass use_cache=False to avoid hitting our local disk cache
-        response = llm_ask(system_prompt, user_msg, use_cache=False)
-        t1 = time.time()
-        print("\n--- RESPONSE ---")
-        print(response)
-        print("----------------")
-        print(f"\nSuccess! Took {t1 - t0:.2f} seconds.")
-    except Exception as e:
-        print(f"\nFailed: {e}")
+    test_openrouter()

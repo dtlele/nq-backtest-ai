@@ -1,45 +1,209 @@
 {
   "dynamic_rules": [
     {
-      "rule_id": "AMT_RULE_165",
-      "topic": "Stop Placement",
-      "description": "In breakout setups, ensure stops are placed beyond key absorption levels rather than just at the Value Area Low (VAL) or Value Area High (VAH) to avoid premature stop-outs.",
-      "action": "adjust_stop_placement_beyond_absorption_levels"
+      "rule_id": "AMT_RULE_178",
+      "topic": "Confidence Threshold",
+      "description": "Avoid trading when confidence levels are below 50, as indicated by light_skip decisions with conf <= 50. This suggests insufficient conviction in the setup.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 14,
+      "failures": 0,
+      "probation_days": 0
     },
     {
-      "rule_id": "AMT_RULE_166",
-      "topic": "Risk Management",
-      "description": "Reduce contract size by 50% when trading IVB breakout setups with an R-ratio below 1.5, as this indicates a low reward-to-risk potential.",
-      "action": "reduce_contracts_low_r_ratio_ivb_breakout"
+      "rule_id": "AMT_RULE_180",
+      "topic": "Delta Divergence",
+      "description": "Be cautious when delta is positive but price isn't advancing, as this may indicate trapped buyers rather than genuine selling pressure. Look for confirming volume spikes or delta reversals.",
+      "action": "reduce_contracts_or_skip",
+      "status": "active",
+      "successes": 9,
+      "failures": 0,
+      "probation_days": 0
     },
     {
-      "rule_id": "AMT_RULE_167",
-      "topic": "Setup Validation",
-      "description": "Avoid IVB breakout setups when delta remains positive and price fails to advance despite absorption, as this indicates trapped buyers and potential reversal risk.",
-      "action": "skip_trade"
+      "rule_id": "AMT_RULE_181",
+      "topic": "Wick Rejection",
+      "description": "Avoid entries when big trades are concentrated in wicks rather than body absorption. Wick rejections without body close outside IB are lower probability. NOTE: This rule DOES NOT APPLY to IMBALANCE_HUNTING on M1, where momentum supersedes structural closes.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 10,
+      "failures": 0,
+      "probation_days": 0
     },
     {
-      "rule_id": "AMT_RULE_168",
-      "topic": "Market Context",
-      "description": "During transition state days, be cautious with IVB breakouts unless there is clear initiative phase confirmation (aggressive delta flip) following absorption.",
-      "action": "reduce_contracts_or_skip"
+      "rule_id": "AMT_RULE_182",
+      "topic": "Trade Conviction",
+      "description": "Avoid trades when bar closes inside IB and trades\u2019 absorption is observed in wicks and not bodies. This increases the risk of structural stop placement.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 13,
+      "failures": 0,
+      "probation_days": 0
     },
     {
-      "rule_id": "AMT_RULE_169",
-      "topic": "Stop Placement",
-      "description": "Place stops at least 2 ticks beyond the nearest significant absorption level, especially during trend_up days, to avoid premature stop-outs.",
-      "action": "adjust_stop_placement_beyond_nearest_absorption"
+      "rule_id": "AMT_RULE_183",
+      "topic": "Excess Tail Detection",
+      "description": "Avoid trades when there is an excess tail detected without clear body absorption, as this increases the risk of stop runs and false breakouts.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 10,
+      "failures": 0,
+      "probation_days": 27
     },
     {
-      "rule_id": "AMT_RULE_170",
-      "topic": "Entry Timing",
-      "description": "Avoid entering trades during macro news windows (09:45 EST and 10:00 EST) unless there is clear confirmation of institutional absorption and delta flip.",
-      "action": "skip_trade_macro_window"
+      "rule_id": "AMT_RULE_184",
+      "topic": "Transition State Caution",
+      "description": "Exercise additional caution during transition_state day types, as these periods often exhibit lower conviction and higher risk of false breakouts.",
+      "action": "reduce_contracts_or_skip",
+      "status": "active",
+      "successes": 10,
+      "failures": 0,
+      "probation_days": 27
+    },
+    {
+      "rule_id": "AMT_RULE_185",
+      "topic": "Delta Divergence Confirmation",
+      "description": "Require confirming volume spikes or delta reversals when delta is positive but price isn't advancing to avoid trades with trapped buyers.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 11,
+      "failures": 0,
+      "probation_days": 22
+    },
+    {
+      "rule_id": "AMT_RULE_186",
+      "topic": "Wick Rejection Confirmation",
+      "description": "Require confirming price action (close outside IB or significant body absorption) when big trades are concentrated in wicks to avoid false breakouts.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 11,
+      "failures": 0,
+      "probation_days": 19
+    },
+    {
+      "rule_id": "AMT_RULE_187",
+      "topic": "IB Close Confirmation",
+      "description": "Require candle body to close completely outside the IB range for IVB breakout trades to confirm true price acceptance. NOTE: This rule DOES NOT APPLY to IMBALANCE_HUNTING on M1, where we enter intra-candle.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 10,
+      "failures": 0,
+      "probation_days": 18
+    },
+    {
+      "rule_id": "AMT_RULE_188",
+      "topic": "Wick Rejection Confirmation",
+      "description": "Avoid trades when big trades are concentrated in wicks and the candle body does not close outside the IB range, as this increases the risk of false breakouts. NOTE: This rule DOES NOT APPLY to IMBALANCE_HUNTING on M1.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 9,
+      "failures": 0,
+      "probation_days": 17
+    },
+    {
+      "rule_id": "AMT_RULE_191",
+      "topic": "Initiative Phase Confirmation",
+      "description": "Wait for the Initiative phase (delta aggressively flipping direction to sweep the book) before entering trades to confirm true breakouts. NOTE: This rule DOES NOT APPLY to IMBALANCE_HUNTING on M1, where continuous aggressive flow is sufficient.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 8,
+      "failures": 0,
+      "probation_days": 11
+    },
+    {
+      "rule_id": "AMT_RULE_192",
+      "topic": "IVB Breakout Confirmation",
+      "description": "Require candle body to close completely outside the IVB range for IVB breakout trades to confirm true price acceptance. This rule applies to all IVB breakout setups to avoid false breakouts.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 8,
+      "failures": 0,
+      "probation_days": 11
+    },
+    {
+      "rule_id": "AMT_RULE_193",
+      "topic": "Imbalance Hunting Caution",
+      "description": "Exercise additional caution during imbalance_hunting setups when delta is positive but price isn't advancing, as this may indicate trapped buyers rather than genuine selling pressure.",
+      "action": "reduce_contracts_or_skip",
+      "status": "active",
+      "successes": 6,
+      "failures": 0,
+      "probation_days": 13
+    },
+    {
+      "rule_id": "AMT_RULE_194",
+      "topic": "Imbalance Hunting Contraction",
+      "description": "During imbalance_hunting setups, if price contracts and delta diverges, reduce contracts or skip the trade to avoid trapped liquidity.",
+      "action": "reduce_contracts_or_skip",
+      "status": "active",
+      "successes": 6,
+      "failures": 0,
+      "probation_days": 13
+    },
+    {
+      "rule_id": "AMT_RULE_195",
+      "topic": "Imbalance Hunting Delta Confirmation",
+      "description": "During imbalance_hunting setups, ensure delta confirms price direction. If delta shows trapped buyers despite price moving lower, reduce contracts or skip the trade.",
+      "action": "reduce_contracts_or_skip",
+      "status": "active",
+      "successes": 4,
+      "failures": 0,
+      "probation_days": 7
+    },
+    {
+      "rule_id": "AMT_RULE_196",
+      "topic": "Second Drive Confirmation",
+      "description": "Require a second drive (re-testing the level after a pullback) for IVB breakout trades to confirm true price acceptance and avoid false breakouts.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 5,
+      "failures": 0,
+      "probation_days": 7
+    },
+    {
+      "rule_id": "AMT_RULE_197",
+      "topic": "Imbalance Hunting Momentum Confirmation",
+      "description": "During imbalance_hunting setups, ensure momentum confirms the direction of the trade. If momentum is weak or conflicting, reduce contracts or skip the trade.",
+      "action": "reduce_contracts_or_skip",
+      "status": "active",
+      "successes": 4,
+      "failures": 0,
+      "probation_days": 7
+    },
+    {
+      "rule_id": "AMT_RULE_198",
+      "topic": "Early Entry Avoidance",
+      "description": "Avoid entries before confirming momentum and delta alignment during imbalance_hunting setups to prevent early stops.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 2,
+      "failures": 0,
+      "probation_days": 5
+    },
+    {
+      "rule_id": "AMT_RULE_199",
+      "topic": "Imbalance Hunting Delta Confirmation",
+      "description": "During imbalance_hunting setups, ensure delta confirms price direction. If delta shows trapped buyers despite price moving lower, reduce contracts or skip the trade.",
+      "action": "reduce_contracts_or_skip",
+      "status": "probation",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 2
+    },
+    {
+      "rule_id": "AMT_RULE_200",
+      "topic": "Early Exit Avoidance",
+      "description": "Avoid early exits when momentum and delta alignment are still confirming the trade direction during imbalance_hunting setups to prevent premature profit-taking.",
+      "action": "skip_trade",
+      "status": "probation",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 2
     }
   ],
   "session_learnings": [
-    "During macro news windows, liquidity voids can lead to artificial delta movements; caution is advised.",
-    "Consistent absorption with negative delta and price progression indicates strong institutional support.",
-    "Skipping low-confidence setups during trend_up days aligns with avoidance of weak reversals."
+    "Several trades were stopped out due to stops being placed at the absolute extreme of wicks, exposing them to retail liquidity pools and stop hunts.",
+    "Early exits were observed in profitable trades, indicating a need for better patience and confirmation of momentum and delta alignment before exiting.",
+    "The session highlighted the importance of confirming momentum and delta alignment during imbalance_hunting setups to avoid early stops and maximize profitable trades."
   ]
 }

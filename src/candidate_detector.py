@@ -38,7 +38,7 @@ def _get_vp_levels(ctx: SessionContext) -> list:
             
     return levels
 
-def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None) -> list:
+def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None, bars_1min_overnight: list = None) -> list:
     """
     Identifies institutional triggers based on volume and technical levels.
     Implements a two-tier filter:
@@ -60,89 +60,102 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
             from src.volume_profile import compute_volume_profile
             sub_1min = [b for b in bars_1min_ny if b.timestamp <= bar.timestamp]
             if sub_1min:
-                # Dynamically calculate volume profile including overnight + cumulative intraday bars
-                overnight_bars = []
-                if ctx.vp:
-                    # RTH dynamic calculations: overnight RTH helper
-                    from src.session_context import filter_overnight_window
-                    # overnight bars are loaded prior in runner, let's merge with sub_1min
-                    # In backtest_runner: we computed overnight profile from overnight_bars.
-                    # To do this safely and dynamically, we can merge the initial vp bars if available
-                    pass
-                
-                # To be absolutely precise and dynamic, we compute VP on sub_1min since it covers
-                # cumulative RTH bars. We can also include overnight bars if they are passed.
-                # Let's import filter_overnight_window and get overnight bars from ctx/runner:
-                # We can dynamically merge bars.
                 dynamic_vp = ctx.vp # fallback
                 try:
-                    # Calculate progressive RTH volume profile
-                    dynamic_vp = compute_volume_profile(sub_1min)
+                    # Calculate progressive volume profile merging overnight and progressive intraday bars
+                    merged_bars = (bars_1min_overnight or []) + sub_1min
+                    dynamic_vp = compute_volume_profile(merged_bars)
                 except Exception as e:
                     pass
                 
                 active_ctx = build_session_context(ctx.date, sub_1min, dynamic_vp, prev_day_vp=ctx.prev_day_vp)
 
+        # --- Determine Market State First ---
+        price = bar.close
+        is_outside_ib = False
+        if active_ctx.ib_complete:
+            is_outside_ib = (price > active_ctx.ib_high or price < active_ctx.ib_low)
+            
+        m_state = "imbalance" if is_outside_ib else "balance"
+
         is_reversal = False
         is_momentum = False
         is_pullback = False
+        is_imbalance_hunter = False
         
-        # Check volume floor
-        if bar.volume >= MIN_VOLUME_PER_BAR:
-            is_momentum = True
-        elif bar.volume >= MIN_REVERSAL_VOLUME:
-            is_reversal = True
+        # In Imbalance State, we actively hunt on every M5 bar (using M1 footprint later in Fabio).
+        # We bypass the strict volume floor.
+        if m_state == 'imbalance':
+            is_imbalance_hunter = True
         else:
-            # PULLBACK RETEST LOGIC:
-            # Look back 1 to 3 bars to see if there was an institutional bar
-            for lookback in range(1, 4):
-                prev_idx = i - lookback
-                if prev_idx < 0:
-                    break
-                prev_bar = bars[prev_idx]
-                if prev_bar.volume >= MIN_REVERSAL_VOLUME:
-                    prev_window = bars[max(0, prev_idx - BIG_TRADE_LOOKBACK_BARS + 1): prev_idx + 1]
-                    prev_big = [t for b in prev_window for t in b.big_trades]
-                    if prev_big:
-                        prev_max_trade = max(prev_big, key=lambda t: t.size)
-                        if _near(bar.close, prev_max_trade.price, VA_PROXIMITY_TICKS):
-                            is_pullback = True
-                            all_big = prev_big
-                            wall_max_trade = prev_max_trade
-                            wall_level = prev_max_trade.price
-                            buy_big = sum(t.size for t in all_big if t.side == 'A')
-                            sell_big = sum(t.size for t in all_big if t.side == 'B')
-                            wall_side = 'ask' if buy_big >= sell_big else 'bid'
-                            break
-            if not is_pullback:
-                continue
+            # Check standard volume floor (Balance state sniper)
+            if bar.volume >= MIN_VOLUME_PER_BAR:
+                is_momentum = True
+            elif bar.volume >= MIN_REVERSAL_VOLUME:
+                is_reversal = True
+            else:
+                # PULLBACK RETEST LOGIC:
+                for lookback in range(1, 4):
+                    prev_idx = i - lookback
+                    if prev_idx < 0:
+                        break
+                    prev_bar = bars[prev_idx]
+                    if prev_bar.volume >= MIN_REVERSAL_VOLUME:
+                        prev_window = bars[max(0, prev_idx - BIG_TRADE_LOOKBACK_BARS + 1): prev_idx + 1]
+                        prev_big = [t for b in prev_window for t in b.big_trades]
+                        if prev_big:
+                            prev_max_trade = max(prev_big, key=lambda t: t.size)
+                            if _near(bar.close, prev_max_trade.price, VA_PROXIMITY_TICKS):
+                                is_pullback = True
+                                all_big = prev_big
+                                wall_max_trade = prev_max_trade
+                                wall_level = prev_max_trade.price
+                                buy_big = sum(t.size for t in all_big if t.side == 'A')
+                                sell_big = sum(t.size for t in all_big if t.side == 'B')
+                                wall_side = 'ask' if buy_big >= sell_big else 'bid'
+                                break
+                if not is_pullback:
+                    continue
 
         # If not pullback, do the standard absorption/big trade checks
         if not is_pullback:
             window   = bars[max(0, i - BIG_TRADE_LOOKBACK_BARS + 1): i + 1]
             all_big  = [t for b in window for t in b.big_trades]
-            if not all_big:
+            if not all_big and not is_imbalance_hunter:
                 continue
-            wall_max_trade = max(all_big, key=lambda t: t.size)
-            wall_level = wall_max_trade.price
-            buy_big  = sum(t.size for t in all_big if t.side == 'A')
-            sell_big = sum(t.size for t in all_big if t.side == 'B')
-            wall_side  = 'ask' if buy_big >= sell_big else 'bid'
+                
+            if all_big:
+                wall_max_trade = max(all_big, key=lambda t: t.size)
+                wall_level = wall_max_trade.price
+                buy_big  = sum(t.size for t in all_big if t.side == 'A')
+                sell_big = sum(t.size for t in all_big if t.side == 'B')
+                wall_side  = 'ask' if buy_big >= sell_big else 'bid'
+            else:
+                # Dummy values for imbalance hunter if literally no big trades happened
+                wall_level = price
+                wall_side = 'none'
+                all_big = []
+                wall_max_trade = Trade(ts_event=bar.timestamp, side='A', price=price, size=0)
 
-        price  = bar.close
         levels = _get_vp_levels(active_ctx)
         
-        # Must be near a structural level (VA or IB edges)
+        # Must be near a structural level (VA or IB edges), EXCEPT if we are hunting in Imbalance
         nearby = [(lvl, name) for lvl, name in levels
                   if _near(price, lvl, VA_PROXIMITY_TICKS)]
         
-        if not nearby:
+        if not nearby and not is_imbalance_hunter:
             continue
 
-        nearby.sort(key=lambda x: abs(price - x[0]))
-        prox_level, prox_name = nearby[0]
-        
-        setup_cat = 'pullback' if is_pullback else ('momentum' if is_momentum else 'reversal')
+        if nearby:
+            nearby.sort(key=lambda x: abs(price - x[0]))
+            prox_level, prox_name = nearby[0]
+        else:
+            prox_level, prox_name = price, "imbalance_zone"
+            
+        if is_imbalance_hunter:
+            setup_cat = 'imbalance_hunting'
+        else:
+            setup_cat = 'pullback' if is_pullback else ('momentum' if is_momentum else 'reversal')
         
         # --- SECOND DRIVE DETECTION ---
         orig_is_second_test = False
@@ -168,23 +181,6 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
 
         sess_high = max(b.high for b in bars[:i+1])
         sess_low = min(b.low for b in bars[:i+1])
-        high_bars = [b for b in bars[:i+1] if b.high == sess_high]
-        low_bars = [b for b in bars[:i+1] if b.low == sess_low]
-        high_bar = high_bars[0] if high_bars else bar
-        low_bar = low_bars[0] if low_bars else bar
-
-        has_high_excess = (high_bar.high - max(high_bar.open, high_bar.close)) >= 4 * NQ_TICK_SIZE
-        has_low_excess = (min(low_bar.open, low_bar.close) - low_bar.low) >= 4 * NQ_TICK_SIZE
-
-        if abs(price - sess_high) < abs(price - sess_low):
-            excess_t = has_high_excess
-            # Rejection of highs: buyers hit the wall (ask)
-            exhaustion_sig = excess_t and (wall_side == 'ask')
-        else:
-            excess_t = has_low_excess
-            # Rejection of lows: sellers hit the wall (bid)
-            exhaustion_sig = excess_t and (wall_side == 'bid')
-
         auc_type = "responsive"
         if setup_cat == "momentum" or setup_cat == "pullback":
             is_outside_ib = False
@@ -213,8 +209,83 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
             market_state=m_state,
             poc_migration=poc_mig,
             auction_type=auc_type,
-            excess_tail=excess_t,
-            exhaustion_signal=exhaustion_sig,
         ))
         
+    return candidates
+
+def detect_m1_candidates(m1_bar: Bar, m5_recent: list, ctx: SessionContext, m1_history: list = None) -> list:
+    """
+    Evaluates a single M1 bar as a candidate when the market is in IMBALANCE state.
+    """
+    candidates = []
+    
+    is_imbalance = False
+    price = m1_bar.close
+    
+    # 1. Outside IB (if complete)
+    if ctx.ib_complete:
+        if price > ctx.ib_high or price < ctx.ib_low:
+            is_imbalance = True
+            
+    # 2. Outside Previous Day Value Area (crucial for first hour moves)
+    if ctx.prev_day_vp and not is_imbalance:
+        if price > ctx.prev_day_vp.va_high or price < ctx.prev_day_vp.va_low:
+            is_imbalance = True
+            
+    # 3. Outside Overnight Value Area (Fallback if prev day is missing, e.g. Monday)
+    if ctx.vp and not is_imbalance:
+        if price > ctx.vp.va_high or price < ctx.vp.va_low:
+            is_imbalance = True
+            
+    if not is_imbalance:
+        return candidates
+        
+    # If we are here, we are outside the IB, so generate an IMBALANCE_HUNTING candidate!
+    all_big = m1_bar.big_trades
+    
+    if all_big:
+        wall_max_trade = max(all_big, key=lambda t: t.size)
+        wall_level = wall_max_trade.price
+        buy_big = sum(t.size for t in all_big if t.side == 'A')
+        sell_big = sum(t.size for t in all_big if t.side == 'B')
+        wall_side = 'ask' if buy_big >= sell_big else 'bid'
+    else:
+        wall_level = price
+        wall_side = 'none'
+        wall_max_trade = Trade(ts_event=m1_bar.timestamp, side='A', price=price, size=0)
+
+    # ── LOGICA SENZA REGOLE (Nessun Filtro Volume) ──
+    # Passiamo a Fabio qualsiasi candela M1 che si trovi in fase di Imbalance 
+    # e che contenga almeno un Big Trade istituzionale. Sarà Fabio (LLM) 
+    # a decidere se è un falso segnale o l'inizio di un breakout reale.
+    
+    if not all_big:
+        return candidates
+
+    # Context states
+    poc_mig = "flat"
+    if ctx.vp and ctx.prev_day_vp:
+        if ctx.vp.poc > ctx.prev_day_vp.poc + 4 * NQ_TICK_SIZE:
+            poc_mig = "up"
+        elif ctx.vp.poc < ctx.prev_day_vp.poc - 4 * NQ_TICK_SIZE:
+            poc_mig = "down"
+
+    candidates.append(CandidateBar(
+        bar=m1_bar,  # M1 BAR!
+        session_ctx=ctx,
+        wall_level=wall_level,
+        wall_side=wall_side,
+        wall_trade_count=len(all_big),
+        wall_max_size=wall_max_trade.size,
+        proximity_to="imbalance_zone_m1",
+        proximity_level=price,
+        bars_in_session=len(m5_recent),
+        is_second_test=False, 
+        setup_category="imbalance_hunting",
+        recent_bars=m5_recent,  # Fabio needs M5 structural context here
+        market_state="imbalance",
+        poc_migration=poc_mig,
+        auction_type="initiative",
+    ))
+    
     return candidates

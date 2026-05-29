@@ -3,7 +3,7 @@
     "ibob_overview": "Initial Balance is the first 60 mins. Breakouts define the session bias.",
     "ibob_candle_close": "Valid breakout requires a candle BODY close outside the Initial Balance, not just a wick.",
     "ibob_bubble_body_vs_wick": "Wicks piercing levels with Big Trades represent absorption (reversal). Bodies closing through represent initiative (breakout).",
-    "simplified_entry_mechanical": "Enter only when structural stop is clearly defined behind a High Volume Node or Ledge.",
+    "simplified_entry_mechanical": "Enter only when structural stop is clearly defined behind a High Volume Node, a Ledge, OR the origin of Initiative Big Trades.",
     "ibob_diagonal_imbalances": "Diagonal imbalances on the footprint indicate strong aggressive participation.",
     "ibob_stop_target": "Stop behind the breakout structure. Target 1.5x IB extension.",
     "ibob_invalidation": "If price closes back inside the IB after a breakout, it is a failed auction.",

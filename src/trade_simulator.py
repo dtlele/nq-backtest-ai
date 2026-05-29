@@ -1,4 +1,4 @@
-from src import (Bar, ConsensusSignal, OpenTrade, ClosedTrade,
+from src import (Bar, ConsensusSignal, OpenTrade, ClosedTrade, PendingTrade,
                  NQ_TICK_SIZE, NQ_TICK_VALUE)
 from src.risk_manager import calculate_commissions
 
@@ -16,6 +16,30 @@ def open_trade(consensus: ConsensusSignal, entry_bar: Bar, contracts: int = 1) -
         consensus  = consensus,
         contracts  = contracts,  # NEW: Store number of contracts
     )
+
+def check_pending_fill(pending: PendingTrade, bar: Bar) -> OpenTrade | None:
+    """Checks if a pending limit order is filled by the current bar."""
+    if pending.direction == 'long' and bar.low <= pending.limit_price:
+        return OpenTrade(
+            direction=pending.direction,
+            entry=pending.limit_price,
+            stop=pending.stop,
+            target=pending.target,
+            entry_bar=bar,
+            consensus=pending.consensus,
+            contracts=pending.contracts
+        )
+    elif pending.direction == 'short' and bar.high >= pending.limit_price:
+        return OpenTrade(
+            direction=pending.direction,
+            entry=pending.limit_price,
+            stop=pending.stop,
+            target=pending.target,
+            entry_bar=bar,
+            consensus=pending.consensus,
+            contracts=pending.contracts
+        )
+    return None
 
 def _close(trade: OpenTrade, exit_price: float,
            exit_reason: str, exit_bar: Bar) -> ClosedTrade:

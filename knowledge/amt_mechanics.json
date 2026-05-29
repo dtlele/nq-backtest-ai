@@ -1,0 +1,20 @@
+{
+  "mechanics": [
+    {
+      "topic": "PUNCH IN THE WALL MECHANICS (INTEGRATED IN TREND BREAKOUTS)",
+      "description": "On directional trend days, counter-trend aggression is absorbed at key levels:\n- NEGATIVE DELTA at new HIGHS = sellers 'punching the wall' of institutional buyers (reload zone for longs).\n- POSITIVE DELTA at new LOWS = buyers 'punching the wall' of institutional sellers (reload zone for shorts).\nThis is evaluated strictly within the context of the IVB_BREAKOUT continuation phase (second drive). Enter immediately near the absorption cluster. Do not wait for the candle to close. Lock in a tight entry within 10-20 ticks of the big-trade wall to secure a massive risk-to-reward ratio."
+    },
+    {
+      "topic": "V3 PREDATORY EXECUTION RULES (M5 CONTEXT + M1 TIMING)",
+      "description": "1. UNIFIED REACTION: Do NOT wait for M5 or M1 candlestick closure.\n2. INSTANT ENTRY ON ABSORPTION: Enter via MARKET ORDER the exact moment you identify institutional absorption on the M1 Footprint (Big Trades hitting a wall and failing to progress).\n3. PREDATOR ENTRY: Your entry must be within 10-20 ticks of the Big Trade cluster. Late entries are strictly prohibited.\n4. INVALIDATION STOP: Use tight, structural stops placed 2-3 ticks behind the institutional big-trade wall. If the wall is breached, accept the invalidation immediately.\n5. HTF ALIGNMENT: Prioritize setups aligned with the dominant trend. Avoid fading strong one-timeframe-moves unless clear exhaustion is confirmed."
+    },
+    {
+      "topic": "INITIATIVE BREAKOUTS & ACCEPTANCE (TRANSITION TO IMBALANCE)",
+      "description": "During a breakout, do NOT enter on the first break. You must wait for ACCEPTANCE. Acceptance means sustained volume and price action outside the structural level. Look for constant aggression pushing price into the new imbalance zone, and the counter-party failing to push it back."
+    },
+    {
+      "topic": "IMBALANCE_HUNTING MECHANICS (M1 FAST LOOP)",
+      "description": "When the market breaks the Initial Balance (IB) and enters an IMBALANCE state, price discovery occurs rapidly. You will be fed M1 (1-minute) candles to evaluate entries in real-time.\n1. TREND ALIGNMENT: Below IB Low = SHORT trend. Above IB High = LONG trend. Do NOT fade an imbalance phase.\n2. M1 MOMENTUM SIGNALS: Look for aggressive Big Trades in the direction of the breakout. If Delta is extremely directional (e.g., highly negative for a short), this is an immediate entry signal.\n3. TRAPPED VS ABSORPTION: In an explosive imbalance, counter-trend participants are often run over (Limit orders swept). If you see positive Delta during a massive down-candle, it is NOT necessarily 'trapped buyers' reversing the trend, but rather passive buyers getting destroyed by market sellers (Limit Absorption). Do NOT let counter-trend delta stop you from entering if the overall M1 momentum and Big Trades heavily favor the breakout direction.\n4. EXECUTE QUICKLY: Do not wait for M5 structural pullbacks. Enter the momentum on the M1 candle that shows aggressive continuation."
+    }
+  ]
+}

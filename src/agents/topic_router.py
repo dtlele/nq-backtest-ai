@@ -49,6 +49,14 @@ FABIO_BY_SETUP = {
         'effort_vs_result',
         'simplified_second_drive_exact',
     ],
+    'imbalance_hunting': [
+        'ib_breakout_rules',
+        'ib_extension_targets',
+        'simplified_second_drive_exact',
+        'initiative_vs_absorption',
+        'trapped_buyers',
+        'trapped_sellers',
+    ],
     'none': [
         'simplified_no_trade_top3',
         'simplified_ivb_formation',
@@ -86,6 +94,7 @@ FABIO_BY_PROXIMITY = {
     'va_low':  ['counter_trend_rules', 'entry_mechanics'],
     'lvn':     ['punches_to_wall', 'big_trades_filter', 'effort_vs_result'],
     'hvn':     ['big_trades_filter', 'coherence_of_information'],
+    'imbalance_zone': ['ib_extension_targets', 'trapped_buyers', 'trapped_sellers'],
 }
 
 # Extra context for specific scenarios
@@ -119,6 +128,11 @@ ANDREA_BY_SETUP = {
         'failed_auction_definition',
         'failed_auction_variants',
         'absorption_vs_exhaustion',
+        'ibob_invalidation',
+    ],
+    'imbalance_hunting': [
+        'ibob_diagonal_imbalances',
+        'ibob_stop_target',
         'ibob_invalidation',
     ],
     'none': [
@@ -173,6 +187,9 @@ def _infer_preliminary_setup(candidate: CandidateBar) -> str:
     """
     bar = candidate.bar
     ctx = candidate.session_ctx
+
+    if candidate.setup_category == 'imbalance_hunting':
+        return 'imbalance_hunting'
 
     # Failed auction: price poked outside IB but closed back inside
     if bar.high > ctx.ib_high and bar.close < ctx.ib_high:
@@ -283,6 +300,7 @@ SIMPLIFIED_TOPICS = {
     'simplified_target_exact', 'simplified_no_trade_top3', 'simplified_absorption_no_cvd',
     'simplified_breakeven_rule', 'simplified_day_type_quick', 'simplified_position_sizing',
     'simplified_reentry', 'myisto_pattern', 'simplified_real_trade_example',
+    'initiative_vs_absorption',
     # Andrea simplified
     'ibob_overview', 'ibob_ib_timing', 'ibob_candle_close', 'ibob_bubble_body_vs_wick',
     'ibob_diagonal_imbalances', 'ibob_stop_target', 'ibob_invalidation',

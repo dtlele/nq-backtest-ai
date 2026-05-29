@@ -15,8 +15,8 @@ TICK_BUCKET_SIZE        = 0.25
 # ── Session / Timing (ET = America/New_York) ──────────────────────────────────
 NY_WINDOW_START_H       = 9
 NY_WINDOW_START_M       = 25
-NY_WINDOW_END_H         = 16
-NY_WINDOW_END_M         = 0
+NY_WINDOW_END_H         = 12
+NY_WINDOW_END_M         = 30
 FABIO_ACTIVE_H          = 9
 FABIO_ACTIVE_M          = 35
 IB_DURATION_MIN         = 30       # Fabio's IVB = first 30 min (per recent videos)
@@ -99,8 +99,7 @@ class CandidateBar:
     market_state: str = 'balance'  # 'balance'|'imbalance'
     poc_migration: str = 'flat'    # 'up'|'down'|'flat'
     auction_type: str = 'responsive' # 'responsive'|'initiative'
-    excess_tail: bool = False
-    exhaustion_signal: bool = False
+    upcoming_news: str = "No high-impact news in the vicinity."
 
 @dataclass
 class FabioSignal:
@@ -135,6 +134,7 @@ class ConsensusSignal:
     andrea: AndreaSignal
     decision: str              # 'trade'|'no_trade'
     no_trade_reason: str       # '' if decision=='trade'
+    news_flag: str = "none"    # NEW: Flag to track if trade was taken near a news event
 
 @dataclass
 class OpenTrade:
@@ -145,6 +145,19 @@ class OpenTrade:
     entry_bar: Bar
     consensus: ConsensusSignal
     contracts: int = 1         # NEW: Dynamic position size
+    news_flag: str = "none"
+
+@dataclass
+class PendingTrade:
+    direction: str
+    limit_price: float
+    stop: float
+    target: float
+    signal_bar: Bar
+    consensus: ConsensusSignal
+    contracts: int = 1
+    expires_at: datetime = None
+    last_eval_time: datetime = None
 
 @dataclass
 class ClosedTrade:
@@ -164,3 +177,4 @@ class ClosedTrade:
     final_confidence: int
     r_ratio: float
     contracts: int = 1         # NEW: Contracts used for this trade
+    news_flag: str = "none"

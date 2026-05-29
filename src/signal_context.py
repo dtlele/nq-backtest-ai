@@ -71,13 +71,36 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
     bar = candidate.bar
     ctx = candidate.session_ctx
     t_et = bar.timestamp.astimezone(ET)
-    ib_pos = 'above IVB' if bar.close > ctx.ib_high else \
-             'below IVB' if bar.close < ctx.ib_low  else 'inside IVB'
+    bar_et_time = t_et
+    ib_end_time = bar_et_time.replace(hour=10, minute=30, second=0, microsecond=0)
+    
+    if bar_et_time >= ib_end_time:
+        ib_pos = 'above IVB' if bar.close > ctx.ib_high else \
+                 'below IVB' if bar.close < ctx.ib_low  else 'inside IVB'
+    else:
+        if ctx.vp:
+            ib_pos = 'above Overnight VA' if bar.close > ctx.vp.va_high else \
+                     'below Overnight VA' if bar.close < ctx.vp.va_low else 'inside Overnight VA'
+        else:
+            ib_pos = 'Price Discovery (First Hour)'
     suggested = 'long' if candidate.wall_side == 'ask' else 'short'
+    # FIX: When price is OUTSIDE the IB, suggested_direction must follow the IB breakout trend,
+    # NOT the wall_side of the single bar (which can point in any direction).
+    # Exception: 'reversal' setups are deliberately counter-trend — keep wall_side for those.
+    if candidate.setup_category != 'reversal':
+        if 'above' in ib_pos:
+            suggested = 'long'   # above IB → uptrend → long continuation bias
+        elif 'below' in ib_pos:
+            suggested = 'short'  # below IB → downtrend → short continuation bias
+        # inside IB: wall_side is the correct hint (no IB directional bias)
     m5_sequence = _format_m5_sequence(candidate.recent_bars) if candidate.recent_bars else ""
     m1_sequence = _format_m1_sequence(m1_bars) if m1_bars else ""
     
-    tpl = templates['fabio_nlm_question_template']
+    # Select appropriate template: imbalance_hunting gets a trend-continuation framing
+    if candidate.setup_category == 'imbalance_hunting' and 'fabio_imbalance_question_template' in templates:
+        tpl = templates['fabio_imbalance_question_template']
+    else:
+        tpl = templates['fabio_nlm_question_template']
     question = tpl.format(
         bar_time_et     = t_et.strftime('%H:%M'),
         close           = bar.close,
@@ -137,9 +160,6 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
     if feedback:
         question += feedback
         
-    if candidate.exhaustion_signal:
-        question += "\n\nEXHAUSTION SIGNAL DETECTED: This candidate shows an excess tail with strong opposed delta absorbed at a structural level. Consider fading the trend."
-        
     return question
 
 def build_andrea_question(candidate: CandidateBar,
@@ -152,7 +172,12 @@ def build_andrea_question(candidate: CandidateBar,
     m5_sequence = _format_m5_sequence(candidate.recent_bars) if candidate.recent_bars else ""
     m1_sequence = _format_m1_sequence(m1_bars) if m1_bars else ""
     
-    tpl = templates['andrea_nlm_question_template']
+    # Select appropriate template for Andrea
+    if fabio_signal.setup_type == 'imbalance_hunting' and 'andrea_imbalance_question_template' in templates:
+        tpl = templates['andrea_imbalance_question_template']
+    else:
+        tpl = templates['andrea_nlm_question_template']
+        
     question = tpl.format(
         bar_time_et     = t_et.strftime('%H:%M'),
         close           = bar.close,

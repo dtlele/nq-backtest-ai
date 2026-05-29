@@ -1,0 +1,22 @@
+{
+  "strategies": [
+    {
+      "name": "IVB_BREAKOUT_IMBALANCE_TRANSITION",
+      "description": "PRIMARY FOCUS: Trading the transition from Balance to Imbalance",
+      "trigger": "Price breaks the Initial Balance High (IBH) or Low (IBL) and seeks new liquidity.",
+      "confirmation": "NEVER enter on the first break. Wait for ACCEPTANCE of volume and price outside the IB. You must see constant, sustained aggression (Big Trades and directional Delta) pushing the price into the new Imbalance zone. The counter-party must fail to push price back inside the IB."
+    },
+    {
+      "name": "VAH_REJECTION_SHORT_OR_VAL_REJECTION_LONG",
+      "description": "DEPRIORITIZED: Mean Reversion",
+      "trigger": "Price tests the Value Area High (VAH) or Value Area Low (VAL).",
+      "confirmation": "[CURRENTLY DEPRIORITIZED] Focus primary analysis on Imbalance transitions instead."
+    },
+    {
+      "name": "EXHAUSTION",
+      "description": "DEPRIORITIZED: Trend Reversal",
+      "trigger": "Price rejection with intense opposite-side delta.",
+      "confirmation": "[CURRENTLY DEPRIORITIZED] Focus primary analysis on Imbalance transitions instead."
+    }
+  ]
+}

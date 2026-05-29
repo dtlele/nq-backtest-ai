@@ -1,22 +1,17 @@
 {
-  "total_trades": 56,
-  "wins": 10,
-  "losses": 46,
-  "win_rate": 0.17857142857142858,
-  "profit_factor": 0.63,
-  "total_pnl_usd": -7382.4,
-  "avg_pnl_usd": -131.83,
-  "avg_r": -0.31,
+  "total_trades": 3,
+  "wins": 2,
+  "losses": 1,
+  "win_rate": 0.6666666666666666,
+  "profit_factor": 0.36,
+  "total_pnl_usd": -256.8,
+  "avg_pnl_usd": -85.6,
+  "avg_r": 0.33,
   "by_setup": {
-    "punch_continuation": {
-      "count": 53,
-      "pnl_usd": -5903.4000000000015,
-      "wins": 10
-    },
-    "squeeze": {
+    "imbalance_hunting": {
       "count": 3,
-      "pnl_usd": -1479.0,
-      "wins": 0
+      "pnl_usd": -256.79999999999995,
+      "wins": 2
     }
   }
 }

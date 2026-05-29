@@ -14,13 +14,22 @@ You must identify:
 3. Lessons learned to avoid future losses.
 
 You will be given:
-1. The existing dynamic rules and heuristics.
+1. The existing dynamic rules and heuristics (with their status: 'probation' or 'active').
 2. The day's trading logs (Closed Trades).
 3. The day's candidate decisions (including prefiltered/skipped ones).
 
 You must review and update our Active Live Corrections/Dynamic Rules.
-- You have full permission to ADD new rules, MODIFY existing rules, or DELETE/PRUNE obsolete or conflicting rules.
-- Keep the total number of rules concise (under 10 high-impact rules) to avoid context clutter.
+- **Probation Logic (Shadow Mode Validation):**
+  - Evaluate existing 'probation' rules against today's trades (both winning target trades and losing stop trades).
+  - If a probation rule WOULD HAVE HELPED (e.g., prevented a stop loss, reduced risk on a loser), increment its `successes` count by 1.
+  - If a probation rule WOULD HAVE HURT (e.g., skipped a winning target trade, reduced risk on a big winner), increment its `failures` count by 1.
+  - If a probation rule reaches 5 `successes`, change its `status` to 'active'.
+  - If a probation rule reaches 3 `failures`, DELETE the rule entirely (do not include it in the output).
+  - If a probation rule didn't apply today, just increment `probation_days` by 1. Do NOT delete it for inactivity.
+- **Creating New Rules:**
+  - Add new rules to prevent today's mistakes. New rules MUST be created with `"status": "probation"`, `"successes": 0`, `"failures": 0`, and `"probation_days": 0`.
+- Keep existing 'active' rules unless they are now obsolete or actively harming the strategy, in which case you can delete or modify them.
+- Keep the total number of rules concise (under 10 high-impact rules).
 
 Respond ONLY with valid JSON matching this schema:
 {
@@ -29,7 +38,11 @@ Respond ONLY with valid JSON matching this schema:
       "rule_id": "AMT_RULE_XYZ",
       "topic": "<short category, e.g. Reversal, Stop Loss, Initiative>",
       "description": "<detailed, actionable rule, e.g. Do not short the first test of VAH if delta is > 5000 and day_type is trend_up.>",
-      "action": "<what the agent should do when encountering this, e.g. skip_trade or reduce_contracts>"
+      "action": "<what the agent should do when encountering this, e.g. skip_trade or reduce_contracts>",
+      "status": "probation" | "active",
+      "successes": <int>,
+      "failures": <int>,
+      "probation_days": <int>
     }
   ],
   "session_learnings": [
