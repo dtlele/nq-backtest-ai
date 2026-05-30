@@ -69,16 +69,6 @@
       "successes": 6,
       "failures": 0,
       "probation_days": 0
-    },
-    {
-      "rule_id": "AMT_RULE_214",
-      "topic": "Consecutive Losses",
-      "description": "After two consecutive stop losses, skip the next trade in the same direction to avoid compounding losses during potential trend reversals.",
-      "action": "skip_trade",
-      "status": "active",
-      "successes": 4,
-      "failures": 0,
-      "probation_days": 5
     }
   ],
   "session_learnings": []
