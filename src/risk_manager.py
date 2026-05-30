@@ -51,8 +51,8 @@ def calculate_contracts(
     # 4. Calculate distance in ticks
     dist_ticks = abs(entry - stop) / 0.25
 
-    # Enforce a safety stop floor of 40 ticks for sizing calculations to prevent ultra-tight leverage spikes
-    effective_dist_ticks = max(40.0, dist_ticks)
+    # Enforce a safety stop floor of 60 ticks (15 points) for sizing calculations to prevent ultra-tight leverage spikes
+    effective_dist_ticks = max(60.0, dist_ticks)
 
     # Apply tighter risk reduction for very narrow stops (<10 ticks originally, now using effective)
     if dist_ticks < 10:

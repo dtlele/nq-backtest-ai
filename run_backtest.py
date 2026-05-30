@@ -22,7 +22,13 @@ def main():
     p.add_argument('--data-dir', default=DATA_DIR)
     p.add_argument('--output',   default='output/reports')
     p.add_argument('--fabio-only', action='store_true', help='Skip Andrea confirmation consensus')
+    p.add_argument('--reset-equity', action='store_true', help='Reset equity to 50000.0 before starting')
     args = p.parse_args()
+
+    if args.reset_equity:
+        from src.agent_memory import force_reset_equity
+        force_reset_equity(50000.0)
+        print("  [SYSTEM] Equity forcibly reset to $50,000.00 for this run.")
 
     trades = run_backtest(args.data_dir, args.days, args.dry_run, args.quiet, args.start_date, fabio_only=args.fabio_only)
     if not trades:

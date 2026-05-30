@@ -34,7 +34,7 @@ STRUCTURAL VALIDATION (NQ 2025):
 CONFIRMATION RULES:
 1. MOMENTUM: Confirm ONLY if price shows initiative delta (>10%) AND acceptance (body close) past the structural wall.
 2. REVERSAL (FAILED AUCTION): Confirm if price probes an extreme (VAH/VAL/IB) and closes BACK INSIDE with increasing volume. Stop must be behind the failed wick.
-3. ANTI-NOISE STOP: Validate that Fabio's proposed stop is behind a structural barrier (Cluster/LVN) OR the origin of Initiative Big Trades. If not, propose a 'Structural SL' level in your reasoning.
+3. WIDE STRUCTURAL STOPS: Do NOT aggressively tighten Fabio's stop based on 1-minute micro-swings. Respect Fabio's wider structural stop to avoid being stopped out by normal liquidity sweeps (stop runs). Propose a 'Structural SL' ONLY if Fabio's stop is dangerously tight.
 4. TOXIC FLOW: If M1 volume is < 300 contracts, VETO the trade as 'Thin Liquidity/Toxic Flow'.
 5. IMBALANCE_HUNTING OVERRIDE: If Fabio's setup is 'imbalance_hunting', the market is in a massive momentum trend outside the Initial Balance. In this state, DO NOT veto a trade just because the M1 body did not close perfectly outside. If the delta confirms the breakout direction and momentum is strong, APPROVE the trade. Momentum takes precedence over perfect structure.
 

@@ -262,7 +262,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
                         
                         decision = apm.get("decision", "hold")
                         reasoning = apm.get("reasoning", "")
-                        print(f"  [MANAGEMENT] Fabio APM decision: {decision.upper()} | Reasoning: {reasoning}")
+                        safe_reasoning = reasoning.encode('cp1252', 'ignore').decode('cp1252')
+                        print(f"  [MANAGEMENT] Fabio APM decision: {decision.upper()} | Reasoning: {safe_reasoning}")
                         
                         if decision == 'early_exit':
                             result = close_early(open_t, m1_bar, reasoning)
@@ -304,9 +305,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
                                     self.final_confidence = 75
                             
                             rev_consensus = _RevConsensus()
-                            rev_contracts = calculate_contracts(rev_entry, rev_stop, load_session()['equity'], risk_pct=0.005)
-                            if daily_stops_count > 0:
-                                rev_contracts = max(1, rev_contracts // 2)
+                            rev_contracts = calculate_contracts(rev_entry, rev_stop, load_session()['equity'], risk_pct=0.001)
                             
                             open_t = open_trade(rev_consensus, m1_bar, contracts=rev_contracts)
                             open_t.last_eval_time = m1_bar.timestamp
@@ -352,11 +351,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
                 continue
 
         # ── MONEY MANAGEMENT CHECKS ──────────────────────────────────
-        if daily_stops_count >= 3:
-            if not quiet:
-                print(f"  {bar_ts} [DAILY STOP OUT] 3 stops hit today. Skipping candidate {bar_et} ET.")
-            continue
-
+        # (3 daily stops limit removed to evaluate full unthrottled performance)
         if dry_run:
             import pytz
             ET = pytz.timezone('America/New_York')
@@ -456,6 +451,14 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
         if not quiet:
             print(f"  [FABIO V3] predatory analysis...", end=' ', flush=True)
         fabio_signal = fabio_analyze(candidate, session_context=session_buffer, m1_bars=m1_bars, market_narrative=market_narrative, bars_since_last=bars_since_last)
+        
+        # APPLY THIRD WAY BUFFER (+2 points = 8 ticks to stop)
+        if fabio_signal.direction in ['long', 'short'] and fabio_signal.stop is not None:
+            buffer_points = 2.0
+            if fabio_signal.direction == 'long':
+                fabio_signal.stop -= buffer_points
+            else:
+                fabio_signal.stop += buffer_points
         
         # (Removed old hardcoded counter-trend block that relied on candidate.excess_tail)
 
@@ -624,22 +627,25 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
             class _DummyAndrea:
                 reasoning = 'fabio_only_skip_andrea'
             andrea_signal = _DummyAndrea()
-            log_entry['andrea_confirmation'] = True
             log_entry['andrea_reasoning'] = andrea_signal.reasoning
-                # ── EXECUTION ───────────────────────────────────────────────
+            
+        # ── EXECUTION ───────────────────────────────────────────────
         if open_t is None and pending_t is None:
             state = load_session()
             contracts = calculate_contracts(
                 consensus.entry, consensus.stop,
-                state['equity'], risk_pct=0.005,
+                state['equity'], risk_pct=0.001,
                 instrument='MNQ',
                 setup_category=candidate.setup_category
             )
 
-            # Dimezza il rischio (contracts) dopo uno stop nella stessa sessione per prudenza
-            if daily_stops_count > 0:
-                contracts = max(1, contracts // 2)
-                print(f"  [MONEY MANAGEMENT] Prudenza attiva: contratti dimezzati a {contracts} (precedente stop nella sessione)")
+            # TRAPPED BUYERS MULTIPLIER (x2)
+            if consensus.direction == 'short' and candidate.bar.delta > 0:
+                contracts = max(1, int(contracts * 2))
+                print("  [MONEY MANAGEMENT] Trapped Buyers detected! Doubling size.")
+            elif consensus.direction == 'long' and candidate.bar.delta < 0:
+                contracts = max(1, int(contracts * 2))
+                print("  [MONEY MANAGEMENT] Trapped Sellers detected! Doubling size.")
 
             # IMPLEMENTATION: Pullback Limit Order for Imbalance
             # We look for the phrase "imbalance" in the setup, or if it's an imbalance session

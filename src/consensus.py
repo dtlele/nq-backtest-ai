@@ -40,7 +40,13 @@ def build_consensus(fabio: FabioSignal, andrea: AndreaSignal) -> ConsensusSignal
         )
         
     if fabio.entry is None or fabio.stop is None or fabio.target is None:
-        raise ValueError(f"Approved trade has None price fields: entry={fabio.entry}, stop={fabio.stop}, target={fabio.target}")
+        return ConsensusSignal(
+            direction='none', entry=0, stop=0, target=0,
+            r_ratio=0, final_confidence=final_conf,
+            fabio=fabio, andrea=andrea,
+            decision='skip',
+            no_trade_reason=f'missing_price_fields (entry={fabio.entry}, stop={fabio.stop}, target={fabio.target})',
+        )
     entry  = fabio.entry
     stop   = fabio.stop
     target = fabio.target

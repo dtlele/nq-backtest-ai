@@ -36,10 +36,10 @@ def _format_m5_sequence(bars: list) -> str:
         )
     return "\n".join(lines)
 
-def _format_m1_sequence(bars: list[Bar]) -> str:
+def _format_m1_sequence(bars: list[Bar], hide_historical_delta: bool = False) -> str:
     """Format M1 bars with aggregated big trade detail for token efficiency."""
     lines = ["M1 bar sequence (oldest -> newest):"]
-    for b in bars:
+    for i, b in enumerate(bars):
         t_et = b.timestamp.astimezone(ET)
         big_info = ""
         if b.big_trades:
@@ -59,11 +59,18 @@ def _format_m1_sequence(bars: list[Bar]) -> str:
                 zones.append(f"{vol} SELL (Zone {min_p:.2f}-{max_p:.2f})" if min_p != max_p else f"{vol} SELL @ {min_p:.2f}")
                 
             big_info = f" | BIG_TRADES=[{', '.join(zones)}]"
+            
+        is_last = (i == len(bars) - 1)
+        delta_str = f" delta={b.delta:+d}" if (is_last or not hide_historical_delta) else ""
+        
         lines.append(
             f"  {t_et.strftime('%H:%M:%S')} O={b.open:.2f} H={b.high:.2f} "
-            f"L={b.low:.2f} C={b.close:.2f} V={b.volume} "
-            f"delta={b.delta:+d}{big_info}"
+            f"L={b.low:.2f} C={b.close:.2f} V={b.volume}"
+            f"{delta_str}{big_info}"
         )
+        if is_last:
+            lines.append(f"\n---> CURRENT CANDIDATE BAR DELTA: {b.delta:+d} <---")
+            
     return "\n".join(lines)
 
 def build_fabio_question(candidate: CandidateBar, session_context: list = None, m1_bars: list[Bar] = None, market_narrative: str = "", bars_since_last: list[Bar] = None) -> str:
@@ -170,7 +177,7 @@ def build_andrea_question(candidate: CandidateBar,
     ctx = candidate.session_ctx
     t_et = bar.timestamp.astimezone(ET)
     m5_sequence = _format_m5_sequence(candidate.recent_bars) if candidate.recent_bars else ""
-    m1_sequence = _format_m1_sequence(m1_bars) if m1_bars else ""
+    m1_sequence = _format_m1_sequence(m1_bars, hide_historical_delta=True) if m1_bars else ""
     
     # Select appropriate template for Andrea
     if fabio_signal.setup_type == 'imbalance_hunting' and 'andrea_imbalance_question_template' in templates:

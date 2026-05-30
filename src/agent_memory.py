@@ -19,18 +19,34 @@ def save_session(state: dict) -> None:
         json.dump(state, f, indent=2)
 
 def reset_session(date_str: str) -> dict:
+    try:
+        with open(SESSION_FILE, encoding='utf-8') as f:
+            old_state = json.load(f)
+            current_equity = old_state.get('equity', 50000.0)
+    except FileNotFoundError:
+        current_equity = 50000.0
+
     state = {
         'date': date_str,
         'ib_high': None, 'ib_low': None, 'poc': None,
         'day_type': 'unknown',
         'open_trade': None,
-        'equity': 100000.0,      # NEW: Account Balance tracker
+        'equity': current_equity,      # Preserve compounding equity
         'daily_pnl_usd': 0.0,
         'trade_count_today': 0,
         'session_stopped': False,
     }
     save_session(state)
     return state
+
+def force_reset_equity(starting_equity: float = 50000.0) -> None:
+    try:
+        with open(SESSION_FILE, encoding='utf-8') as f:
+            state = json.load(f)
+    except FileNotFoundError:
+        state = {}
+    state['equity'] = starting_equity
+    save_session(state)
 
 def log_reasoning(entry: dict) -> None:
     """Append one reasoning entry to the JSONL log."""

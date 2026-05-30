@@ -11,8 +11,8 @@ with open('agent_memory/trades_log.jsonl', 'r', encoding='utf-8') as f:
             if not logged_at_str:
                 continue
                 
-            # Keep only trades from the latest run (started after 2026-05-29T18:42:00Z)
-            if logged_at_str < "2026-05-29T18:42:00":
+            # Keep only trades from the latest run (started after 2026-05-30T11:54:00Z)
+            if logged_at_str < "2026-05-30T11:54:00":
                 continue
                 
             key = f"{t.get('date')}_{t.get('entry_time')}"
@@ -37,8 +37,7 @@ total_pnl = 0
 
 daily_stats = defaultdict(lambda: {'wins': 0, 'losses': 0, 'scratches': 0, 'pnl': 0.0})
 
-print(f"{'Data':<12} | {'Ora':<5} | {'Dir':<5} | {'Lotti':<5} | {'Esito':<8} | {'PnL Reale':<10}")
-print("-" * 65)
+
 
 for key in sorted(trades.keys()):
     t = trades[key]
@@ -67,7 +66,7 @@ for key in sorted(trades.keys()):
         daily_stats[date]['scratches'] += 1
         exit_str = "SCRATCH"
         
-    print(f"{date:<12} | {time_str:<5} | {direction:<5} | {contracts:<5} | {exit_str:<8} | ${pnl_usd:<9.2f}")
+    # Individual trade print removed to save space
 
 print("\n" + "=" * 65)
 print("RIEPILOGO GIORNALIERO (SOLO ULTIME RUN)")
@@ -91,3 +90,28 @@ print(f"Totale Operazioni: {total_trades}")
 print(f"Wins: {wins} | Losses: {losses} | Scratches: {scratches}")
 print(f"Win Rate: {win_rate:.1f}%")
 print(f"PnL Netto: ${total_pnl:.2f}")
+
+print("\n" + "=" * 65)
+print("RAGIONAMENTI CONCISI (Ultimi trade)")
+print("-" * 65)
+# Print reasonings for the last 5 trades to keep the telegram message concise
+last_keys = sorted(trades.keys())[-5:]
+for key in last_keys:
+    t = trades[key]
+    date = t.get('date', '')
+    time_str = t.get('entry_time', '')
+    if len(time_str) >= 16: time_str = time_str[11:16]
+    direction = t.get('direction', '').upper()
+    pnl_usd = float(t.get('pnl_usd', 0))
+    if pnl_usd > 10: exit_str = "WIN"
+    elif pnl_usd < -10: exit_str = "LOSS"
+    else: exit_str = "SCRATCH"
+    
+    print(f"[{date} {time_str}] {direction} ({exit_str} ${pnl_usd:.2f})")
+    fabio = t.get('fabio_reasoning', '')
+    andrea = t.get('andrea_reasoning', '')
+    if len(fabio) > 100: fabio = fabio[:97] + "..."
+    if len(andrea) > 100: andrea = andrea[:97] + "..."
+    print(f"F: {fabio}")
+    print(f"A: {andrea}")
+    print("-" * 30)
