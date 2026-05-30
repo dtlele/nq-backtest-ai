@@ -51,16 +51,6 @@
       "probation_days": 0
     },
     {
-      "rule_id": "AMT_RULE_206",
-      "topic": "Stop Reduction for Small Losses",
-      "description": "For setups with small expected loss (R-Ratio <= 2), consider reducing contracts or widening stops to prevent premature stop-outs.",
-      "action": "reduce_contracts_or_skip",
-      "status": "active",
-      "successes": 7,
-      "failures": 0,
-      "probation_days": 0
-    },
-    {
       "rule_id": "AMT_RULE_207",
       "topic": "Trade Frequency Control",
       "description": "Avoid overtrading by limiting the number of consecutive trades in the same direction during imbalance phases.",
@@ -81,99 +71,15 @@
       "probation_days": 0
     },
     {
-      "rule_id": "AMT_RULE_209",
-      "topic": "Imbalance Hunting Stop Placement",
-      "description": "In Imbalance Hunting setups, ensure stops are placed behind structural walls with a buffer to prevent stop runs, especially in high momentum environments.",
-      "action": "reduce_contracts_or_skip",
-      "status": "active",
-      "successes": 6,
-      "failures": 0,
-      "probation_days": 7
-    },
-    {
-      "rule_id": "AMT_RULE_210",
-      "topic": "Imbalance Hunting Entry Timing",
-      "description": "Avoid entering Imbalance Hunting trades immediately after a stop run or a sharp reversal, as these may indicate temporary exhaustion rather than continuation.",
-      "action": "skip_trade",
-      "status": "active",
-      "successes": 5,
-      "failures": 0,
-      "probation_days": 7
-    },
-    {
-      "rule_id": "AMT_RULE_211",
-      "topic": "Imbalance Hunting Trade Size Management",
-      "description": "In Imbalance Hunting setups, adjust trade size based on the proximity to key structural levels and the strength of the momentum to optimize risk-reward.",
-      "action": "reduce_contracts_or_skip",
-      "status": "probation",
-      "successes": 1,
-      "failures": 0,
-      "probation_days": 6
-    },
-    {
-      "rule_id": "AMT_RULE_212",
-      "topic": "Imbalance Hunting Trade Frequency",
-      "description": "Avoid consecutive Imbalance Hunting trades in the same direction without sufficient pullback or confirmation, to prevent overtrading during extended trends.",
-      "action": "skip_trade",
-      "status": "probation",
-      "successes": 1,
-      "failures": 0,
-      "probation_days": 6
-    },
-    {
-      "rule_id": "AMT_RULE_213",
-      "topic": "Imbalance Hunting Stop Reduction",
-      "description": "In Imbalance Hunting setups with high momentum, widen stops to account for volatility and reduce contract size to manage risk exposure.",
-      "action": "reduce_contracts_or_skip",
-      "status": "probation",
-      "successes": 1,
-      "failures": 0,
-      "probation_days": 6
-    },
-    {
       "rule_id": "AMT_RULE_214",
-      "topic": "Imbalance Hunting Consecutive Losses",
-      "description": "After two consecutive stop losses in Imbalance Hunting setups, skip the next trade in the same direction to avoid compounding losses during potential trend reversals.",
+      "topic": "Consecutive Losses",
+      "description": "After two consecutive stop losses, skip the next trade in the same direction to avoid compounding losses during potential trend reversals.",
       "action": "skip_trade",
       "status": "active",
       "successes": 4,
       "failures": 0,
       "probation_days": 5
-    },
-    {
-      "rule_id": "AMT_RULE_215",
-      "topic": "Imbalance Hunting Momentum Confirmation",
-      "description": "In Imbalance Hunting setups, require additional momentum confirmation (such as delta alignment and volume spikes) before entering trades to reduce false breakouts.",
-      "action": "reduce_contracts_or_skip",
-      "status": "probation",
-      "successes": 1,
-      "failures": 0,
-      "probation_days": 3
-    },
-    {
-      "rule_id": "AMT_RULE_216",
-      "topic": "Imbalance Hunting Stop Run Avoidance",
-      "description": "Avoid entering Imbalance Hunting trades immediately after a stop run or a sharp reversal, as these may indicate temporary exhaustion rather than continuation.",
-      "action": "skip_trade",
-      "status": "probation",
-      "successes": 1,
-      "failures": 0,
-      "probation_days": 3
-    },
-    {
-      "rule_id": "AMT_RULE_217",
-      "topic": "Early Exit Prevention in Profitable Trades",
-      "description": "Avoid early exits in profitable trades when momentum and delta alignment are still confirming the trade direction, to maximize profit potential.",
-      "action": "skip_trade",
-      "status": "probation",
-      "successes": 0,
-      "failures": 0,
-      "probation_days": 0
     }
   ],
-  "session_learnings": [
-    "Entered multiple consecutive Imbalance Hunting trades without sufficient pullback or confirmation, leading to compounded stop losses.",
-    "Stops were placed too tightly behind structural walls, making trades vulnerable to stop runs in high momentum environments.",
-    "Aggressive trade sizing persisted despite multiple stop losses, increasing risk exposure."
-  ]
+  "session_learnings": []
 }
