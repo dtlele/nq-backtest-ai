@@ -528,12 +528,11 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
 
         _append_session(session_buffer, bar_ts, fabio_signal)
 
-        # Dinamicamente richiedi prudenza maggiore (minimo 75% confidenza anziché 65%) dopo uno stop loss nella stessa sessione
-        required_confidence = FABIO_MIN_CONFIDENCE + 10 if daily_stops_count > 0 else FABIO_MIN_CONFIDENCE
+        # Use base confidence (80)
+        required_confidence = FABIO_MIN_CONFIDENCE
         if fabio_signal.confidence < required_confidence or fabio_signal.direction == 'none':
             if fabio_signal.confidence < required_confidence:
-                caution_suffix = ' (Prudenza post-stop attiva)' if daily_stops_count > 0 else ''
-                reason = f'fabio_confidence={fabio_signal.confidence} < {required_confidence}{caution_suffix}'
+                reason = f'fabio_confidence={fabio_signal.confidence} < {required_confidence}'
             else:
                 reason = 'fabio_direction_none'
             if not quiet:
