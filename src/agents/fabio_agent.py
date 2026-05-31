@@ -68,6 +68,10 @@ def _get_system_prompt() -> str:
         except Exception as e:
             print(f"Error loading amt_mechanics.json: {e}")
 
+    # Devil's Advocate Logic
+    prompt += "CRITICAL CALIBRATION (DEVIL'S ADVOCATE):\n"
+    prompt += "Before emitting your final confidence score, you MUST play Devil's Advocate. Explicitly articulate at least 2 strong structural or volume-based reasons why this setup might fail or trap you. Include this inside your 'reasoning'. If you cannot easily dismiss these risks with overwhelming confirmation, your confidence score MUST drop proportionally to reflect reality.\n\n"
+
     # JSON Schema definition
     prompt += """Respond ONLY with valid JSON matching this schema:
 {
