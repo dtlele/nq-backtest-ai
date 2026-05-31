@@ -53,6 +53,28 @@ def confirm(candidate: CandidateBar, fabio_signal: FabioSignal, m1_bars: list[Ba
     rules_text, context_text = build_tiered_knowledge(topics, store)
     question = build_andrea_question(candidate, fabio_signal, m1_bars=m1_bars)
 
+    # ── PRE-CHECK DETERMINISTICI (basati su 549 trade storici) ──────────────
+    # Check 1: Nessun Big Trade istituzionale → veto immediato
+    if candidate.wall_max_size < 200:
+        return AndreaSignal(
+            confirmation=False, confidence=25,
+            setup_type='none',
+            reasoning=f'VETO: No institutional footprint (wall_max_size={candidate.wall_max_size} < 200 contracts). Statistically 18% WR.',
+            nlm_answer='Deterministic veto',
+        )
+
+    # Check 2: Kill zone 10:15–10:30 ET (18% WR su 51 trade storici)
+    _is_kill_zone = False
+    try:
+        import pytz as _ap
+        _ET2 = _ap.timezone('America/New_York')
+        _bar_et2 = candidate.bar.timestamp.astimezone(_ET2)
+        if _bar_et2.hour == 10 and 15 <= _bar_et2.minute < 30:
+            _is_kill_zone = True
+    except Exception:
+        pass
+    # ────────────────────────────────────────────────────────────────────────
+
     # Bypass NotebookLM: inject distilled knowledge directly
     user_msg = f"## TRADING RULES (DISTILLED KNOWLEDGE)\n{rules_text}\n{context_text}\n\n## TASK\n{question}\n\nDoes this bar confirm Fabio's signal? Respond with JSON only."
 
@@ -69,7 +91,20 @@ def confirm(candidate: CandidateBar, fabio_signal: FabioSignal, m1_bars: list[Ba
             nlm_answer="Bypassed",
         )
     
+
     confidence = int(data.get('confidence', 0))
+
+    # Apply kill zone cap AFTER LLM response
+    if _is_kill_zone:
+        confidence = min(confidence, 40)
+        return AndreaSignal(
+            confirmation=False, confidence=confidence,
+            setup_type=data.get('setup_type', 'none'),
+            reasoning=f'KILL ZONE 10:15-10:30 ET (18% WR storico). ' + data.get('reasoning', ''),
+            nlm_answer='Bypassed',
+            structural_stop=data.get('structural_stop'),
+        )
+
     # Compute stop distance in ticks (NQ tick = 0.25)
     stop_distance_ticks = abs(fabio_signal.entry - fabio_signal.stop) / 0.25
     # Veto trades with very tight stops (<10 ticks)

@@ -68,6 +68,21 @@ def _get_system_prompt() -> str:
         except Exception as e:
             print(f"Error loading amt_mechanics.json: {e}")
 
+    # Statistical calibration hints (derived from 549 backtested trades)
+    prompt += """BACKTESTED CONFIDENCE CALIBRATION (549 trades analyzed):
+Use these empirical signals to calibrate your confidence score — they are NOT hard rules, but statistical priors:
+
+1. STRUCTURE CONVERGENCE: IBL + VAL converging at the same level = strongest setup historically (59% WR).
+   VAH or VAL alone WITHOUT IB confirmation = weak signal (22-31% WR). Subtract 10-15 from confidence.
+
+2. INSTITUTIONAL FOOTPRINT: Big Trade >= 400 contracts at the breakout point = strong confirmation (+10 confidence).
+   High total bar volume (>3000 contracts) BUT small Big Trade = likely retail fakeout (-10 confidence).
+   The SIZE of the single institutional order matters more than total volume.
+
+3. DELTA CONVICTION: |Delta| >= 400 at entry bar = real directional commitment, confirmed.
+   |Delta| < 200 = market in chop/equilibrium, subtract 10 from confidence.
+
+"""
 
     # JSON Schema definition
     prompt += """Respond ONLY with valid JSON matching this schema:
@@ -139,6 +154,16 @@ def light_analyze(candidate: CandidateBar, session_context: list = None, m1_bars
     # --- VP migration (trending day) ---
     if candidate.poc_migration != 'flat':
         score += 10
+
+    # --- Penalità fascia oraria 10:15-10:30 ET (18% WR storico su 51 trade) ---
+    try:
+        import pytz as _lp
+        _ET = _lp.timezone('America/New_York')
+        _bar_et = candidate.bar.timestamp.astimezone(_ET)
+        if _bar_et.hour == 10 and 15 <= _bar_et.minute < 30:
+            score -= 25  # Kill zone: post-opening-range fakeout window
+    except Exception:
+        pass
 
     # --- Penalties ---
     if cat == 'pullback' and wms < 20:
