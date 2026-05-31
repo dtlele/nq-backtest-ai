@@ -743,7 +743,83 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
         except Exception as e:
             print(f"  [NLM] queue skipped: {e}")
 
+    # EOD Telegram notification — DeepSeek writes the day summary
+    if not dry_run:
+        try:
+            _telegram_day_summary(date_str, closed_trades)
+        except Exception as e:
+            print(f"  [TELEGRAM] Day summary failed: {e}")
+
     return closed_trades, vp
+
+
+def _telegram_day_summary(date_str: str, trades: list) -> None:
+    """Asks DeepSeek to generate a trading day summary and sends it to Telegram."""
+    import os, json, datetime, requests
+    from src.agents.llm_client import llm_ask
+
+    bot_token = os.environ.get('TELEGRAM_BOT_TOKEN', '8745379821:AAE3Oa2CUjrbVzRPW_yJyOwnpQHD4RXvjZ8')
+    chat_id   = os.environ.get('TELEGRAM_CHAT_ID', '-1003723252971')
+    if not bot_token or not chat_id:
+        return
+
+    if not trades:
+        trades_summary = "Nessun trade eseguito oggi."
+    else:
+        total_pnl = sum(t.pnl_usd for t in trades)
+        wins    = sum(1 for t in trades if t.pnl_usd > 10)
+        losses  = sum(1 for t in trades if t.pnl_usd < -10)
+        scratch = len(trades) - wins - losses
+        trade_lines = []
+        for t in trades:
+            outcome = 'WIN' if t.pnl_usd > 10 else ('LOSS' if t.pnl_usd < -10 else 'SCRATCH')
+            entry_time = getattr(t, 'entry_time', '') or ''
+            if len(str(entry_time)) >= 16:
+                entry_time = str(entry_time)[11:16]
+            trade_lines.append(
+                f"- {entry_time} ET | {t.direction.upper()} | entry={t.entry} stop={t.stop} target={t.target} "
+                f"exit={t.exit_price} ({t.exit_reason}) | P&L=${t.pnl_usd:.2f} | conf={getattr(t, 'final_confidence', '?')}% | "
+                f"reasoning: {str(getattr(t, 'fabio_reasoning', ''))[:200]}"
+            )
+        trades_summary = (
+            f"Data: {date_str} | Trade: {len(trades)} | W/L/S: {wins}/{losses}/{scratch} | "
+            f"P&L Giornaliero: ${total_pnl:.2f}\n\n"
+            + "\n".join(trade_lines)
+        )
+
+    now = datetime.datetime.now().strftime('%d/%m/%Y %H:%M')
+    system_prompt = (
+        "Sei un analista di trading quantitativo esperto di NQ (Nasdaq Futures). "
+        "Il tuo compito e' analizzare i trade della giornata e produrre un breve report di massimo 200 parole "
+        "da inviare via Telegram. Il report deve: "
+        "1) Aprire con data, P&L totale e numero di trade, "
+        "2) Spiegare sinteticamente cosa ha funzionato e cosa no (pattern ricorrenti nei setup vincenti vs perdenti), "
+        "3) Identificare 1-2 lezioni chiave dalla giornata, "
+        "4) Usare un tono professionale e conciso, senza markdown pesante (solo testo). "
+        "NON usare asterischi o simboli speciali. Usa solo testo semplice."
+    )
+    user_msg = f"Ecco i trade della giornata:\n{trades_summary}"
+
+    try:
+        analysis = llm_ask(system_prompt, user_msg, use_cache=False)
+    except Exception as e:
+        analysis = f"(Analisi non disponibile: {e})"
+
+    message = (
+        f"<b>NQ Backtest Fabio - {date_str}</b>\n"
+        f"<i>Aggiornamento ore {now}</i>\n"
+        f"<pre>{analysis}</pre>"
+    )
+
+    try:
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        r = requests.post(url, json={"chat_id": chat_id, "text": message, "parse_mode": "HTML"}, timeout=15)
+        if r.status_code == 200:
+            print(f"  [TELEGRAM] Giornata {date_str} inviata su Telegram.")
+        else:
+            print(f"  [TELEGRAM] Errore invio: {r.text[:100]}")
+    except Exception as e:
+        print(f"  [TELEGRAM] Connessione fallita: {e}")
 
 
 def _read_day_logs(date_str: str) -> list:
