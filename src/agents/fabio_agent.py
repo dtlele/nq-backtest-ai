@@ -75,14 +75,14 @@ def _get_system_prompt() -> str:
     # JSON Schema definition
     prompt += """Respond ONLY with valid JSON matching this schema:
 {
+  "reasoning": "<MAX 100 WORDS. Provide a detailed Order Flow narrative. Explain exactly which side is trapped (Effort vs No Result), how the delta confirms the absorption or initiative, and justify the exact structural placement of the stop loss behind a verified volume node or Big Trade wall. ALWAYS ADD AN EXTRA 10 TICKS BUFFER BEHIND THE STRUCTURAL LEVEL TO PREVENT STOP RUNS. Play Devil's Advocate here.>",
+  "market_narrative_update": "<Provide an evolving narrative of the trading session. CRITICAL: Review your previous reasonings (Session Context) against what the market actually did afterwards (Bars Since Last). If you were wrong or missed a move, explicitly acknowledge the mistake and adjust your current bias/logic. How has the macro context shifted?>",
+  "setup_type": "squeeze" | "reversal" | "ivb_breakout" | "exhaustion" | "imbalance_hunting" | "none",
   "direction": "long" | "short" | "none",
   "confidence": <int 0-100>,
   "entry": <float or null>,
   "stop": <float or null>,
-  "target": <float or null>,
-  "setup_type": "squeeze" | "reversal" | "ivb_breakout" | "exhaustion" | "imbalance_hunting" | "none",
-  "reasoning": "<MAX 100 WORDS. Provide a detailed Order Flow narrative. Explain exactly which side is trapped (Effort vs No Result), how the delta confirms the absorption or initiative, and justify the exact structural placement of the stop loss behind a verified volume node or Big Trade wall. ALWAYS ADD AN EXTRA 10 TICKS BUFFER BEHIND THE STRUCTURAL LEVEL TO PREVENT STOP RUNS.>",
-  "market_narrative_update": "<Provide an evolving narrative of the trading session. CRITICAL: Review your previous reasonings (Session Context) against what the market actually did afterwards (Bars Since Last). If you were wrong or missed a move, explicitly acknowledge the mistake and adjust your current bias/logic. How has the macro context shifted?>"
+  "target": <float or null>
 }"""
     return prompt
 
