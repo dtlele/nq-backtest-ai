@@ -141,6 +141,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
     # Money Management state
     daily_stops_count = 0
     last_stop_time = None
+    last_loss_info = {'time': None, 'direction': None}
     
     def handle_close(result, session_buffer, daily_stops_count):
         closed_trades.append(result)
@@ -152,6 +153,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
             log_trade_result(result)
         if result.exit_reason == 'stop' and result.pnl_ticks < 0:
             daily_stops_count += 1
+            last_loss_info['time'] = result.exit_time
+            last_loss_info['direction'] = result.direction
             print(f"  [MONEY MANAGEMENT] Stop loss hit. Daily stops: {daily_stops_count}.")
         elif result.exit_reason == 'stop':
             print(f"  [MONEY MANAGEMENT] Trailing stop hit in profit (+{result.pnl_ticks:.1f} ticks).")
@@ -448,9 +451,25 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
         # OPT: extract M1 context for Fabio V3 Unified
         m1_bars = get_m1_context(bars_1min_ny, candidate.bar)
 
+        # INTELLIGENT COOLDOWN
+        current_narrative = market_narrative
+        if last_loss_info['time'] is not None:
+            time_since_loss = candidate.bar.timestamp - last_loss_info['time']
+            if time_since_loss.total_seconds() < 15 * 60:
+                mins_ago = int(time_since_loss.total_seconds() // 60)
+                loss_dir = last_loss_info['direction'].upper()
+                cooldown_warning = (
+                    f"⚠️ ATTENZIONE: Hai preso uno STOP LOSS esattamente {mins_ago} minuti fa andando {loss_dir}. "
+                    f"Il mercato in questa zona è estremamente volatile e ti sta 'mitragliando'. "
+                    f"REGOLA TASSATIVA: NON rientrare in direzione {loss_dir} a meno che non ci sia una CONFERMA "
+                    f"ISTITUZIONALE MASSSICCIA (es. pattern di absorption su M1 inequivocabile) o un REVERSAL "
+                    f"STRUTTURALE GIGANTESCO. Se vedi lo stesso identico setup di prima, era SBAGLIATO, quindi SKIPPA."
+                )
+                current_narrative += f"\n\n[COOLDOWN] {cooldown_warning}"
+
         if not quiet:
             print(f"  [FABIO V3] predatory analysis...", end=' ', flush=True)
-        fabio_signal = fabio_analyze(candidate, session_context=session_buffer, m1_bars=m1_bars, market_narrative=market_narrative, bars_since_last=bars_since_last)
+        fabio_signal = fabio_analyze(candidate, session_context=session_buffer, m1_bars=m1_bars, market_narrative=current_narrative, bars_since_last=bars_since_last)
         
         # APPLY THIRD WAY BUFFER (+2 points = 8 ticks to stop)
         if fabio_signal.direction in ['long', 'short'] and fabio_signal.stop is not None:
