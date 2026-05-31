@@ -6,17 +6,7 @@
       "description": "Avoid trading when confidence levels are below 50, as indicated by light_skip decisions with conf <= 50. This suggests insufficient conviction in the setup.",
       "action": "skip_trade",
       "status": "active",
-      "successes": 29,
-      "failures": 0,
-      "probation_days": 0
-    },
-    {
-      "rule_id": "AMT_RULE_180",
-      "topic": "Delta Divergence",
-      "description": "Be cautious when delta is positive but price isn't advancing (or vice versa), as this may indicate trapped buyers/sellers. Look for confirming volume spikes or delta reversals.",
-      "action": "reduce_contracts_or_skip",
-      "status": "active",
-      "successes": 22,
+      "successes": 30,
       "failures": 0,
       "probation_days": 0
     },
@@ -67,16 +57,6 @@
       "action": "skip_trade",
       "status": "active",
       "successes": 7,
-      "failures": 0,
-      "probation_days": 0
-    },
-    {
-      "rule_id": "AMT_RULE_208",
-      "topic": "Stop Placement",
-      "description": "Avoid placing stops directly above/below the extreme of a wick to prevent exposure to retail liquidity pools. Instead, hide stops in the 'belly' of the volume profile.",
-      "action": "reduce_contracts_or_skip",
-      "status": "active",
-      "successes": 6,
       "failures": 0,
       "probation_days": 0
     },
@@ -179,12 +159,23 @@
       "successes": 0,
       "failures": 0,
       "probation_days": 0
+    },
+    {
+      "rule_id": "AMT_RULE_219",
+      "topic": "Imbalance Hunting Volume Spikes",
+      "description": "In Imbalance Hunting setups, ensure trades are only taken when there is a significant volume spike confirming the directional bias.",
+      "action": "reduce_contracts_or_skip",
+      "status": "probation",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 0
     }
   ],
   "session_learnings": [
-    "AMT_RULE_211 successfully prevented excessive risk in Imbalance Hunting setups by adjusting trade size.",
-    "AMT_RULE_214 was effective in preventing compounding losses by skipping trades after consecutive stop losses.",
-    "Early exits in profitable trades were avoided by adhering to AMT_RULE_205, maximizing profit potential.",
-    "AMT_RULE_207 helped control trade frequency, preventing overtrading during imbalance phases."
+    "AMT_RULE_178 successfully avoided trades with low confidence levels, preventing potential losses.",
+    "Imbalance Hunting setups yielded mixed results, suggesting the need for stricter volume and momentum confirmation.",
+    "There were consecutive stop losses in Imbalance Hunting setups, highlighting the importance of stricter trade frequency control.",
+    "The profitable trade in Imbalance Hunting demonstrated the importance of strong momentum and delta alignment.",
+    "Missed opportunities in earlier sessions due to low confidence levels underscore the value of AMT_RULE_178."
   ]
 }

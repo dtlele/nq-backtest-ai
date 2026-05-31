@@ -30,7 +30,7 @@ BIG_TRADE_LOOKBACK_BARS = 3        # 3 M5 bars = 15 min lookback for wall cluste
 RECENT_BARS_CONTEXT     = 6        # M5 bars of context sent to agents (30 min)
 
 # ── Agent thresholds ──────────────────────────────────────────────────────────
-FABIO_MIN_CONFIDENCE       = 65
+FABIO_MIN_CONFIDENCE       = 78
 ANDREA_VETO_THRESHOLD      = 40
 LIGHT_CONFIDENCE_THRESHOLD = 50   # two-pass: skip full analysis if light pass below this
 

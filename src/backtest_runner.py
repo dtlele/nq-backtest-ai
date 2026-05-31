@@ -443,6 +443,21 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
         upcoming_news = news_manager.get_upcoming_news(candidate.bar.timestamp)
         candidate.upcoming_news = upcoming_news
 
+        # --- AUTONOMOUS TELEGRAM CRON ---
+        global _last_tele_update
+        if '_last_tele_update' not in globals():
+            _last_tele_update = datetime.datetime.now()
+        
+        now_ts = datetime.datetime.now()
+        if (now_ts - _last_tele_update).total_seconds() >= 5 * 60:
+            try:
+                _telegram_periodic_update()
+            except Exception as e:
+                print(f"  [TELEGRAM] Periodic update error: {e}")
+            _last_tele_update = now_ts
+        # --------------------------------
+
+
         # Fabio full analysis (passed prefilter + light pass)
         if not quiet:
             category_color = candidate.setup_category.upper()
@@ -979,7 +994,6 @@ def run_backtest(data_dir: str, max_days: int = 0, dry_run: bool = False, quiet:
 
     all_trades = []
     prev_day_vp = None  # carry forward yesterday's VP
-    last_telegram_update = datetime.datetime.now()
     for f in files:
         abs_p = str(Path(f).absolute())
         print(f"Processing ({abs_p})...")
@@ -988,15 +1002,6 @@ def run_backtest(data_dir: str, max_days: int = 0, dry_run: bool = False, quiet:
         if today_vp is not None:
             prev_day_vp = today_vp
         print(f"  -> {len(day_trades)} trades")
-
-        # Periodic Telegram update every 5 minutes (real-world time)
-        now = datetime.datetime.now()
-        if (now - last_telegram_update).total_seconds() >= 5 * 60:
-            try:
-                _telegram_periodic_update()
-            except Exception as e:
-                print(f"  [TELEGRAM] Periodic update error: {e}")
-            last_telegram_update = now
 
     return all_trades
 

@@ -13,7 +13,8 @@ ALLOWED_ACTIONS = {
     'reduce_contracts_or_skip',
     'adjust_stop_placement_beyond_nearest_absorption',
     'skip_trade_macro_window',
-    # Add more actions as defined in the system
+    'require_delta_confirmation',
+    'widen_stop_in_volatility',
 }
 
 def load_dynamic_rules() -> Dict:
