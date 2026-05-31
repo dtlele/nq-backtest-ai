@@ -16,7 +16,9 @@ import shutil
 import subprocess
 from pathlib import Path
 
-CACHE_FILE = Path(__file__).parent.parent.parent / "agent_memory" / "llm_cache.json"
+CACHE_FILE        = Path(__file__).parent.parent.parent / "agent_memory" / "llm_cache.json"
+CACHE_SNAPSHOT_DIR = Path(__file__).parent.parent.parent / "agent_memory" / "cache_snapshots"
+DYNAMIC_RULES_FILE = Path(__file__).parent.parent.parent / "knowledge" / "dynamic_rules.json"
 
 # ── Provider config ──────────────────────────────────────────────────────────
 
@@ -47,13 +49,70 @@ def _save_cache(cache: dict) -> None:
         json.dump(cache, f, ensure_ascii=False, indent=2)
 
 
+def _rules_hash() -> str:
+    """SHA256 of current dynamic_rules.json content — used to version the cache."""
+    if DYNAMIC_RULES_FILE.exists():
+        try:
+            content = DYNAMIC_RULES_FILE.read_bytes()
+            return hashlib.sha256(content).hexdigest()[:12]
+        except OSError:
+            pass
+    return "norules"
+
+
 def _cache_key(system_prompt: str, user_msg: str) -> str:
-    """Cache key built from base system_prompt + user_msg only.
-    Dynamic rules are intentionally EXCLUDED from the key so that
-    minor rule updates don't bust the cache for identical market data.
+    """Cache key built from system_prompt (includes dynamic rules) + user_msg.
+    The rules hash is embedded so entries become stale automatically when rules change.
     """
     raw = f"{system_prompt}\x00{user_msg}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def snapshot_cache() -> str:
+    """Save a dated snapshot of the current cache keyed by rules version.
+    Returns the snapshot filename, or empty string if cache is empty.
+    Call this after a full backtest run to persist a stable reference.
+    """
+    cache = _load_cache()
+    if not cache:
+        return ""
+    CACHE_SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    import datetime
+    stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    rules_v = _rules_hash()
+    fname = CACHE_SNAPSHOT_DIR / f"cache_{stamp}_rules_{rules_v}.json"
+    with open(fname, "w", encoding="utf-8") as f:
+        json.dump({"rules_hash": rules_v, "entries": cache}, f, ensure_ascii=False)
+    print(f"  [CACHE] Snapshot saved: {fname.name} ({len(cache)} entries)", flush=True)
+    return str(fname)
+
+
+def restore_cache_snapshot(snapshot_path: str) -> int:
+    """Restore a cache snapshot into the active cache (merges, does not replace).
+    Returns number of entries restored.
+    """
+    p = Path(snapshot_path)
+    if not p.exists():
+        print(f"  [CACHE] Snapshot not found: {snapshot_path}", flush=True)
+        return 0
+    with open(p, encoding="utf-8") as f:
+        data = json.load(f)
+    entries = data.get("entries", data)  # support both formats
+    cache = _load_cache()
+    before = len(cache)
+    cache.update(entries)
+    _save_cache(cache)
+    restored = len(cache) - before
+    print(f"  [CACHE] Restored {restored} new entries from snapshot (total: {len(cache)})", flush=True)
+    return restored
+
+
+def list_cache_snapshots() -> list:
+    """List available snapshots ordered newest first."""
+    if not CACHE_SNAPSHOT_DIR.exists():
+        return []
+    snaps = sorted(CACHE_SNAPSHOT_DIR.glob("cache_*.json"), reverse=True)
+    return [str(s) for s in snaps]
 
 
 # ── Claude backend ───────────────────────────────────────────────────────────
@@ -413,6 +472,9 @@ def llm_ask(system_prompt: str, user_msg: str, timeout: int = 120,
         cache = _load_cache()
         cache[key] = response
         _save_cache(cache)
+        # Auto-snapshot every 500 new entries to preserve work
+        if len(cache) % 500 == 0 and len(cache) > 0:
+            snapshot_cache()
 
     return response
 

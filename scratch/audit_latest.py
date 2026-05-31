@@ -108,10 +108,21 @@ for key in last_keys:
     else: exit_str = "SCRATCH"
     
     print(f"[{date} {time_str}] {direction} ({exit_str} ${pnl_usd:.2f})")
-    fabio = t.get('fabio_reasoning', '')
-    andrea = t.get('andrea_reasoning', '')
-    if len(fabio) > 100: fabio = fabio[:97] + "..."
-    if len(andrea) > 100: andrea = andrea[:97] + "..."
-    print(f"F: {fabio}")
-    print(f"A: {andrea}")
+    print(f"  Entry: {t.get('entry')} | Stop: {t.get('stop')} | Target: {t.get('target')}")
+    print(f"  Exit: {t.get('exit_price')} ({t.get('exit_reason')})")
+    
+    # Generate a clean, analytical summary instead of a truncated thought
+    f_reason = t.get('fabio_reasoning', '')
+    if f_reason:
+        # Extract main logical points or summarize cleanly
+        summary = f_reason.split('.')[0] if '.' in f_reason else f_reason
+        if len(summary) > 130:
+            summary = summary[:127] + "..."
+        print(f"  Analisi: {summary}")
     print("-" * 30)
+
+# Aggiunge informazioni sulla sessione di esecuzione corrente
+import datetime
+start_time = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+print(f"\nAvvio Run: {start_time}")
+

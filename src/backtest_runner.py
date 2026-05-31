@@ -528,7 +528,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
 
         _append_session(session_buffer, bar_ts, fabio_signal)
 
-        # Use base confidence (80)
+        # Threshold always fixed at FABIO_MIN_CONFIDENCE (no post-stop penalty)
         required_confidence = FABIO_MIN_CONFIDENCE
         if fabio_signal.confidence < required_confidence or fabio_signal.direction == 'none':
             if fabio_signal.confidence < required_confidence:
@@ -751,7 +751,7 @@ def _read_day_logs(date_str: str) -> list:
     from src.agent_memory import LOG_FILE
     entries = []
     try:
-        with open(LOG_FILE, encoding="utf-8") as f:
+        with open(LOG_FILE, encoding="utf-8-sig") as f:
             for line in f:
                 if line.strip():
                     entry = __import__("json").loads(line)
@@ -831,3 +831,10 @@ if __name__ == "__main__":
     
     # Run the backtest
     run_backtest(DATA_DIR, max_days=args.max_days, start_date=args.start_date, end_date=args.end_date, fabio_only=args.fabio_only)
+
+    # Save cache snapshot upon successful completion
+    try:
+        from src.agents.llm_client import snapshot_cache
+        snapshot_cache()
+    except Exception as e:
+        print(f"  [CACHE] Failed to auto-snapshot: {e}")
