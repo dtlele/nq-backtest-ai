@@ -13,6 +13,7 @@ For each day:
   10. Log to agent_memory, collect ClosedTrades
 """
 import json
+import datetime
 from pathlib import Path
 from src.data_loader import load_day, list_data_files
 from src.bar_aggregator import aggregate_to_bars
@@ -141,7 +142,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
     # Money Management state
     daily_stops_count = 0
     last_stop_time = None
-    last_loss_info = {'time': None, 'direction': None}
+    recent_losses = []
+
     
     def handle_close(result, session_buffer, daily_stops_count):
         closed_trades.append(result)
@@ -153,8 +155,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
             log_trade_result(result)
         if result.exit_reason == 'stop' and result.pnl_ticks < 0:
             daily_stops_count += 1
-            last_loss_info['time'] = result.exit_time
-            last_loss_info['direction'] = result.direction
+            recent_losses.append({'time': result.exit_time, 'direction': result.direction})
             print(f"  [MONEY MANAGEMENT] Stop loss hit. Daily stops: {daily_stops_count}.")
         elif result.exit_reason == 'stop':
             print(f"  [MONEY MANAGEMENT] Trailing stop hit in profit (+{result.pnl_ticks:.1f} ticks).")
@@ -451,21 +452,28 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
         # OPT: extract M1 context for Fabio V3 Unified
         m1_bars = get_m1_context(bars_1min_ny, candidate.bar)
 
-        # INTELLIGENT COOLDOWN
+        # INTELLIGENT COOLDOWN (2-Loss Rule)
         current_narrative = market_narrative
-        if last_loss_info['time'] is not None:
-            time_since_loss = candidate.bar.timestamp - last_loss_info['time']
-            if time_since_loss.total_seconds() < 15 * 60:
-                mins_ago = int(time_since_loss.total_seconds() // 60)
-                loss_dir = last_loss_info['direction'].upper()
-                cooldown_warning = (
-                    f"⚠️ ATTENZIONE: Hai preso uno STOP LOSS esattamente {mins_ago} minuti fa andando {loss_dir}. "
-                    f"Il mercato in questa zona è estremamente volatile e ti sta 'mitragliando'. "
-                    f"REGOLA TASSATIVA: NON rientrare in direzione {loss_dir} a meno che non ci sia una CONFERMA "
-                    f"ISTITUZIONALE MASSSICCIA (es. pattern di absorption su M1 inequivocabile) o un REVERSAL "
-                    f"STRUTTURALE GIGANTESCO. Se vedi lo stesso identico setup di prima, era SBAGLIATO, quindi SKIPPA."
-                )
-                current_narrative += f"\n\n[COOLDOWN] {cooldown_warning}"
+        if len(recent_losses) >= 2:
+            loss1 = recent_losses[-2]
+            loss2 = recent_losses[-1]
+            
+            # If the last two losses were in the same direction and happened within 20 minutes of each other
+            if loss1['direction'] == loss2['direction'] and (loss2['time'] - loss1['time']).total_seconds() < 20 * 60:
+                time_since_last_loss = candidate.bar.timestamp - loss2['time']
+                
+                # Apply cooldown for 15 minutes after the SECOND loss
+                if time_since_last_loss.total_seconds() < 15 * 60:
+                    mins_ago = int(time_since_last_loss.total_seconds() // 60)
+                    loss_dir = loss2['direction'].upper()
+                    cooldown_warning = (
+                        f"⚠️ ATTENZIONE: Hai preso 2 STOP LOSS CONSECUTIVI in direzione {loss_dir} (l'ultimo {mins_ago} minuti fa). "
+                        f"Il mercato in questa zona è estremamente volatile e ti sta 'mitragliando'. "
+                        f"REGOLA TASSATIVA: NON rientrare in direzione {loss_dir} a meno che non ci sia una CONFERMA "
+                        f"ISTITUZIONALE MASSSICCIA (es. pattern di absorption su M1 inequivocabile) o un REVERSAL "
+                        f"STRUTTURALE GIGANTESCO. Se vedi lo stesso identico setup di prima, era SBAGLIATO, quindi SKIPPA."
+                    )
+                    current_narrative += f"\n\n[COOLDOWN 2-LOSS] {cooldown_warning}"
 
         if not quiet:
             print(f"  [FABIO V3] predatory analysis...", end=' ', flush=True)
@@ -772,6 +780,83 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
     return closed_trades, vp
 
 
+def _telegram_periodic_update() -> None:
+    """Sends a 5-minute style Telegram update from within the backtest process."""
+    import sys, json, datetime, requests, re
+    from pathlib import Path
+    from collections import defaultdict
+
+    bot_token = '8745379821:AAE3Oa2CUjrbVzRPW_yJyOwnpQHD4RXvjZ8'
+    chat_id   = '-1003723252971'
+    base_dir  = Path(__file__).parent.parent
+    trades_log = base_dir / 'agent_memory' / 'trades_log.jsonl'
+    marker_file = base_dir / 'agent_memory' / 'run_start_marker.json'
+
+    # Load run start
+    run_start = 'N/A'
+    run_range_start, run_range_end = None, None
+    if marker_file.exists():
+        try:
+            data = json.loads(marker_file.read_text(encoding='utf-8'))
+            run_start = data.get('start_time', 'N/A')
+            r = data.get('range', '')
+            if '\u2192' in r:
+                parts = r.split('\u2192')
+                run_range_start, run_range_end = parts[0].strip(), parts[1].strip()
+        except: pass
+
+    # Load trades
+    trades = []
+    if trades_log.exists():
+        try:
+            with open(trades_log, 'r', encoding='utf-8-sig') as f:
+                for line in f:
+                    if line.strip():
+                        try: trades.append(json.loads(line))
+                        except: pass
+        except: pass
+
+    if run_range_start and run_range_end:
+        trades = [t for t in trades if run_range_start <= t.get('date','') <= run_range_end]
+
+    now = datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+
+    if not trades:
+        msg = f"<b>\U0001f4ca NQ Backtest — {now}</b>\n<pre>Nessun trade disponibile.</pre>"
+    else:
+        by_date = defaultdict(list)
+        for t in trades:
+            by_date[t.get('date','?')].append(t)
+
+        lines = [f"\U0001f550 Aggiornamento: {now}", f"\U0001f680 Avvio run: {run_start}", ""]
+        lines.append(f"{'Data':<12} {'T':>3} {'W/L':>6} {'WR%':>6} {'P&L':>9}")
+        lines.append("-" * 42)
+        total_pnl = 0.0
+        for date in sorted(by_date.keys()):
+            day = by_date[date]
+            wins = sum(1 for t in day if t.get('pnl_usd',0) > 10)
+            losses = sum(1 for t in day if t.get('pnl_usd',0) < -10)
+            pnl = sum(t.get('pnl_usd',0) for t in day)
+            total_pnl += pnl
+            wr = (wins / len(day) * 100) if day else 0
+            pnl_str = f"+${pnl:.0f}" if pnl >= 0 else f"-${abs(pnl):.0f}"
+            lines.append(f"{date:<12} {len(day):>3} {wins}/{losses:>3} {wr:>5.0f}% {pnl_str:>9}")
+        lines.append("-" * 42)
+        tot_str = f"+${total_pnl:.2f}" if total_pnl >= 0 else f"-${abs(total_pnl):.2f}"
+        lines.append(f"{'TOTALE':<12} {'':>3} {'':>6} {'':>6} {tot_str:>9}")
+        msg = f"<b>\U0001f4ca NQ Backtest Fabio</b>\n<pre>{''.join(l + chr(10) for l in lines)}</pre>"
+
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{bot_token}/sendMessage",
+            json={"chat_id": chat_id, "text": msg, "parse_mode": "HTML"},
+            timeout=10
+        )
+        print(f"  [TELEGRAM] Periodic update sent at {now}")
+    except Exception as e:
+        print(f"  [TELEGRAM] Periodic update failed: {e}")
+
+
 def _telegram_day_summary(date_str: str, trades: list) -> None:
     """Asks DeepSeek to generate a trading day summary and sends it to Telegram."""
     import os, json, datetime, requests
@@ -894,6 +979,7 @@ def run_backtest(data_dir: str, max_days: int = 0, dry_run: bool = False, quiet:
 
     all_trades = []
     prev_day_vp = None  # carry forward yesterday's VP
+    last_telegram_update = datetime.datetime.now()
     for f in files:
         abs_p = str(Path(f).absolute())
         print(f"Processing ({abs_p})...")
@@ -902,6 +988,16 @@ def run_backtest(data_dir: str, max_days: int = 0, dry_run: bool = False, quiet:
         if today_vp is not None:
             prev_day_vp = today_vp
         print(f"  -> {len(day_trades)} trades")
+
+        # Periodic Telegram update every 5 minutes (real-world time)
+        now = datetime.datetime.now()
+        if (now - last_telegram_update).total_seconds() >= 5 * 60:
+            try:
+                _telegram_periodic_update()
+            except Exception as e:
+                print(f"  [TELEGRAM] Periodic update error: {e}")
+            last_telegram_update = now
+
     return all_trades
 
 
