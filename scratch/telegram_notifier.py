@@ -37,6 +37,19 @@ def get_run_start() -> str:
             pass
     return 'N/A'
 
+def get_run_range() -> tuple:
+    """Legge il range di date dal marker file."""
+    if MARKER_FILE.exists():
+        try:
+            data = json.loads(MARKER_FILE.read_text(encoding='utf-8'))
+            r = data.get('range', '')
+            if '→' in r:
+                parts = r.split('→')
+                return parts[0].strip(), parts[1].strip()
+        except:
+            pass
+    return None, None
+
 
 def set_run_start():
     """Scrive l'orario di avvio nel marker file (chiamare all'avvio del backtest)."""
@@ -118,7 +131,12 @@ def load_recent_trades(days: int = 3) -> list:
     except:
         pass
 
-    # Prendi solo gli ultimi N giorni distinti
+    # Filtra prima per range della run attuale se presente
+    start_date, end_date = get_run_range()
+    if start_date and end_date:
+        trades = [t for t in trades if start_date <= t.get('date', '') <= end_date]
+
+    # Prendi solo gli ultimi N giorni distinti tra quelli filtrati
     dates = sorted(set(t.get('date','') for t in trades if t.get('date')))
     cutoff = dates[-days] if len(dates) >= days else (dates[0] if dates else '')
     return [t for t in trades if t.get('date','') >= cutoff]

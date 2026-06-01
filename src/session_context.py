@@ -88,7 +88,7 @@ def update_day_type(ctx: SessionContext, bars: list) -> str:
         ctx.day_type_history = ctx.day_type_history[-MAX_HISTORY:]
     return new_type
 
-def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None) -> SessionContext:
+def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None, historical_days=None) -> SessionContext:
     ib_high, ib_low = compute_ib(bars)
     initial_day_type = classify_day_type(bars)
     ctx = SessionContext(
@@ -99,6 +99,7 @@ def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None) -> Se
         ib_complete=ib_high > 0,
         vp=vp,
         prev_day_vp=prev_day_vp,
+        historical_days=historical_days or [],
         day_type=initial_day_type,
         # initialize history list
         day_type_history=[initial_day_type],

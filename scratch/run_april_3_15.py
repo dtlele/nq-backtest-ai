@@ -18,15 +18,16 @@ marker = BASE_DIR / 'agent_memory' / 'run_start_marker.json'
 marker.parent.mkdir(parents=True, exist_ok=True)
 marker.write_text(json.dumps({
     'start_time': datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-    'range': '2025-04-03 → 2025-04-15'
+    'range': '2025-04-09 → 2025-04-30'
+
 }), encoding='utf-8')
-print(f"[START] Run avviata alle {datetime.now().strftime('%H:%M:%S')} — range: 3-15 Aprile 2025")
+print(f"[START] Run avviata alle {datetime.now().strftime('%H:%M:%S')} — range: 9-30 Aprile 2025")
 
 # ── 2. Lancia il backtest ────────────────────────────────────────────────
 print("[BACKTEST] Avvio backtest 3-15 Aprile 2025...")
 result = subprocess.run(
     [sys.executable, '-m', 'src.backtest_runner',
-     '--start_date', '20250403', '--end_date', '20250415'],
+     '--start_date', '20250409', '--end_date', '20250430'],
     cwd=str(BASE_DIR),
     capture_output=False
 )

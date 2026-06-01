@@ -71,6 +71,12 @@ class VolumeProfile:
     lvn_levels: list = field(default_factory=list)  # up to 5
 
 @dataclass
+class DailySummary:
+    vp: VolumeProfile
+    close_price: float
+    date: str
+
+@dataclass
 class SessionContext:
     date: str
     ib_high: float
@@ -78,7 +84,8 @@ class SessionContext:
     ib_range: float
     ib_complete: bool
     vp: Optional[VolumeProfile]
-    prev_day_vp: Optional[VolumeProfile] = None  # yesterday's session VP
+    prev_day_vp: Optional[VolumeProfile] = None  # yesterday's session VP (legacy, keep for backward compat)
+    historical_days: List[DailySummary] = field(default_factory=list) # [T-1, T-2, ...]
     day_type: str = 'unknown'  # 'trend_up'|'trend_down'|'balance'|'unknown'
     day_type_history: List[str] = field(default_factory=list)  # history of day_type over session
 

@@ -57,13 +57,23 @@ def get_fingerprint_stats(candidate) -> str:
     total_pnl = stats.get("total_pnl_usd", 0.0)
     avg_pnl = total_pnl / seen if seen > 0 else 0.0
     
+    gross_profit = stats.get("gross_profit", 0.0)
+    gross_loss = stats.get("gross_loss", 0.0)
+    win_count = stats.get("winning_trades", stats.get("wins", 0))
+    loss_count = stats.get("losing_trades", stats.get("losses", 0))
+    
+    pf = (gross_profit / gross_loss) if gross_loss > 0 else (99.9 if gross_profit > 0 else 0.0)
+    avg_win = (gross_profit / win_count) if win_count > 0 else 0.0
+    avg_loss = (gross_loss / loss_count) if loss_count > 0 else 0.0
+    
     alert = (
         f"\\n\\n> [!WARNING]\\n"
         f"> **STATISTICAL MEMORY ALERT**\\n"
         f"> You have evaluated this exact market context ({fp}) {seen} times before.\\n"
         f"> Historical Results: {wins} Wins, {losses} Losses (Win Rate: {wr:.1f}%).\\n"
-        f"> Total Net P&L: ${total_pnl:.2f} (Average P&L per trade: ${avg_pnl:.2f}).\\n"
-        f"> -> USE THIS QUANTITATIVE DATA to calibrate your confidence. A low Win Rate with a strongly positive Average P&L is still a valid setup. Focus on the Average P&L."
+        f"> Profit Factor: {pf:.2f} | Total Net PnL: {total_pnl:.2f} USD (Avg PnL: {avg_pnl:.2f} USD).\\n"
+        f"> Average Win: +{avg_win:.2f} USD | Average Loss: -{avg_loss:.2f} USD.\\n"
+        f"> -> USE THIS DATA to calibrate risk. A high Profit Factor means this setup generates outsized asymmetric returns."
     )
     return alert
 
@@ -84,17 +94,31 @@ def log_trade_for_quantitative_memory(closed_trade):
             "losses": 0,
             "win_rate": 0.0,
             "total_pnl_usd": 0.0,
-            "total_ticks": 0.0
+            "total_ticks": 0.0,
+            "gross_profit": 0.0,
+            "gross_loss": 0.0,
+            "winning_trades": 0,
+            "losing_trades": 0
         }
         
     stats = db[fp]
     stats["seen"] += 1
     
+    if "gross_profit" not in stats:
+        stats["gross_profit"] = 0.0
+        stats["gross_loss"] = 0.0
+        stats["winning_trades"] = stats["wins"]
+        stats["losing_trades"] = stats["losses"]
+
     if closed_trade.pnl_usd > 0:
         stats["wins"] += 1
+        stats["gross_profit"] += closed_trade.pnl_usd
+        stats["winning_trades"] += 1
     elif closed_trade.pnl_usd <= 0:
         # We count break-even as a loss for the strict win-rate
         stats["losses"] += 1
+        stats["gross_loss"] += abs(closed_trade.pnl_usd)
+        stats["losing_trades"] += 1
         
     stats["win_rate"] = (stats["wins"] / stats["seen"]) * 100
     stats["total_pnl_usd"] = stats.get("total_pnl_usd", 0.0) + closed_trade.pnl_usd

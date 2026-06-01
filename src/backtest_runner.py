@@ -18,6 +18,7 @@ from pathlib import Path
 from src.data_loader import load_day, list_data_files
 from src.bar_aggregator import aggregate_to_bars
 from src.volume_profile import compute_volume_profile
+from src import SessionContext
 from src.session_context import filter_ny_window, filter_overnight_window, build_session_context, update_day_type
 from src.candidate_detector import detect_candidates
 from src.agents.fabio_agent import analyze as fabio_analyze, light_analyze as fabio_light, manage_active_trade
@@ -74,8 +75,8 @@ def _should_prefilter(candidate: CandidateBar) -> Optional[str]:
 
     return None
 
-def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_only: bool = False, prev_day_vp=None) -> tuple:
-    """Run backtest for one day. Returns (list[ClosedTrade], today_vp)."""
+def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_vp=None, fabio_only: bool = False, historical_days: list = None) -> tuple:
+    """Run backtest for one day. Returns (list[ClosedTrade], today_vp, today_close)."""
     date_str = Path(csv_path).name.split('-')[2].split('.')[0]  # e.g. 20250430
     date_str = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
     
@@ -83,7 +84,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
     is_blackout, reason = news_manager.is_blackout_day(date_str)
     if is_blackout:
         print(f"  [SKIPPED] {date_str} is a Blackout Day due to: {reason}. No trading allowed.")
-        return [], prev_day_vp
+        return [], prev_day_vp, 0.0
 
     reset_session(date_str)
     trades_raw = load_day(csv_path)
@@ -98,14 +99,16 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
     # IB and Day Type use 1-min bars from NY window
     bars_1min_ny = filter_ny_window(bars_1min_all)
     if not bars_1min_ny:
-        return [], vp   # Return whatever VP was computed from overnight
+        return [], vp, 0.0   # Return whatever VP was computed from overnight
         
-    ctx = build_session_context(date_str, bars_1min_ny, vp, prev_day_vp=prev_day_vp)
+    ctx = build_session_context(date_str, bars_1min_ny, vp, prev_day_vp=prev_day_vp, historical_days=historical_days)
+    today_close = bars_1min_ny[-1].close
 
     # Candidate detection and agent reasoning use M5 bars
     bars_ny = filter_ny_window(aggregate_to_bars(trades_raw, freq='5min'))
     if not bars_ny:
-        return [], vp
+        return [], vp, today_close
+
     candidates = detect_candidates(bars_ny, ctx, bars_1min_ny=bars_1min_ny, bars_1min_overnight=bars_1min_overnight)
 
     # Inject M1 candidates for Imbalance Hunting
@@ -247,9 +250,14 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
                         open_t = None
                         trade_closed_early = True
                         break
-                    
-                    # The trade survived! Run Fabio APM on this M1 bar
-                    if m1_bar.timestamp > open_t.entry_bar.timestamp:
+                    # The trade survived! Run Fabio APM on this M1 bar, but only every 2 minutes or on big trades to save API credits
+                    should_run_apm = False
+                    if m1_bar.timestamp.minute % 2 == 0:
+                        should_run_apm = True
+                    elif getattr(m1_bar, 'big_trades', []):
+                        should_run_apm = True
+                        
+                    if m1_bar.timestamp > open_t.entry_bar.timestamp and should_run_apm:
                         print(f"  [MANAGEMENT] Active {open_t.direction.upper()} trade open at {m1_bar.timestamp.strftime('%H:%M UTC')}. Consulting Fabio APM...")
                         m1_context = get_m1_context(bars_1min_ny, m1_bar)
                         
@@ -997,13 +1005,28 @@ def run_backtest(data_dir: str, max_days: int = 0, dry_run: bool = False, quiet:
 
     all_trades = []
     prev_day_vp = None  # carry forward yesterday's VP
+    historical_days = [] # List[DailySummary] sliding window
+    
     for f in files:
         abs_p = str(Path(f).absolute())
         print(f"Processing ({abs_p})...")
-        day_trades, today_vp = run_day(f, dry_run=dry_run, quiet=quiet, prev_day_vp=prev_day_vp, fabio_only=fabio_only)
+        day_trades, today_vp, today_close = run_day(f, dry_run=dry_run, quiet=quiet, prev_day_vp=prev_day_vp, fabio_only=fabio_only, historical_days=historical_days)
         all_trades.extend(day_trades)
         if today_vp is not None:
             prev_day_vp = today_vp
+            from src import DailySummary
+            
+            # Extract date from filename for the DailySummary
+            date_str = "unknown"
+            match = re.search(r'(\d{8})', Path(f).name)
+            if match:
+                date_str = match.group(1)
+                
+            summary = DailySummary(vp=today_vp, close_price=today_close, date=date_str)
+            historical_days.insert(0, summary) # T-1 at index 0, T-2 at index 1
+            if len(historical_days) > 2:
+                historical_days = historical_days[:2] # Keep only last 2 days
+                
         print(f"  -> {len(day_trades)} trades")
 
     return all_trades

@@ -138,6 +138,25 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
             f"\n\nPrevious day VP: POC={pvp.poc:.2f} VAH={pvp.va_high:.2f} "
             f"VAL={pvp.va_low:.2f} HVN={pvp.hvn_levels} LVN={pvp.lvn_levels}"
         )
+        
+    # Multi-Day Structural Context
+    if len(ctx.historical_days) >= 2:
+        t1 = ctx.historical_days[0]
+        t2 = ctx.historical_days[1]
+        
+        question += "\n\n## MULTI-DAY STRUCTURAL CONTEXT\n"
+        question += f"T-2 (Day Before Yesterday): POC={t2.vp.poc:.2f}, Close={t2.close_price:.2f}\n"
+        question += f"T-1 (Yesterday): POC={t1.vp.poc:.2f}, Close={t1.close_price:.2f}\n"
+        question += f"T-0 (Today Live): POC={ctx.vp.poc:.2f} (developing)\n"
+        
+        if t1.vp.poc < t2.vp.poc and t1.close_price < t2.vp.poc:
+            status = "[STRONG DOWNTREND MULTI-DAY] T-1 printed a lower POC and closed below T-2 POC. Sellers have Value Acceptance. Favour SHORT setups."
+        elif t1.vp.poc > t2.vp.poc and t1.close_price > t2.vp.poc:
+            status = "[STRONG UPTREND MULTI-DAY] T-1 printed a higher POC and closed above T-2 POC. Buyers have Value Acceptance. Favour LONG setups."
+        else:
+            status = "[MIXED / BALANCE MULTI-DAY] T-1 did not structurally break T-2 (e.g., lower POC but closed higher, or inside day). Market is in equilibrium or squeezing."
+            
+        question += f"Structural Status: {status}\n"
     
     if m1_sequence:
         # Calculate institutional stats for the M1 window

@@ -1,42 +1,30 @@
-"""
-Ispeziona la struttura reale del reasoning_log e identifica
-i candidati dove il prezzo stava chiaramente muovendo in imbalance
-ma Fabio ha dato conf bassa o dir=none.
-"""
 import json
-from pathlib import Path
-from collections import Counter
+from datetime import datetime, timezone
+import pytz
 
-REASONING_LOG = Path("agent_memory/reasoning_log.jsonl")
+TRADES_LOG = r"c:\Users\Mauro\Documents\nq-backtest\agent_memory\trades_log.jsonl"
+ET = pytz.timezone("America/New_York")
 
-entries = []
-with open(REASONING_LOG, encoding='utf-8') as f:
-    for line in f:
+# Prima: mostra struttura dei record per capire i campi disponibili
+print("=== STRUTTURA DEL LOG ===")
+with open(TRADES_LOG, "r", encoding="utf-8-sig") as f:
+    for i, line in enumerate(f):
         line = line.strip()
         if not line:
             continue
         try:
-            entries.append(json.loads(line))
-        except:
-            pass
-
-# Mostra i campi disponibili del primo entry
-print("=== CAMPI DISPONIBILI NEL REASONING LOG ===")
-if entries:
-    print(json.dumps(list(entries[0].keys()), indent=2))
-    print()
-
-# Conta le decisioni
-decisions = Counter(e.get('decision') for e in entries)
-print(f"=== DISTRIBUZIONE DECISIONI (ultimi {len(entries)} entries) ===")
-for k, v in decisions.most_common():
-    print(f"  {k}: {v}")
-
-print()
-
-# Mostra ultimi 5 NO_TRADE per capire i campi fabio
-no_trades = [e for e in entries if e.get('decision') == 'NO_TRADE']
-print(f"=== ULTIMI 5 NO_TRADE (su {len(no_trades)} totali) ===")
-for e in no_trades[-5:]:
-    print(json.dumps(e, indent=2, default=str))
-    print("---")
+            sample = json.loads(line)
+            print(f"Keys: {list(sample.keys())}")
+            # Mostra tutte le date presenti
+            for k in ["entry_time", "bar_time_utc", "timestamp", "date", "time"]:
+                if k in sample:
+                    print(f"  {k}: {sample[k]}")
+            print(f"  decision: {sample.get('decision','N/A')}")
+            print(f"  outcome: {sample.get('outcome','N/A')}")
+            print(f"  pnl: {sample.get('pnl', sample.get('profit_loss','N/A'))}")
+            print()
+            if i >= 4:
+                break
+        except Exception as e:
+            print(f"  Errore parsing riga {i}: {e}")
+            continue
