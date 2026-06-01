@@ -58,3 +58,21 @@ def compute_volume_profile(bars: list):
 
     return VolumeProfile(poc=poc, va_high=va_high, va_low=va_low,
                          hvn_levels=hvn, lvn_levels=lvn)
+
+def compute_vwap(bars: list) -> float:
+    """Compute the Volume Weighted Average Price (VWAP) for a list of bars."""
+    if not bars:
+        return 0.0
+    
+    cum_pv = 0.0
+    cum_vol = 0.0
+    
+    for bar in bars:
+        hlc3 = (bar.high + bar.low + bar.close) / 3.0
+        cum_pv += hlc3 * bar.volume
+        cum_vol += bar.volume
+        
+    if cum_vol == 0:
+        return bars[-1].close
+        
+    return cum_pv / cum_vol

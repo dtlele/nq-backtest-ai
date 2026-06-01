@@ -38,6 +38,19 @@ def _get_vp_levels(ctx: SessionContext) -> list:
             
     return levels
 
+import numpy as np
+
+def _check_nav_alert(volumes: list) -> bool:
+    if len(volumes) < 6:
+        return False
+    # Use all volumes except the very last one for baseline to avoid the spike skewing the baseline
+    baseline = volumes[:-1]
+    mean_vol = np.mean(baseline)
+    std_vol = np.std(baseline)
+    if std_vol == 0:
+        return False
+    return volumes[-1] > (mean_vol + 2.33 * std_vol)
+
 def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None, bars_1min_overnight: list = None) -> list:
     """
     Identifies institutional triggers based on volume and technical levels.
@@ -60,6 +73,8 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
             from src.volume_profile import compute_volume_profile
             sub_1min = [b for b in bars_1min_ny if b.timestamp <= bar.timestamp]
             if sub_1min:
+                from src.volume_profile import compute_vwap
+                current_vwap = compute_vwap(sub_1min)
                 dynamic_vp = ctx.vp # fallback
                 try:
                     # Calculate progressive volume profile merging overnight and progressive intraday bars
@@ -77,6 +92,10 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
             is_outside_ib = (price > active_ctx.ib_high or price < active_ctx.ib_low)
             
         m_state = "imbalance" if is_outside_ib else "balance"
+        
+        # Calculate NAV Alert for M5
+        session_vols = [b.volume for b in bars[:i+1]]
+        is_nav_alert = _check_nav_alert(session_vols)
 
         is_reversal = False
         is_momentum = False
@@ -209,6 +228,8 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
             market_state=m_state,
             poc_migration=poc_mig,
             auction_type=auc_type,
+            vwap=current_vwap if 'current_vwap' in locals() else 0.0,
+            nav_alert=is_nav_alert,
         ))
         
     return candidates
@@ -221,6 +242,15 @@ def detect_m1_candidates(m1_bar: Bar, m5_recent: list, ctx: SessionContext, m1_h
     
     is_imbalance = False
     price = m1_bar.close
+    
+    # Calculate VWAP
+    from src.volume_profile import compute_vwap
+    all_m1_so_far = (m1_history or []) + [m1_bar]
+    current_vwap = compute_vwap(all_m1_so_far)
+    
+    # Calculate NAV Alert for M1
+    session_vols = [b.volume for b in all_m1_so_far]
+    is_nav_alert = _check_nav_alert(session_vols)
     
     # 1. Outside IB (if complete)
     if ctx.ib_complete:
@@ -286,6 +316,8 @@ def detect_m1_candidates(m1_bar: Bar, m5_recent: list, ctx: SessionContext, m1_h
         market_state="imbalance",
         poc_migration=poc_mig,
         auction_type="initiative",
+        vwap=current_vwap,
+        nav_alert=is_nav_alert,
     ))
     
     return candidates

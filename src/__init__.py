@@ -107,6 +107,8 @@ class CandidateBar:
     poc_migration: str = 'flat'    # 'up'|'down'|'flat'
     auction_type: str = 'responsive' # 'responsive'|'initiative'
     upcoming_news: str = "No high-impact news in the vicinity."
+    vwap: float = 0.0          # Current Intraday VWAP at this bar
+    nav_alert: bool = False    # True if Volume > Mean + 2.33*StdDev
 
 @dataclass
 class FabioSignal:

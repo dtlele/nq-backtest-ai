@@ -803,7 +803,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         except Exception as e:
             print(f"  [TELEGRAM] Day summary failed: {e}")
 
-    return closed_trades, vp
+    return closed_trades, vp, today_close
 
 
 def _telegram_periodic_update() -> None:
@@ -936,7 +936,7 @@ def _telegram_day_summary(date_str: str, trades: list) -> None:
         analysis = f"(Analisi non disponibile: {e})"
 
     message = (
-        f"<b>NQ Backtest Fabio - {date_str}</b>\n"
+        f"<b>NQ Backtest (VWAP/NAV) - {date_str}</b>\n"
         f"<i>Aggiornamento ore {now}</i>\n"
         f"<pre>{analysis}</pre>"
     )

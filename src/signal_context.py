@@ -139,6 +139,23 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
             f"VAL={pvp.va_low:.2f} HVN={pvp.hvn_levels} LVN={pvp.lvn_levels}"
         )
         
+    # Inject VWAP Intraday Status
+    if getattr(candidate, 'vwap', 0.0) > 0:
+        question += f"\n\n## INTRADAY VWAP STATUS\n"
+        if price > candidate.vwap:
+            question += f"Price is ABOVE the RTH VWAP ({candidate.vwap:.2f}). According to Zarattini & Aziz (2023), buying pressure persists. FAVOUR LONG SETUPS.\n"
+        else:
+            question += f"Price is BELOW the RTH VWAP ({candidate.vwap:.2f}). According to Zarattini & Aziz (2023), selling pressure persists. FAVOUR SHORT SETUPS.\n"
+            
+    # Inject Midday Penalty (12:00 - 14:30 ET)
+    if 12 <= t_et.hour < 14 or (t_et.hour == 14 and t_et.minute < 30):
+        question += f"\n\n🚨 [WARNING - MIDDAY KILL-ZONE] The time is {t_et.strftime('%H:%M')} ET (Lunch Session). Volume and trend continuation are statistically terrible here. REJECT TRADES unless there is an extreme institutional anomaly (NAV spike).\n"
+        
+    # Inject Normalized Abnormal Volume (NAV)
+    if getattr(candidate, 'nav_alert', False):
+        question += f"\n\n🚨🚨 [ABNORMAL VOLUME SPIKE DETECTED] 🚨🚨\n"
+        question += "Current volume is > 2.33 Standard Deviations above the session's moving average! According to Bajo (2010), this signals undisclosed institutional information. Expect STRONG PRICE CONTINUATION in the direction of the spike.\n"
+        
     # Multi-Day Structural Context
     if len(ctx.historical_days) >= 2:
         t1 = ctx.historical_days[0]
