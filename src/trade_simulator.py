@@ -70,6 +70,7 @@ def _close(trade: OpenTrade, exit_price: float,
         final_confidence = trade.consensus.final_confidence,
         r_ratio          = trade.consensus.r_ratio,
         contracts        = trade.contracts, # Log contracts used
+        context_fingerprint = getattr(trade.consensus, 'context_fingerprint', '')
     )
 
 def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False) -> 'ClosedTrade | None':

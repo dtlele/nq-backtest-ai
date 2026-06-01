@@ -109,6 +109,7 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
     else:
         tpl = templates['fabio_nlm_question_template']
     question = tpl.format(
+        date            = bar.timestamp.strftime('%Y-%m-%d'),
         bar_time_et     = t_et.strftime('%H:%M'),
         close           = bar.close,
         ib_high         = ctx.ib_high,
@@ -163,6 +164,13 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
         
     # Inject Human Feedback (all setups, since Fabio determines the setup)
     from src.memory.feedback_injector import get_relevant_feedback
+    from src.memory.quantitative_memory import build_fingerprint, get_fingerprint_stats
+    
+    candidate.context_fingerprint = build_fingerprint(candidate)
+    stats_alert = get_fingerprint_stats(candidate)
+    if stats_alert:
+        question += stats_alert
+        
     feedback = get_relevant_feedback(None)
     if feedback:
         question += feedback
@@ -186,6 +194,7 @@ def build_andrea_question(candidate: CandidateBar,
         tpl = templates['andrea_nlm_question_template']
         
     question = tpl.format(
+        date            = bar.timestamp.strftime('%Y-%m-%d'),
         bar_time_et     = t_et.strftime('%H:%M'),
         close           = bar.close,
         open            = bar.open,
@@ -222,6 +231,13 @@ def build_andrea_question(candidate: CandidateBar,
         
     # Inject Human Feedback specific to Fabio's setup choice
     from src.memory.feedback_injector import get_relevant_feedback
+    from src.memory.quantitative_memory import build_fingerprint, get_fingerprint_stats
+    
+    candidate.context_fingerprint = build_fingerprint(candidate)
+    stats_alert = get_fingerprint_stats(candidate)
+    if stats_alert:
+        question += stats_alert
+        
     feedback = get_relevant_feedback(fabio_signal.setup_type)
     if feedback:
         question += feedback

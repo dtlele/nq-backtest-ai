@@ -30,7 +30,7 @@ BIG_TRADE_LOOKBACK_BARS = 3        # 3 M5 bars = 15 min lookback for wall cluste
 RECENT_BARS_CONTEXT     = 6        # M5 bars of context sent to agents (30 min)
 
 # ── Agent thresholds ──────────────────────────────────────────────────────────
-FABIO_MIN_CONFIDENCE       = 78
+FABIO_MIN_CONFIDENCE       = 75
 ANDREA_VETO_THRESHOLD      = 40
 LIGHT_CONFIDENCE_THRESHOLD = 50   # two-pass: skip full analysis if light pass below this
 
@@ -135,6 +135,7 @@ class ConsensusSignal:
     decision: str              # 'trade'|'no_trade'
     no_trade_reason: str       # '' if decision=='trade'
     news_flag: str = "none"    # NEW: Flag to track if trade was taken near a news event
+    context_fingerprint: str = "" # To tie the trade to the statistical memory
 
 @dataclass
 class OpenTrade:
@@ -178,3 +179,4 @@ class ClosedTrade:
     r_ratio: float
     contracts: int = 1         # NEW: Contracts used for this trade
     news_flag: str = "none"
+    context_fingerprint: str = ""

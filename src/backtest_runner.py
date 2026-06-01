@@ -147,6 +147,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
     
     def handle_close(result, session_buffer, daily_stops_count):
         closed_trades.append(result)
+        from src.memory.quantitative_memory import log_trade_for_quantitative_memory
+        log_trade_for_quantitative_memory(result)
         update_pattern_memory(result)
         state = load_session()
         state['equity'] += result.pnl_usd
@@ -613,8 +615,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
                     self.andrea = _SimpleSubObj()
                     self.andrea.structural_stop = None
                     self.andrea.reasoning = 'fabio_only_skip_andrea'
-                    # final confidence placeholder
                     self.final_confidence = getattr(fabio_signal, 'confidence', None)
+                    self.context_fingerprint = getattr(candidate, 'context_fingerprint', '')
                 
             consensus = _SimpleConsensus()
         else:
@@ -624,6 +626,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
             
             # Build consensus object
             consensus = build_consensus(fabio_signal, andrea_signal)
+            consensus.context_fingerprint = getattr(candidate, 'context_fingerprint', '')
 
 
         if consensus.decision != 'trade':

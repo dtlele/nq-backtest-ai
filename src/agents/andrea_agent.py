@@ -37,6 +37,7 @@ CONFIRMATION RULES:
 3. WIDE STRUCTURAL STOPS: Do NOT aggressively tighten Fabio's stop based on 1-minute micro-swings. Respect Fabio's wider structural stop to avoid being stopped out by normal liquidity sweeps (stop runs). Propose a 'Structural SL' ONLY if Fabio's stop is dangerously tight.
 4. TOXIC FLOW: If M1 volume is < 300 contracts, VETO the trade as 'Thin Liquidity/Toxic Flow'.
 5. IMBALANCE_HUNTING OVERRIDE: If Fabio's setup is 'imbalance_hunting', the market is in a massive momentum trend outside the Initial Balance. In this state, DO NOT veto a trade just because the M1 body did not close perfectly outside. If the delta confirms the breakout direction and momentum is strong, APPROVE the trade. Momentum takes precedence over perfect structure.
+6. DYNAMIC LIQUIDITY CONTEXT: The institutional footprint required depends on the month/date, but remember that market conditions can shift rapidly even within the same month. Historical benchmarks (e.g., 200+ contracts in November, 30-100 in April) are strictly reference values, not hard rules. Evaluate the relative volume and the structural context very carefully rather than relying on static thresholds.
 
 Respond ONLY with valid JSON:
 {
@@ -54,14 +55,6 @@ def confirm(candidate: CandidateBar, fabio_signal: FabioSignal, m1_bars: list[Ba
     question = build_andrea_question(candidate, fabio_signal, m1_bars=m1_bars)
 
     # ── PRE-CHECK DETERMINISTICI (basati su 549 trade storici) ──────────────
-    # Check 1: Nessun Big Trade istituzionale → veto immediato
-    if candidate.wall_max_size < 200:
-        return AndreaSignal(
-            confirmation=False, confidence=25,
-            setup_type='none',
-            reasoning=f'VETO: No institutional footprint (wall_max_size={candidate.wall_max_size} < 200 contracts). Statistically 18% WR.',
-            nlm_answer='Deterministic veto',
-        )
 
     # Check 2: Kill zone 10:15–10:30 ET (18% WR su 51 trade storici)
     _is_kill_zone = False
