@@ -28,7 +28,7 @@ def test_detects_candidate_at_lvn():
 
 def test_no_candidate_before_fabio_active():
     ctx = _ctx()
-    bars = [_bar_et(9, 34, 20000.0, vol=4000, big_size=45)]
+    bars = [_bar_et(9, 30, 20000.0, vol=4000, big_size=45)]
     assert detect_candidates(bars, ctx) == []
 
 def test_no_candidate_low_volume():
@@ -42,6 +42,6 @@ def test_no_candidate_no_big_trade():
     assert detect_candidates(bars, ctx) == []
 
 def test_no_candidate_far_from_levels():
-    ctx = _ctx(poc=20000.0)
+    ctx = _ctx(poc=20000.0, ib_high=20500.0, ib_low=19500.0)
     bars = [_bar_et(9, 41, 20200.0, vol=4000, big_size=45)]
     assert detect_candidates(bars, ctx) == []

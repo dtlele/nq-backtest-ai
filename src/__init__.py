@@ -19,7 +19,8 @@ NY_WINDOW_END_H         = 12
 NY_WINDOW_END_M         = 30
 FABIO_ACTIVE_H          = 9
 FABIO_ACTIVE_M          = 35
-IB_DURATION_MIN         = 30       # Fabio's IVB = first 30 min (per recent videos)
+IB_DURATION_MIN         = 60       # Fabio's/Yush's Initial Balance = first 60 min (RTH)
+
 
 # ── Candidate detection ───────────────────────────────────────────────────────
 MIN_VOLUME_PER_BAR      = 3000     # Momentum Floor for NQ Full
@@ -30,9 +31,9 @@ BIG_TRADE_LOOKBACK_BARS = 3        # 3 M5 bars = 15 min lookback for wall cluste
 RECENT_BARS_CONTEXT     = 6        # M5 bars of context sent to agents (30 min)
 
 # ── Agent thresholds ──────────────────────────────────────────────────────────
-FABIO_MIN_CONFIDENCE       = 75
+FABIO_MIN_CONFIDENCE       = 80
 ANDREA_VETO_THRESHOLD      = 40
-LIGHT_CONFIDENCE_THRESHOLD = 50   # two-pass: skip full analysis if light pass below this
+LIGHT_CONFIDENCE_THRESHOLD = 0    # disabled: always run full analysis for every candidate bar
 
 # ── NotebookLM IDs ────────────────────────────────────────────────────────────
 FABIO_NOTEBOOK_ID       = "4c868e52"
@@ -75,6 +76,8 @@ class DailySummary:
     vp: VolumeProfile
     close_price: float
     date: str
+    telegram_analysis: str = ""
+    market_narrative: str = ""
 
 @dataclass
 class SessionContext:
@@ -88,6 +91,7 @@ class SessionContext:
     historical_days: List[DailySummary] = field(default_factory=list) # [T-1, T-2, ...]
     day_type: str = 'unknown'  # 'trend_up'|'trend_down'|'balance'|'unknown'
     day_type_history: List[str] = field(default_factory=list)  # history of day_type over session
+    session_memory: List[dict] = field(default_factory=list)  # chronological timeline of key session events (list of {'timestamp': datetime, 'text': str})
 
 @dataclass
 class CandidateBar:
@@ -108,7 +112,16 @@ class CandidateBar:
     auction_type: str = 'responsive' # 'responsive'|'initiative'
     upcoming_news: str = "No high-impact news in the vicinity."
     vwap: float = 0.0          # Current Intraday VWAP at this bar
+    vwap_std_dev: float = 0.0  # VWAP Standard Deviation
     nav_alert: bool = False    # True if Volume > Mean + 2.33*StdDev
+    active_stop_hunt: bool = False
+    stop_hunt_direction: str = ""
+    delta_divergence: bool = False
+    effort_no_result: bool = False
+    top_wick_ratio: float = 0.0
+    bottom_wick_ratio: float = 0.0
+    close_percentile: float = 0.5
+
 
 @dataclass
 class FabioSignal:
@@ -154,8 +167,11 @@ class OpenTrade:
     target: float
     entry_bar: Bar
     consensus: ConsensusSignal
-    contracts: int = 1         # NEW: Dynamic position size
+    contracts: float = 1.0         # NEW: Dynamic position size
     news_flag: str = "none"
+    partial_taken: bool = False
+    entry_time: Optional[datetime] = None
+    last_eval_time: Optional[datetime] = None
 
 @dataclass
 class PendingTrade:
@@ -186,6 +202,6 @@ class ClosedTrade:
     setup_type: str
     final_confidence: int
     r_ratio: float
-    contracts: int = 1         # NEW: Contracts used for this trade
+    contracts: float = 1.0         # NEW: Contracts used for this trade
     news_flag: str = "none"
     context_fingerprint: str = ""

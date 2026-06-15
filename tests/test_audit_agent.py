@@ -47,7 +47,7 @@ def test_audit_session_updates_rules(mock_llm_ask, clean_rules_file, tmp_path):
                 "rule_id": "AMT_001",
                 "topic": "Trend",
                 "description": "Never short trend up days.",
-                "action": "skip"
+                "action": "skip_trade"
             }
         ],
         "session_learnings": ["Avoided bad short."]

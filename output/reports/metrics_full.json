@@ -1,16 +1,16 @@
 {
-  "total_trades": 12,
+  "total_trades": 4,
   "wins": 4,
-  "losses": 8,
-  "win_rate": 0.3333333333333333,
-  "profit_factor": 3.27,
-  "total_pnl_usd": 5868.9,
-  "avg_pnl_usd": 489.08,
-  "avg_r": 0.87,
+  "losses": 0,
+  "win_rate": 1.0,
+  "profit_factor": 0.0,
+  "total_pnl_usd": 156.34,
+  "avg_pnl_usd": 39.09,
+  "avg_r": 1.5,
   "by_setup": {
-    "imbalance_hunting": {
-      "count": 12,
-      "pnl_usd": 5868.9000000000015,
+    "ivb_model_1_continuation": {
+      "count": 4,
+      "pnl_usd": 156.34225,
       "wins": 4
     }
   }

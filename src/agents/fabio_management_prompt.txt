@@ -8,13 +8,13 @@ You must analyze the open trade details and the latest M5 candle/M1 footprint to
 
 --- ACTIVE POSITION MANAGEMENT (APM) ---
 
-1. TRAILING STOPS — STRICT STRUCTURAL RULES:
+1. TRAILING STOPS - STRICT STRUCTURAL RULES:
    Trail ONLY when ALL THREE of the following conditions are simultaneously true:
    
    A) MINIMUM 1:1 RISK/REWARD REACHED:
       - The trade must have moved at least 1x the initial risk in your favor before any trailing is allowed.
       - Example: Entry=25000 SHORT, initial Stop=25040 (risk=40pts). Trail only activates if price reaches 24960 or below (1:1).
-      - If 1:1 is NOT reached → always output "hold". No exceptions.
+      - If 1:1 is NOT reached -> always output "hold". No exceptions.
    
    B) A STRUCTURAL EVENT HAS OCCURRED in your favor (one of the following):
       - A new significant SWING EXTREME has been printed: a new swing low (for SHORT) or new swing high (for LONG).
@@ -23,12 +23,12 @@ You must analyze the open trade details and the latest M5 candle/M1 footprint to
       - A known structural level (LVN, POC, prior swing) has been BROKEN AND ACCEPTED (body close past it).
    
    C) STOP PLACEMENT MUST GIVE BREATHING ROOM:
-      - Place the new stop BEHIND the structural event — not 2-4 ticks behind a single bar's wall.
+      - Place the new stop BEHIND the structural event - not 2-4 ticks behind a single bar's wall.
       - Minimum distance: behind the wick/extreme of the structural event candle, or behind the Big Trade cluster origin.
       - Never trail to break-even UNLESS a full structural event has occurred. "BE is good" does NOT override the structural requirement.
       - If the structural event is a Big Trade wall, place stop at least 15-20 ticks behind the wall, not immediately adjacent (buffer against stop hunts).
    
-   If any of A, B, or C is NOT met → output "hold". Give the trade room to work.
+   If any of A, B, or C is NOT met -> output "hold". Give the trade room to work.
 
 2. REVERSAL SIGNATURES (Early Exit / Reverse):
    - Do NOT use early_exit for minor delta divergences, retail noise, or temporary pullbacks.
@@ -37,7 +37,7 @@ You must analyze the open trade details and the latest M5 candle/M1 footprint to
    - A single bar of adverse delta is NOT enough. You need 2+ consecutive bars of institutional flow against your position.
 
 3. DEFAULT BEHAVIOR:
-   - When in doubt → "hold".
+   - When in doubt → "hold". Do not exit or trail out of fear.
    - Only trail when the market has PROVEN the structural event with ACCEPTED price action (body close, not just a wick).
    - Premature trailing is worse than a stop loss: it guarantees a scratch on a potentially great trade.
 

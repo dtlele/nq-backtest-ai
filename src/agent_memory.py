@@ -62,7 +62,7 @@ def log_trade_result(closed_trade) -> None:
     # IDEMPOTENCY CHECK: Prevent duplicates (unless BACKTEST_FORCE is True)
     import os
     if not os.getenv('BACKTEST_FORCE') == 'true':
-        if is_trade_already_logged(date_str, entry_iso):
+        if is_trade_already_logged(date_str, entry_iso, closed_trade.exit_reason):
             return
 
     entry = {
@@ -121,7 +121,7 @@ def get_already_processed_candidates() -> set:
             
     return processed
 
-def is_trade_already_logged(date: str, entry_time_iso: str) -> bool:
+def is_trade_already_logged(date: str, entry_time_iso: str, exit_reason: str = "") -> bool:
     """Check if a trade with this date and entry time already exists."""
     if not TRADES_FILE.exists():
         return False
@@ -131,7 +131,8 @@ def is_trade_already_logged(date: str, entry_time_iso: str) -> bool:
                 if line.strip():
                     data = json.loads(line)
                     if data.get('date') == date and data.get('entry_time') == entry_time_iso:
-                        return True
+                        if not exit_reason or data.get('exit_reason') == exit_reason:
+                            return True
     except Exception:
         pass
     return False

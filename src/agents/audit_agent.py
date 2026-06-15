@@ -140,7 +140,18 @@ Respond with JSON only."""
     try:
         updated_data = json.loads(raw_response)
         if "dynamic_rules" in updated_data:
-            valid_rules = [r for r in updated_data["dynamic_rules"] if validate_dynamic_rule(r)]
+            existing_rules_map = {r['rule_id']: r for r in existing_rules.get("dynamic_rules", [])}
+            valid_rules = []
+            for r in updated_data["dynamic_rules"]:
+                if validate_dynamic_rule(r):
+                    rule_id = r.get('rule_id')
+                    if rule_id in existing_rules_map:
+                        old_rule = existing_rules_map[rule_id]
+                        if 'step' in old_rule and 'step' not in r:
+                            r['step'] = old_rule['step']
+                        if 'applies_to' in old_rule and 'applies_to' not in r:
+                            r['applies_to'] = old_rule['applies_to']
+                    valid_rules.append(r)
             updated_data["dynamic_rules"] = valid_rules
             save_dynamic_rules(updated_data)
             print(f"  [AUDIT] Success! Dynamic Rules updated. Total rules: {len(updated_data['dynamic_rules'])}")

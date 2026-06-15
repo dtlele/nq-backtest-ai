@@ -3,7 +3,8 @@
 ## Dashboard (live now)
 
 ```
-python dashboard.py   ->   http://localhost:8050
+cd dashboard
+npm run dev           ->   http://localhost:5173
 ```
 
 ### Cosa mostra
@@ -97,9 +98,10 @@ Possiamo migliorarlo con:
 - ATR del giorno precedente come normalizzatore
 - Classificazione basata sul VP migration (POC migration < 4 ticks = balance)
 
-### 5. Exit logic avanzata
+### 5. Exit logic avanzata e Moduli di Re-Entry
 Attualmente il TradeSimulator usa solo stop/target fissi.
 Possiamo aggiungere:
+- **Stop-Hunt Re-entry System**: Quando si prende uno stop, il sistema monitora i successivi 1-3 minuti per individuare una "caccia alla liquidità" (liquidity sweep). Se si verifica una rapida inversione con ordini intrappolati (trapped) e nuovi Big Trades, si rientra immediatamente in direzione del trend.
 - Trailing stop basato su VP levels (aggiorna target quando HVN viene raggiunto)
 - Time stop (chiudi dopo N barre se non si muove)
 - Partial exits (50% a target1, 50% a target2)
@@ -152,7 +154,7 @@ il sistema di hooks, instradando i task agli agenti giusti.
 | `src/consensus.py` | Fusione segnali Fabio+Andrea |
 | `src/trade_simulator.py` | Apre/chiude trade, calcola PnL |
 | `src/agent_memory.py` | Log JSON strutturato per candidati e trade |
-| `dashboard.py` | Dashboard Dash + Plotly |
+| `dashboard` | Dashboard React + Vite (localhost:5173) |
 | `agent_memory/reasoning_log.jsonl` | Log candidati (1 riga = 1 candidato) |
 | `agent_memory/trades_log.jsonl` | Log trade chiusi con PnL |
 | `output/week_log.txt` | Log testuale dell'ultima run |
@@ -168,7 +170,8 @@ python -m notebooklm login
 # 2. Backtest full (tutti i giorni disponibili)
 python run_backtest.py --days 0 > output/full_run.txt 2>&1
 
-# 3. Apri il dashboard
-python dashboard.py
-# -> http://localhost:8050
+# 3. Apri il dashboard React
+cd dashboard
+npm run dev
+# -> http://localhost:5173
 ```

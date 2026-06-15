@@ -74,7 +74,7 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
             sub_1min = [b for b in bars_1min_ny if b.timestamp <= bar.timestamp]
             if sub_1min:
                 from src.volume_profile import compute_vwap
-                current_vwap = compute_vwap(sub_1min)
+                current_vwap, current_vwap_std = compute_vwap(sub_1min)
                 dynamic_vp = ctx.vp # fallback
                 try:
                     # Calculate progressive volume profile merging overnight and progressive intraday bars
@@ -212,6 +212,35 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
                 auc_type = "initiative"
 
         recent = bars[max(0, i - RECENT_BARS_CONTEXT + 1): i + 1]
+        
+        # Calculate new masterclass metrics
+        prev_bar = bars[i-1] if i > 0 else None
+        is_delta_div = False
+        if prev_bar:
+            is_delta_div = (bar.close > prev_bar.close and bar.delta < 0) or (bar.close < prev_bar.close and bar.delta > 0)
+            
+        is_effort_no_result = False
+        session_ranges = [b.high - b.low for b in bars[:i+1]]
+        if len(session_vols) >= 3:
+            avg_vol = np.mean(session_vols[:-1])
+            avg_rng = np.mean(session_ranges[:-1])
+            bar_rng = bar.high - bar.low
+            if avg_vol > 0 and avg_rng > 0:
+                if bar.volume > avg_vol * 1.3 and bar_rng < avg_rng * 0.7:
+                    is_effort_no_result = True
+                    
+        bar_rng = bar.high - bar.low
+        if bar_rng > 0:
+            t_wick = bar.high - max(bar.open, bar.close)
+            b_wick = min(bar.open, bar.close) - bar.low
+            t_ratio = t_wick / bar_rng
+            b_ratio = b_wick / bar_rng
+            c_percentile = (bar.close - bar.low) / bar_rng
+        else:
+            t_ratio = 0.0
+            b_ratio = 0.0
+            c_percentile = 0.5
+
         candidates.append(CandidateBar(
             bar=bar,
             session_ctx=active_ctx,
@@ -229,29 +258,117 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
             poc_migration=poc_mig,
             auction_type=auc_type,
             vwap=current_vwap if 'current_vwap' in locals() else 0.0,
+            vwap_std_dev=current_vwap_std if 'current_vwap_std' in locals() else 0.0,
             nav_alert=is_nav_alert,
+            delta_divergence=is_delta_div,
+            effort_no_result=is_effort_no_result,
+            top_wick_ratio=t_ratio,
+            bottom_wick_ratio=b_ratio,
+            close_percentile=c_percentile,
         ))
         
     return candidates
 
-def detect_m1_candidates(m1_bar: Bar, m5_recent: list, ctx: SessionContext, m1_history: list = None) -> list:
+def generate_m1_candidate(m1_bar: Bar, m5_recent: list, ctx: SessionContext, m1_history: list = None) -> CandidateBar:
+    """
+    Generates a CandidateBar for EVERY single M1 bar. No mechanical filtering (Zero-Waste logic).
+    The LLM will decide if the bar contains a valid setup based on the footprint.
+    """
+    from src.volume_profile import compute_vwap
+    all_m1_so_far = (m1_history or []) + [m1_bar]
+    current_vwap, current_vwap_std = compute_vwap(all_m1_so_far)
+    
+    session_vols = [b.volume for b in all_m1_so_far]
+    is_nav_alert = _check_nav_alert(session_vols)
+    
+    # Find the wall by looking back up to 3 M1 bars
+    recent_m1 = all_m1_so_far[-3:]
+    all_big = [t for b in recent_m1 for t in b.big_trades]
+    if all_big:
+        wall_max_trade = max(all_big, key=lambda t: t.size)
+        wall_level = wall_max_trade.price
+        buy_big = sum(t.size for t in all_big if t.side == 'A')
+        sell_big = sum(t.size for t in all_big if t.side == 'B')
+        wall_side = 'ask' if buy_big >= sell_big else 'bid'
+    else:
+        wall_level = m1_bar.close
+        wall_side = 'none'
+        wall_max_trade = Trade(ts_event=m1_bar.timestamp, side='A', price=m1_bar.close, size=0)
+        
+    poc_mig = "flat"
+    if ctx.vp and ctx.prev_day_vp:
+        if ctx.vp.poc > ctx.prev_day_vp.poc + 4 * NQ_TICK_SIZE:
+            poc_mig = "up"
+        elif ctx.vp.poc < ctx.prev_day_vp.poc - 4 * NQ_TICK_SIZE:
+            poc_mig = "down"
+            
+    is_imbalance = False
+    price = m1_bar.close
+    if ctx.ib_complete and (price > ctx.ib_high or price < ctx.ib_low):
+        is_imbalance = True
+        
+    # Calculate new masterclass metrics for M1 candidate
+    prev_bar = m1_history[-1] if (m1_history and len(m1_history) > 0) else None
+    is_delta_div = False
+    if prev_bar:
+        is_delta_div = (price > prev_bar.close and m1_bar.delta < 0) or (price < prev_bar.close and m1_bar.delta > 0)
+        
+    is_effort_no_result = False
+    session_ranges = [b.high - b.low for b in all_m1_so_far]
+    if len(session_vols) >= 3:
+        avg_vol = np.mean(session_vols[:-1])
+        avg_rng = np.mean(session_ranges[:-1])
+        bar_rng = m1_bar.high - m1_bar.low
+        if avg_vol > 0 and avg_rng > 0:
+            if m1_bar.volume > avg_vol * 1.3 and bar_rng < avg_rng * 0.7:
+                is_effort_no_result = True
+                
+    bar_rng = m1_bar.high - m1_bar.low
+    if bar_rng > 0:
+        t_wick = m1_bar.high - max(m1_bar.open, m1_bar.close)
+        b_wick = min(m1_bar.open, m1_bar.close) - m1_bar.low
+        t_ratio = t_wick / bar_rng
+        b_ratio = b_wick / bar_rng
+        c_percentile = (m1_bar.close - m1_bar.low) / bar_rng
+    else:
+        t_ratio = 0.0
+        b_ratio = 0.0
+        c_percentile = 0.5
+
+    return CandidateBar(
+        bar=m1_bar,
+        session_ctx=ctx,
+        wall_level=wall_level,
+        wall_side=wall_side,
+        wall_trade_count=len(all_big),
+        wall_max_size=wall_max_trade.size,
+        proximity_to="m1_feed",
+        proximity_level=price,
+        bars_in_session=len(m5_recent),
+        is_second_test=False,
+        setup_category="m1_total_feed",
+        recent_bars=m5_recent, # Still pass M5 context so LLM sees the macro structure
+        market_state="imbalance" if is_imbalance else "balance",
+        poc_migration=poc_mig,
+        auction_type="initiative" if is_imbalance else "responsive",
+        vwap=current_vwap,
+        vwap_std_dev=current_vwap_std,
+        nav_alert=is_nav_alert,
+        delta_divergence=is_delta_div,
+        effort_no_result=is_effort_no_result,
+        top_wick_ratio=t_ratio,
+        bottom_wick_ratio=b_ratio,
+        close_percentile=c_percentile,
+    )
+
+def detect_m1_candidates(m1_bar, m5_recent: list, ctx: SessionContext, m1_history: list = None) -> list:
     """
     Evaluates a single M1 bar as a candidate when the market is in IMBALANCE state.
     """
     candidates = []
-    
-    is_imbalance = False
     price = m1_bar.close
     
-    # Calculate VWAP
-    from src.volume_profile import compute_vwap
-    all_m1_so_far = (m1_history or []) + [m1_bar]
-    current_vwap = compute_vwap(all_m1_so_far)
-    
-    # Calculate NAV Alert for M1
-    session_vols = [b.volume for b in all_m1_so_far]
-    is_nav_alert = _check_nav_alert(session_vols)
-    
+    is_imbalance = False
     # 1. Outside IB (if complete)
     if ctx.ib_complete:
         if price > ctx.ib_high or price < ctx.ib_low:
@@ -270,54 +387,16 @@ def detect_m1_candidates(m1_bar: Bar, m5_recent: list, ctx: SessionContext, m1_h
     if not is_imbalance:
         return candidates
         
-    # If we are here, we are outside the IB, so generate an IMBALANCE_HUNTING candidate!
-    all_big = m1_bar.big_trades
-    
-    if all_big:
-        wall_max_trade = max(all_big, key=lambda t: t.size)
-        wall_level = wall_max_trade.price
-        buy_big = sum(t.size for t in all_big if t.side == 'A')
-        sell_big = sum(t.size for t in all_big if t.side == 'B')
-        wall_side = 'ask' if buy_big >= sell_big else 'bid'
-    else:
-        wall_level = price
-        wall_side = 'none'
-        wall_max_trade = Trade(ts_event=m1_bar.timestamp, side='A', price=price, size=0)
-
-    # ── LOGICA SENZA REGOLE (Nessun Filtro Volume) ──
-    # Passiamo a Fabio qualsiasi candela M1 che si trovi in fase di Imbalance 
-    # e che contenga almeno un Big Trade istituzionale. Sarà Fabio (LLM) 
-    # a decidere se è un falso segnale o l'inizio di un breakout reale.
-    
-    if not all_big:
+    # We only pass M1 candidates that contain at least one Big Trade to avoid spam
+    if not m1_bar.big_trades:
         return candidates
 
-    # Context states
-    poc_mig = "flat"
-    if ctx.vp and ctx.prev_day_vp:
-        if ctx.vp.poc > ctx.prev_day_vp.poc + 4 * NQ_TICK_SIZE:
-            poc_mig = "up"
-        elif ctx.vp.poc < ctx.prev_day_vp.poc - 4 * NQ_TICK_SIZE:
-            poc_mig = "down"
-
-    candidates.append(CandidateBar(
-        bar=m1_bar,  # M1 BAR!
-        session_ctx=ctx,
-        wall_level=wall_level,
-        wall_side=wall_side,
-        wall_trade_count=len(all_big),
-        wall_max_size=wall_max_trade.size,
-        proximity_to="imbalance_zone_m1",
-        proximity_level=price,
-        bars_in_session=len(m5_recent),
-        is_second_test=False, 
-        setup_category="imbalance_hunting",
-        recent_bars=m5_recent,  # Fabio needs M5 structural context here
-        market_state="imbalance",
-        poc_migration=poc_mig,
-        auction_type="initiative",
-        vwap=current_vwap,
-        nav_alert=is_nav_alert,
-    ))
+    cand = generate_m1_candidate(m1_bar, m5_recent, ctx, m1_history=m1_history)
     
+    # Override setup_category and proximity_to to match legacy imbalance hunting format
+    cand.setup_category = "imbalance_hunting"
+    cand.proximity_to = "imbalance_zone_m1"
+    
+    candidates.append(cand)
     return candidates
+

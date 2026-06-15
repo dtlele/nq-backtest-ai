@@ -50,9 +50,86 @@ def build_consensus(fabio: FabioSignal, andrea: AndreaSignal) -> ConsensusSignal
     entry  = fabio.entry
     stop   = fabio.stop
     target = fabio.target
+    
+    # ── Andrea Structural Stop Override ──
+    if andrea.structural_stop is not None:
+        try:
+            andrea_stop = float(andrea.structural_stop)
+            # Calculate risk with Fabio's stop vs. Andrea's stop
+            fabio_risk = abs(entry - fabio.stop) if fabio.stop is not None else 0.0
+            andrea_risk = abs(entry - andrea_stop)
+            
+            # Target reward points
+            reward = abs(target - entry)
+            
+            # Calculate Reward-to-Risk ratios
+            fabio_rr = reward / fabio_risk if fabio_risk > 0 else 0.0
+            andrea_rr = reward / andrea_risk if andrea_risk > 0 else 0.0
+            
+            should_override = False
+            if fabio.direction == 'long' and andrea_stop < entry:
+                # Andrea wants a wider stop (lower)
+                # Only override if Fabio's stop is too tight (< 10 pts) and Andrea's stop still offers R:R >= 1.0,
+                # OR if Andrea's stop is actually tighter (less risk) than Fabio's stop
+                if fabio_risk < 10.0 and andrea_rr >= 1.0:
+                    should_override = True
+                elif andrea_stop > fabio.stop:
+                    should_override = True
+            elif fabio.direction == 'short' and andrea_stop > entry:
+                # Andrea wants a wider stop (higher)
+                if fabio_risk < 10.0 and andrea_rr >= 1.0:
+                    should_override = True
+                elif andrea_stop < fabio.stop:
+                    should_override = True
+                    
+            if should_override:
+                stop = andrea_stop
+                print(f"  [CONSENSUS] Overriding stop with Andrea's Structural SL: {stop} (was {fabio.stop})")
+            else:
+                print(f"  [CONSENSUS] Keeping Fabio's protected stop {fabio.stop} (R:R {fabio_rr:.2f}) over Andrea's wider stop {andrea_stop} (R:R {andrea_rr:.2f})")
+        except (ValueError, TypeError):
+            pass
+
     risk   = abs(entry - stop)
-    reward = abs(target - entry)
-    r_ratio = round(reward / risk, 2) if risk > 0 else 0.0
+    if fabio.direction == 'long':
+        reward = target - entry
+    else:
+        reward = entry - target
+
+    # Gate 4: Backward target / stop validation
+    if fabio.direction == 'long':
+        if stop >= entry or target <= entry:
+            return ConsensusSignal(
+                direction='none', entry=0, stop=0, target=0,
+                r_ratio=0.0, final_confidence=final_conf,
+                fabio=fabio, andrea=andrea,
+                decision='no_trade',
+                no_trade_reason=f'backward_levels (stop={stop} >= entry={entry} or target={target} <= entry={entry})',
+            )
+    elif fabio.direction == 'short':
+        if stop <= entry or target >= entry:
+            return ConsensusSignal(
+                direction='none', entry=0, stop=0, target=0,
+                r_ratio=0.0, final_confidence=final_conf,
+                fabio=fabio, andrea=andrea,
+                decision='no_trade',
+                no_trade_reason=f'backward_levels (stop={stop} <= entry={entry} or target={target} >= entry={entry})',
+            )
+
+    r_ratio = round(reward / risk, 2) if (risk > 0 and reward > 0) else 0.0
+
+    
+    # Gate 4: Minimum R:R check (disabled for observation)
+    min_rr = 0.0
+    if r_ratio < min_rr:
+        return ConsensusSignal(
+            direction='none', entry=0, stop=0, target=0,
+            r_ratio=0, final_confidence=final_conf,
+            fabio=fabio, andrea=andrea,
+            decision='no_trade',
+            no_trade_reason=f'insufficient_rr (R:R {r_ratio} < {min_rr})',
+        )
+        
     return ConsensusSignal(
         direction        = fabio.direction,
         entry            = entry,

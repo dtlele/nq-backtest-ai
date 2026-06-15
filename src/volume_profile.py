@@ -59,10 +59,10 @@ def compute_volume_profile(bars: list):
     return VolumeProfile(poc=poc, va_high=va_high, va_low=va_low,
                          hvn_levels=hvn, lvn_levels=lvn)
 
-def compute_vwap(bars: list) -> float:
-    """Compute the Volume Weighted Average Price (VWAP) for a list of bars."""
+def compute_vwap(bars: list) -> tuple[float, float]:
+    """Compute the VWAP and its Standard Deviation (VWAP, StdDev)."""
     if not bars:
-        return 0.0
+        return 0.0, 0.0
     
     cum_pv = 0.0
     cum_vol = 0.0
@@ -73,6 +73,16 @@ def compute_vwap(bars: list) -> float:
         cum_vol += bar.volume
         
     if cum_vol == 0:
-        return bars[-1].close
+        return bars[-1].close, 0.0
         
-    return cum_pv / cum_vol
+    vwap = cum_pv / cum_vol
+    
+    # Calculate Variance
+    cum_var = 0.0
+    for bar in bars:
+        hlc3 = (bar.high + bar.low + bar.close) / 3.0
+        cum_var += bar.volume * ((hlc3 - vwap) ** 2)
+        
+    std_dev = np.sqrt(cum_var / cum_vol)
+    
+    return vwap, std_dev

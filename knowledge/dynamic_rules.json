@@ -1,189 +1,217 @@
 {
   "dynamic_rules": [
     {
-      "rule_id": "AMT_RULE_178",
-      "topic": "Confidence Threshold",
-      "description": "Avoid trading when confidence levels are below 50, as indicated by light_skip decisions with conf <= 50. This suggests insufficient conviction in the setup.",
+      "rule_id": "AMT_CORE_01",
+      "topic": "Market State Filter",
+      "description": "Before any trade entry, verify if the market is in Balance (range day, P-shape or b-shape profile consolidation) or Imbalance (trend day, active value migration). Trade Mean Reversion (buy VAL, sell VAH) only during Balance; trade breakouts/continuation only during Imbalance. Skip trading if in a transition state with mixed delta and choppy horizontal overlap inside the Value Area.",
       "action": "skip_trade",
       "status": "active",
-      "successes": 31,
+      "successes": 0,
       "failures": 0,
-      "probation_days": 0
+      "probation_days": 50,
+      "step": 1,
+      "applies_to": [
+        "all"
+      ]
     },
     {
-      "rule_id": "AMT_RULE_181",
-      "topic": "Wick Rejection",
-      "description": "Avoid entries when big trades are concentrated in wicks rather than body absorption, unless trading IMBALANCE_HUNTING on M1 where momentum supersedes structural closes.",
-      "action": "skip_trade",
+      "rule_id": "AMT_CORE_02",
+      "topic": "IBOB Breakout Validation",
+      "description": "Validate Initial Balance (IB) range breakouts only when a candle BODY (not just the wick) closes completely outside the IB High or IB Low. If only the wick extends beyond the boundary, treat it as a liquidity sweep and prepare for a contrarian Failed Auction setup. Do not chase breakout candle wicks without delta confirmation.",
+      "action": "require_delta_confirmation",
       "status": "active",
-      "successes": 39,
+      "successes": 0,
       "failures": 0,
-      "probation_days": 0
+      "probation_days": 50,
+      "step": 1,
+      "applies_to": [
+        "all"
+      ]
     },
     {
-      "rule_id": "AMT_RULE_191",
-      "topic": "Initiative Phase Confirmation",
-      "description": "Wait for the Initiative phase (delta aggressively flipping direction to sweep the book) before entering trades to confirm true breakouts. DOES NOT APPLY to IMBALANCE_HUNTING.",
-      "action": "skip_trade",
+      "rule_id": "AMT_CORE_03",
+      "topic": "Failed Auction & Reversals",
+      "description": "Do not enter reversal or contrarian trades on the first vertical spike (First Drive) to prevent being swept. Wait for a second test of the extreme level (Second Drive). Enter only if the Second Drive shows delta exhaustion, institutional absorption (effort vs no result), or a clear delta flip, confirming that the initial breakout has failed.",
+      "action": "require_delta_confirmation",
       "status": "active",
-      "successes": 21,
+      "successes": 0,
       "failures": 0,
-      "probation_days": 0
+      "probation_days": 50,
+      "step": 1,
+      "applies_to": [
+        "all"
+      ]
     },
     {
-      "rule_id": "AMT_RULE_205",
-      "topic": "Early Exit Prevention in Profitable Trades",
-      "description": "Avoid early exits in profitable trades when momentum and delta alignment are still confirming the trade direction, to maximize profit potential.",
-      "action": "skip_trade",
+      "rule_id": "AMT_CORE_04",
+      "topic": "Surgical Stop Placement",
+      "description": "Never place stop losses at obvious wick extremes, support/resistance lines, or round numbers \u2014 primary targets for liquidity sweeps. Place stops structurally behind dense HVN clusters, POC lines, or large Big Trade walls (observable in M1 footprint). For SHORT: stop goes ABOVE the nearest counter-trend BUY cluster. For LONG: stop goes BELOW the nearest counter-trend SELL cluster. Add 1-2pt buffer beyond the wall.",
+      "action": "adjust_stop_placement_beyond_nearest_absorption",
       "status": "active",
-      "successes": 52,
+      "successes": 0,
       "failures": 0,
-      "probation_days": 0
+      "probation_days": 50,
+      "step": 2,
+      "applies_to": [
+        "all"
+      ]
     },
     {
-      "rule_id": "AMT_RULE_206",
-      "topic": "Stop Reduction for Small Losses",
-      "description": "For setups with small expected loss (R-Ratio <= 2), consider reducing contracts or widening stops to prevent premature stop-outs.",
+      "rule_id": "AMT_CORE_05",
+      "topic": "Dynamic Position Sizing",
+      "description": "Adjust contract size inversely to structural stop distance. Wider stop = smaller size to keep absolute dollar risk constant. Do not use fixed contract sizing across different volatility regimes.",
       "action": "reduce_contracts_or_skip",
       "status": "active",
-      "successes": 8,
+      "successes": 0,
       "failures": 0,
-      "probation_days": 0
+      "probation_days": 50,
+      "step": 2,
+      "applies_to": [
+        "all"
+      ]
     },
     {
-      "rule_id": "AMT_RULE_207",
-      "topic": "Trade Frequency Control",
-      "description": "Avoid overtrading by limiting the number of consecutive trades in the same direction during imbalance phases.",
-      "action": "skip_trade",
-      "status": "active",
-      "successes": 8,
-      "failures": 0,
-      "probation_days": 0
-    },
-    {
-      "rule_id": "AMT_RULE_209",
-      "topic": "Imbalance Hunting Stop Placement",
-      "description": "In Imbalance Hunting setups, ensure stops are placed behind structural walls with a buffer to prevent stop runs, especially in high momentum environments.",
+      "rule_id": "AMT_CORE_06",
+      "topic": "Scale Out & Trade Management",
+      "description": "Two-target scale-out: at Target 1 (nearest VP ledge, POC, or local HVN) exit 50% and trail remaining stop to Breakeven. Do not exit 100% at Target 1 on strong imbalance days.",
       "action": "reduce_contracts_or_skip",
       "status": "active",
-      "successes": 8,
+      "successes": 0,
       "failures": 0,
-      "probation_days": 10
+      "probation_days": 50,
+      "step": 2,
+      "applies_to": [
+        "all"
+      ]
     },
     {
-      "rule_id": "AMT_RULE_210",
-      "topic": "Imbalance Hunting Entry Timing",
-      "description": "Avoid entering Imbalance Hunting trades immediately after a stop run or a sharp reversal, as these may indicate temporary exhaustion rather than continuation.",
+      "rule_id": "AMT_CORE_07",
+      "topic": "Institutional Absorption Filter",
+      "description": "Do not trade AGAINST a verified absorption zone. Large volume + delta spike with NO price progress (Effort vs No Result) = passive institutional defense. Observable via M1 Big Trades: if >= 150 contracts hit at a level and price does not break through, the wall is real. Trade WITH the absorption direction, not against it.",
       "action": "skip_trade",
       "status": "active",
-      "successes": 7,
+      "successes": 0,
       "failures": 0,
-      "probation_days": 10
+      "probation_days": 50,
+      "step": 1,
+      "applies_to": [
+        "all"
+      ]
     },
     {
-      "rule_id": "AMT_RULE_211",
-      "topic": "Imbalance Hunting Trade Size Management",
-      "description": "In Imbalance Hunting setups, adjust trade size based on the proximity to key structural levels and the strength of the momentum to optimize risk-reward.",
-      "action": "reduce_contracts_or_skip",
-      "status": "probation",
-      "successes": 4,
-      "failures": 0,
-      "probation_days": 10
-    },
-    {
-      "rule_id": "AMT_RULE_212",
-      "topic": "Imbalance Hunting Trade Frequency",
-      "description": "Avoid consecutive Imbalance Hunting trades in the same direction without sufficient pullback or confirmation, to prevent overtrading during extended trends.",
-      "action": "skip_trade",
-      "status": "probation",
-      "successes": 3,
-      "failures": 0,
-      "probation_days": 9
-    },
-    {
-      "rule_id": "AMT_RULE_213",
-      "topic": "Imbalance Hunting Stop Reduction",
-      "description": "In Imbalance Hunting setups with high momentum, widen stops to account for volatility and reduce contract size to manage risk exposure.",
-      "action": "reduce_contracts_or_skip",
-      "status": "probation",
-      "successes": 3,
-      "failures": 0,
-      "probation_days": 9
-    },
-    {
-      "rule_id": "AMT_RULE_214",
-      "topic": "Imbalance Hunting Consecutive Losses",
-      "description": "After two consecutive stop losses in Imbalance Hunting setups, skip the next trade in the same direction to avoid compounding losses during potential trend reversals.",
-      "action": "skip_trade",
+      "rule_id": "AMT_CORE_08",
+      "topic": "Volume Profile Ledge Pullbacks",
+      "description": "In trending markets, never chase price at session highs/lows. Wait for pullback to HVN ledge or VA boundary. Verify absorption or delta confirmation at the ledge before entering. Stop structural behind the ledge.",
+      "action": "adjust_stop_placement_beyond_nearest_absorption",
       "status": "active",
-      "successes": 6,
+      "successes": 0,
       "failures": 0,
-      "probation_days": 8
+      "probation_days": 50,
+      "step": 2,
+      "applies_to": [
+        "all"
+      ]
     },
     {
-      "rule_id": "AMT_RULE_215",
-      "topic": "Imbalance Hunting Momentum Confirmation",
-      "description": "In Imbalance Hunting setups, require additional momentum confirmation (such as delta alignment and volume spikes) before entering trades to reduce false breakouts.",
-      "action": "reduce_contracts_or_skip",
-      "status": "probation",
-      "successes": 3,
+      "rule_id": "AMT_CORE_10",
+      "topic": "Pullback Rejection Confirmation",
+      "description": "For trend-continuation on pullback: entry bar must show clear rejection. SHORT entry: bar must print top_wick_ratio >= 0.35 OR bar_delta < 0. LONG entry: bar must print bottom_wick_ratio >= 0.35 OR bar_delta > 0. If candle closes strongly in the pullback direction without wick rejection or delta flip, skip the trade.",
+      "action": "require_delta_confirmation",
+      "status": "active",
+      "successes": 0,
       "failures": 0,
-      "probation_days": 6
+      "probation_days": 50,
+      "step": 1,
+      "applies_to": [
+        "all"
+      ]
     },
     {
-      "rule_id": "AMT_RULE_216",
-      "topic": "Imbalance Hunting Stop Run Avoidance",
-      "description": "Avoid entering Imbalance Hunting trades immediately after a stop run or a sharp reversal, as these may indicate temporary exhaustion rather than continuation.",
-      "action": "skip_trade",
-      "status": "probation",
-      "successes": 3,
+      "rule_id": "AMT_CORE_11",
+      "topic": "Failed Auction Reversal from Big Trades",
+      "description": "When price tests a key extreme (IB Low/High, VAL/VAH) with a Big Trade >= 100 contracts but fails to hold the breakout (Effort vs No Result) and closes back inside with wick_ratio >= 0.40, this confirms trapped traders. Enter contrarian Failed Auction (Long at IBL/VAL traps; Short at IBH/VAH traps). Stop behind the failed wick extreme.",
+      "action": "require_delta_confirmation",
+      "status": "active",
+      "successes": 0,
       "failures": 0,
-      "probation_days": 6
+      "probation_days": 50,
+      "step": 1,
+      "applies_to": [
+        "all"
+      ]
     },
     {
-      "rule_id": "AMT_RULE_217",
-      "topic": "Early Exit Prevention in Profitable Trades",
-      "description": "Avoid early exits in profitable trades when momentum and delta alignment are still confirming the trade direction, to maximize profit potential.",
-      "action": "skip_trade",
-      "status": "probation",
-      "successes": 2,
+      "rule_id": "AMT_CORE_13",
+      "topic": "AVWAP Pullback in Trend Day",
+      "description": "In confirmed strong trending markets, AVWAP anchored to RTH open or session extreme acts as institutional support/resistance. Wait for pullback to AVWAP + Second Drive rejection with delta and volume confirmation. Place stop 20-30 ticks structurally behind AVWAP.",
+      "action": "require_delta_confirmation",
+      "status": "active",
+      "successes": 0,
       "failures": 0,
-      "probation_days": 3
+      "probation_days": 46,
+      "step": 1,
+      "applies_to": [
+        "imbalance_day"
+      ]
     },
     {
-      "rule_id": "AMT_RULE_218",
-      "topic": "Imbalance Hunting Early Exit Prevention",
-      "description": "Avoid early exits in Imbalance Hunting trades when momentum and delta alignment are still confirming the trade direction, to maximize profit potential.",
-      "action": "skip_trade",
-      "status": "probation",
-      "successes": 2,
+      "rule_id": "AMT_CORE_14",
+      "topic": "Failed Auction Second Drive Confirmation",
+      "description": "Never enter Failed Auction / Spring / Trap reversal on First Drive (liquidity sweep probe). Wait for pullback and Second Drive retest with volume exhaustion, delta divergence, or active delta flip. Enter only on Second Drive confirmation.",
+      "action": "require_delta_confirmation",
+      "status": "active",
+      "successes": 0,
       "failures": 0,
-      "probation_days": 3
+      "probation_days": 46,
+      "step": 1,
+      "applies_to": [
+        "all"
+      ]
     },
     {
-      "rule_id": "AMT_RULE_219",
-      "topic": "Imbalance Hunting Volume Spikes",
-      "description": "In Imbalance Hunting setups, ensure trades are only taken when there is a significant volume spike confirming the directional bias.",
-      "action": "reduce_contracts_or_skip",
-      "status": "probation",
-      "successes": 2,
+      "rule_id": "AMT_NEW_01",
+      "topic": "Stop Placement Beyond Institutional Walls",
+      "description": "When placing stops, ensure they are positioned beyond significant institutional absorption walls observed in the M1 footprint. For SHORT: stop goes above the nearest BUY cluster with significant volume. For LONG: stop goes below the nearest SELL cluster with significant volume. Add a buffer of 1-2pts to avoid liquidity sweeps.",
+      "action": "adjust_stop_placement_beyond_nearest_absorption",
+      "status": "active",
+      "successes": 5,
       "failures": 0,
-      "probation_days": 3
+      "probation_days": 7
     },
     {
-      "rule_id": "AMT_RULE_220",
-      "topic": "Imbalance Hunting Big Trade Confirmation",
-      "description": "In Imbalance Hunting setups, ensure trades are only taken when there is a significant cluster of big trades confirming the directional bias.",
+      "rule_id": "AMT_NEW_02",
+      "topic": "Trade Management in Strong Trends",
+      "description": "In strong trending markets, avoid taking partial profits too early. Let the trade run to the full target unless there is a clear reversal signal or delta exhaustion. This prevents leaving money on the table during strong momentum moves.",
       "action": "reduce_contracts_or_skip",
       "status": "probation",
       "successes": 0,
       "failures": 0,
-      "probation_days": 0
+      "probation_days": 6
+    },
+    {
+      "rule_id": "AMT_NEW_03",
+      "topic": "High R-Ratio Trade Filter",
+      "description": "Avoid trades with R-ratio > 5 unless there is clear institutional absorption or delta confirmation at the entry point. High R-ratio trades often have wider stops and are more susceptible to stop runs.",
+      "action": "skip_trade",
+      "status": "probation",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 4
+    },
+    {
+      "rule_id": "AMT_NEW_04",
+      "topic": "R-Ratio Filter for Continuation Trades",
+      "description": "Avoid continuation trades with R-ratio > 3 unless there is clear institutional absorption or delta confirmation at the entry point. High R-ratio continuation trades in strong trends are more susceptible to stop runs due to wider stops.",
+      "action": "skip_trade",
+      "status": "probation",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 2
     }
   ],
   "session_learnings": [
-    "The first trade stopped out despite high confidence, suggesting the need for additional confirmation from big trade clusters.",
-    "The second trade hit its target quickly, indicating that momentum and delta alignment can be reliable indicators in Imbalance Hunting setups.",
-    "The stop placement in the first trade may have been too tight, highlighting the importance of buffer zones behind structural walls."
+    "All trades were profitable, indicating strong trend continuation and effective use of institutional absorption walls for stop placement.",
+    "The strategy successfully avoided high R-ratio trades, with all trades having R-ratios below 3, which contributed to the positive performance.",
+    "The probation rule AMT_NEW_02 (Trade Management in Strong Trends) was not tested today as all trades hit their full targets, suggesting the need for more varied market conditions to evaluate its effectiveness."
   ]
 }

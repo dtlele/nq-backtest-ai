@@ -33,11 +33,17 @@ STRUCTURAL VALIDATION (NQ 2025):
 
 CONFIRMATION RULES:
 1. MOMENTUM: Confirm ONLY if price shows initiative delta (>10%) AND acceptance (body close) past the structural wall.
-2. REVERSAL (FAILED AUCTION): Confirm if price probes an extreme (VAH/VAL/IB) and closes BACK INSIDE with increasing volume. Stop must be behind the failed wick.
+2. REVERSAL (FAILED AUCTION): Confirm if price probes an extreme (VAH/VAL/IB) and closes BACK INSIDE with increasing volume (or shows strong passive institutional absorption on the wick with delta divergence/exhaustion even if the M1 body close is at the edge). Stop must be behind the failed wick. Avoid chasing large engulfing candle closes that ruin the risk-to-reward ratio.
 3. WIDE STRUCTURAL STOPS: Do NOT aggressively tighten Fabio's stop based on 1-minute micro-swings. Respect Fabio's wider structural stop to avoid being stopped out by normal liquidity sweeps (stop runs). Propose a 'Structural SL' ONLY if Fabio's stop is dangerously tight.
-4. TOXIC FLOW: If M1 volume is < 300 contracts, VETO the trade as 'Thin Liquidity/Toxic Flow'.
-5. IMBALANCE_HUNTING OVERRIDE: If Fabio's setup is 'imbalance_hunting', the market is in a massive momentum trend outside the Initial Balance. In this state, DO NOT veto a trade just because the M1 body did not close perfectly outside. If the delta confirms the breakout direction and momentum is strong, APPROVE the trade. Momentum takes precedence over perfect structure.
-6. DYNAMIC LIQUIDITY CONTEXT: The institutional footprint required depends on the month/date, but remember that market conditions can shift rapidly even within the same month. Historical benchmarks (e.g., 200+ contracts in November, 30-100 in April) are strictly reference values, not hard rules. Evaluate the relative volume and the structural context very carefully rather than relying on static thresholds.
+4. TOXIC FLOW (RELATIVE VOLUME): VETO the trade as 'Thin Liquidity/Toxic Flow' if the candidate M1 bar's Relative Volume (RVol) is very thin (< 0.70x) or if its volume represents a sudden massive drop compared to the local average. Rely on the 'rvol' parameter in the M1 sequence rather than static thresholds to adapt to different historical volume epochs.
+5. IMBALANCE_HUNTING OVERRIDE: If Fabio's setup is 'imbalance_hunting', the market is in a massive momentum trend outside the Initial Balance. In this state, DO NOT veto a trade just because the M1 body did not close perfectly outside. If the delta confirms the breakout direction and momentum is strong (RVol >= 1.20x), APPROVE the trade. Momentum takes precedence over perfect structure.
+6. DYNAMIC LIQUIDITY REGIME: Do not apply static contract limits (like 300 contracts) across different years or seasons, as NQ/ES volume levels shift drastically over time. Evaluate the Relative Volume (RVol) of the entry bars and big trades: an RVol >= 1.30x indicates significant institutional initiative, while RVol < 0.80x indicates retail-driven chop.
+7. GUIDELINE FOR HIGH-PROBABILITY STOPS: Prefer "Macro-Structural" walls (Initial Balance boundaries, Session VWAP, major swing extremes) over "Micro-Structural" walls (1-minute LVNs). Do not blindly force wide stops. If Fabio's stop is tight but perfectly shielded by a MACRO-level, allow it. Veto or propose a wider stop only if his stop is relying on weak micro-structure.
+8. ANTI-FOMO VETO: On BALANCE or CHOP days, if Fabio proposes a LONG trade at the absolute highs, or a SHORT trade at the absolute lows, VETO the trade immediately. However, on trending or IMBALANCE days, trend continuation trades at highs/lows are valid if supported by strong initiative delta. Do not veto them if the trend has institutional backing.
+9. CHOP ZONE VETO: If the price is inside the Initial Balance (IB) or Value Area (VA), VETO the trade immediately UNLESS it is a clear structural Reversal off the absolute extremes (IBH/IBL/VAH/VAL) OR a valid structural Pullback setup (e.g. testing the IB/VA edge, developing POC, VWAP, or internal HVN/LVNs from the inside on trending days, showing rejection). Do not try to anticipate breakouts from the middle of the chop zone.
+10. V-SHAPE RECOVERY VETO: Veto any trend-continuation setup if the pullback is a sharp, vertical, high-velocity bounce (V-shape recovery) from the session extreme. A vertical rebound indicates institutional buying/selling pressure in the opposite direction, making continuation pullback entries highly dangerous. Confirm only if the pullback is structured (moving slowly with clear rejection signatures at key levels).
+11. RNI (RESPONSE VS INITIATIVE): Differentiate Response (flat delta, narrow range, high volume) from Initiative (coherent delta direction, wide body candle). Veto any trend continuation or breakout trades proposed in Response phase (rvol can be high but delta is flat/divergent); confirm only during Initiative phase (RVol >= 1.20x and delta is strongly directional).
+12. SECOND DRIVE RE-TEST: For Failed Auctions and Spring/Trap reversals, veto any entry proposed on the first aggressive sweep (First Drive). Require a Second Drive (retest) with delta exhaustion or divergence before confirming.
 
 Respond ONLY with valid JSON:
 {
@@ -54,24 +60,28 @@ def confirm(candidate: CandidateBar, fabio_signal: FabioSignal, m1_bars: list[Ba
     rules_text, context_text = build_tiered_knowledge(topics, store)
     question = build_andrea_question(candidate, fabio_signal, m1_bars=m1_bars)
 
-    # ── PRE-CHECK DETERMINISTICI (basati su 549 trade storici) ──────────────
-
-    # Check 2: Kill zone 10:15–10:30 ET (18% WR su 51 trade storici)
-    _is_kill_zone = False
-    try:
-        import pytz as _ap
-        _ET2 = _ap.timezone('America/New_York')
-        _bar_et2 = candidate.bar.timestamp.astimezone(_ET2)
-        if _bar_et2.hour == 10 and 15 <= _bar_et2.minute < 30:
-            _is_kill_zone = True
-    except Exception:
-        pass
+    # ── PRE-CHECK DETERMINISTICI ───────────────────────────────────────────
+    # Note: Legacy timing constraints (10:15-10:30 ET) removed to align strictly with video teachings.
     # ────────────────────────────────────────────────────────────────────────
 
     # Bypass NotebookLM: inject distilled knowledge directly
     user_msg = f"## TRADING RULES (DISTILLED KNOWLEDGE)\n{rules_text}\n{context_text}\n\n## TASK\n{question}\n\nDoes this bar confirm Fabio's signal? Respond with JSON only."
 
-    raw = llm_ask(SYSTEM_PROMPT, user_msg)
+    sys_prompt = SYSTEM_PROMPT
+    try:
+        from src.agents.dynamic_rules_manager import get_active_rules
+        active_rules = get_active_rules(limit=20)
+        if active_rules:
+            active_rules_text = "\n\nACTIVE LIVE CORRECTIONS / DYNAMIC RULES (MUST STRICTLY FOLLOW):\n"
+            for r in active_rules:
+                active_rules_text += f"- [{r['rule_id']}] Topic: {r['topic']}\n"
+                active_rules_text += f"  Description: {r['description']}\n"
+                active_rules_text += f"  Required Action: {r['action']}\n"
+            sys_prompt = SYSTEM_PROMPT + active_rules_text
+    except Exception as e:
+        print(f"Error loading active dynamic rules: {e}")
+
+    raw = llm_ask(sys_prompt, user_msg)
     if raw.startswith('```'):
         raw = raw.split('```')[1].lstrip('json').strip()
     try:
@@ -87,30 +97,17 @@ def confirm(candidate: CandidateBar, fabio_signal: FabioSignal, m1_bars: list[Ba
 
     confidence = int(data.get('confidence', 0))
 
-    # Apply kill zone cap AFTER LLM response
-    if _is_kill_zone:
-        confidence = min(confidence, 40)
-        return AndreaSignal(
-            confirmation=False, confidence=confidence,
-            setup_type=data.get('setup_type', 'none'),
-            reasoning=f'KILL ZONE 10:15-10:30 ET (18% WR storico). ' + data.get('reasoning', ''),
-            nlm_answer='Bypassed',
-            structural_stop=data.get('structural_stop'),
-        )
+    # Legacy kill zone cap removed to align with video teachings.
 
-    # Compute stop distance in ticks (NQ tick = 0.25)
-    stop_distance_ticks = abs(fabio_signal.entry - fabio_signal.stop) / 0.25
-    # Veto trades with very tight stops (<10 ticks)
-    if stop_distance_ticks < 10:
+    # ROBUSTNESS: Get confirmation from LLM data
+    confirmation = bool(data.get('confirmation') or data.get('confirm'))
+    if not confirmation and confidence >= 65 and data.get('direction', 'none') != 'none':
+        confirmation = True
+
+    # Ensure entry and stop are provided
+    if fabio_signal.entry is None or fabio_signal.stop is None:
         confirmation = False
-        confidence = min(confidence, 30)
-    else:
-        # ROBUSTNESS: If manual mailbox input lacks "confirmation" but has high confidence + direction, assume True.
-        # Check for both 'confirmation' and legacy 'confirm' keys
-        confirmation = bool(data.get('confirmation') or data.get('confirm'))
-        # Preserve existing robustness heuristic
-        if not confirmation and confidence >= 65 and data.get('direction', 'none') != 'none':
-            confirmation = True
+        confidence = 0
 
     return AndreaSignal(
         confirmation = confirmation,

@@ -19,55 +19,30 @@ def calculate_contracts(
     max_risk_usd: float = None
 ) -> int:
     """
-    Calculates number of contracts. Scales risk down for Reversal setups.
-    
-    Args:
-        entry: Entry price.
-        stop: Stop loss price.
-        equity: Current account equity.
-        risk_pct: Baseline risk % (0.005 = 0.5%).
-        instrument: 'NQ' or 'MNQ'.
-        setup_category: 'momentum' (A-setup) or 'reversal' (C-setup).
-        min_contracts: Min contracts to open.
-        max_risk_usd: Optional $ cap on loss.
+    Calculates number of contracts based on account equity and exact stop distance
+    to maintain a constant risk percentage per trade.
     """
     if entry == stop:
         return min_contracts
 
-    # 1. Scaling for Reversal (C Setup)
-    # Fabio targets lower winrate for reversals, so we reduce exposure
-    effective_risk_pct = risk_pct
-    if setup_category == 'reversal':
-        effective_risk_pct = risk_pct * 0.5
-        
-    # 2. Determine tick value
+    # Determine tick value
     tick_val = 5.00 if instrument.upper() == 'NQ' else 0.50
     
-    # 3. Calculate risk amount in USD
-    risk_usd = equity * effective_risk_pct
+    # Calculate risk amount in USD
+    risk_usd = equity * risk_pct
     if max_risk_usd is not None:
         risk_usd = min(risk_usd, max_risk_usd)
         
-    # 4. Calculate distance in ticks
+    # Calculate distance in ticks
     dist_ticks = abs(entry - stop) / 0.25
-
-    # Enforce a safety stop floor of 60 ticks (15 points) for sizing calculations to prevent ultra-tight leverage spikes
-    effective_dist_ticks = max(60.0, dist_ticks)
-
-    # Apply tighter risk reduction for very narrow stops (<10 ticks originally, now using effective)
-    if dist_ticks < 10:
-        effective_risk_pct *= 0.5
-    
     if dist_ticks <= 0:
         return min_contracts
         
-    # 5. Contracts = Risk_USD / (Effective_Dist_Ticks * Tick_Value)
-    contracts = risk_usd / (effective_dist_ticks * tick_val)
+    # Contracts = Risk_USD / (Dist_Ticks * Tick_Value)
+    contracts = risk_usd / (dist_ticks * tick_val)
     
-    # 6. Safety Floor
-    final_contracts = max(min_contracts, math.floor(contracts))
-    
-    return final_contracts
+    # CFD/Fractional contracts: return the exact float value rounded to 4 decimals
+    return round(contracts, 4)
 
 def calculate_commissions(contracts: int, instrument: str = 'NQ') -> float:
     """

@@ -6,15 +6,29 @@ from src.risk_manager import calculate_commissions
 INSTRUMENT = 'MNQ'
 TICK_VALUE = 0.50 # MNQ ($0.50 per tick)
 
-def open_trade(consensus: ConsensusSignal, entry_bar: Bar, contracts: int = 1) -> OpenTrade:
+def open_trade(consensus: ConsensusSignal, entry_bar: Bar, contracts: float = 1.0, entry_time = None) -> OpenTrade:
+    # ── Execute at Market Close ──
+    actual_entry = entry_bar.close
+    actual_stop = consensus.stop
+    actual_target = consensus.target
+    
+    if actual_target is None:
+        risk_points = abs(actual_entry - actual_stop)
+        if consensus.direction == 'long':
+            actual_target = actual_entry + (risk_points * 2.0)
+        else:
+            actual_target = actual_entry - (risk_points * 2.0)
+            
     return OpenTrade(
         direction  = consensus.direction,
-        entry      = consensus.entry,
-        stop       = consensus.stop,
-        target     = consensus.target,
+        entry      = actual_entry,
+        stop       = actual_stop,
+        target     = actual_target,
         entry_bar  = entry_bar,
         consensus  = consensus,
-        contracts  = contracts,  # NEW: Store number of contracts
+        contracts  = contracts,
+        entry_time = entry_time or entry_bar.timestamp,
+        last_eval_time = entry_time or entry_bar.timestamp
     )
 
 def check_pending_fill(pending: PendingTrade, bar: Bar) -> OpenTrade | None:
@@ -62,7 +76,7 @@ def _close(trade: OpenTrade, exit_price: float,
         exit_reason      = exit_reason,
         pnl_ticks        = pnl_ticks,
         pnl_usd          = net_pnl_usd,  # Log Net PnL
-        entry_time       = trade.entry_bar.timestamp,
+        entry_time       = getattr(trade, 'entry_time', trade.entry_bar.timestamp),
         exit_time        = exit_bar.timestamp,
         fabio_reasoning  = trade.consensus.fabio.reasoning,
         andrea_reasoning = trade.consensus.andrea.reasoning,
@@ -73,7 +87,7 @@ def _close(trade: OpenTrade, exit_price: float,
         context_fingerprint = getattr(trade.consensus, 'context_fingerprint', '')
     )
 
-def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False) -> 'ClosedTrade | None':
+def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False, on_partial_close = None) -> 'ClosedTrade | None':
     """Walk forward through bars. Return ClosedTrade if exited, else None.
     
     first_bar_after_entry: if True, the first bar in the list is the same M5 bar
@@ -82,33 +96,79 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
     preventing false stops when the bar's extreme occurred before our entry time.
     Target hits are still valid (price reaching target after entry is always good).
     """
+    risk_points = abs(trade.entry - trade.stop)
+    
     for i, bar in enumerate(bars):
         is_first = first_bar_after_entry and (i == 0)
         
         if trade.direction == 'long':
+            # --- 1. Check Partial TP (50% distance / 1.0 R:R) ---
+            if not trade.partial_taken and risk_points > 0 and bar.high >= trade.entry + risk_points:
+                partial_exit_price = trade.entry + risk_points
+                closed_contracts = trade.contracts * 0.5
+                orig_contracts = trade.contracts
+                trade.contracts = closed_contracts
+                partial_closed = _close(trade, partial_exit_price, 'partial_tp', bar)
+                trade.contracts = orig_contracts - closed_contracts
+                trade.partial_taken = True
+                trade.stop = trade.entry  # Move remaining to Break Even!
+                if on_partial_close:
+                    on_partial_close(partial_closed)
+            
+            # --- 2. Check Near-TP Trailing (80% distance / 1.6 R:R) ---
+            if risk_points > 0 and bar.high >= trade.entry + 1.6 * risk_points:
+                lock_in_stop = trade.entry + 1.0 * risk_points
+                if lock_in_stop > trade.stop:
+                    print(f"  [MANAGEMENT] Near-TP reached (80%). Trailing stop to lock in 1.0 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
+                    trade.stop = lock_in_stop
+            
+            # --- 3. Check Target Hit ---
             if bar.high >= trade.target:
                 return _close(trade, trade.target, 'target', bar)
-            # Only process stop if it makes sense (below entry, or trailed up)
-            # Wait, trailing stops can be above entry. 
-            # But bar.low <= trade.stop is the trigger. If trade.stop > bar.high, it triggers instantly.
-            # We just need to check if the stop is hit. The bug is that if stop is far above current price,
-            # bar.low <= trade.stop is instantly true. 
-            # Actually, if the LLM hallucinates a backward stop initially, it should be rejected at entry!
+                
+            # --- 4. Check Stop Loss Hit ---
             if bar.low <= trade.stop:
                 if is_first:
                     if bar.close <= trade.stop:
-                        return _close(trade, trade.stop, 'stop', bar)
+                        reason = 'trailing_stop' if trade.stop > trade.entry else 'stop'
+                        return _close(trade, trade.stop, reason, bar)
                 else:
-                    return _close(trade, trade.stop, 'stop', bar)
+                    reason = 'trailing_stop' if trade.stop > trade.entry else 'stop'
+                    return _close(trade, trade.stop, reason, bar)
         else:  # short
+            # --- 1. Check Partial TP (50% distance / 1.0 R:R) ---
+            if not trade.partial_taken and risk_points > 0 and bar.low <= trade.entry - risk_points:
+                partial_exit_price = trade.entry - risk_points
+                closed_contracts = trade.contracts * 0.5
+                orig_contracts = trade.contracts
+                trade.contracts = closed_contracts
+                partial_closed = _close(trade, partial_exit_price, 'partial_tp', bar)
+                trade.contracts = orig_contracts - closed_contracts
+                trade.partial_taken = True
+                trade.stop = trade.entry  # Move remaining to Break Even!
+                if on_partial_close:
+                    on_partial_close(partial_closed)
+            
+            # --- 2. Check Near-TP Trailing (80% distance / 1.6 R:R) ---
+            if risk_points > 0 and bar.low <= trade.entry - 1.6 * risk_points:
+                lock_in_stop = trade.entry - 1.0 * risk_points
+                if lock_in_stop < trade.stop:
+                    print(f"  [MANAGEMENT] Near-TP reached (80%). Trailing stop to lock in 1.0 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
+                    trade.stop = lock_in_stop
+            
+            # --- 3. Check Target Hit ---
             if bar.low <= trade.target:
                 return _close(trade, trade.target, 'target', bar)
+                
+            # --- 4. Check Stop Loss Hit ---
             if bar.high >= trade.stop:
                 if is_first:
                     if bar.close >= trade.stop:
-                        return _close(trade, trade.stop, 'stop', bar)
+                        reason = 'trailing_stop' if trade.stop < trade.entry else 'stop'
+                        return _close(trade, trade.stop, reason, bar)
                 else:
-                    return _close(trade, trade.stop, 'stop', bar)
+                    reason = 'trailing_stop' if trade.stop < trade.entry else 'stop'
+                    return _close(trade, trade.stop, reason, bar)
     return None
 
 def close_eod(trade: OpenTrade, last_bar: Bar) -> ClosedTrade:

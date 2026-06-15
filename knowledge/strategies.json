@@ -1,22 +1,22 @@
 {
   "strategies": [
     {
-      "name": "IVB_BREAKOUT_IMBALANCE_TRANSITION",
-      "description": "PRIMARY FOCUS: Trading the transition from Balance to Imbalance",
-      "trigger": "Price breaks the Initial Balance High (IBH) or Low (IBL) and seeks new liquidity.",
-      "confirmation": "NEVER enter on the first break. Wait for ACCEPTANCE of volume and price outside the IB. You must see constant, sustained aggression (Big Trades and directional Delta) pushing the price into the new Imbalance zone. The counter-party must fail to push price back inside the IB."
+      "name": "ivb_model_1_continuation",
+      "description": "Trend continuation on a pullback to a key level (VAH/VAL, POC, LVN) after a confirmed Initial Volume Breakout (IVB) breakout",
+      "trigger": "Price breaks outside the IVB range with institutional aggression, then retraces to a key level where sellers/buyers stall.",
+      "confirmation": "Look for institutional absorption (large Big Trades, delta divergence) on the pullback, followed by a 'Second Drive' resuming the trend in the breakout direction."
     },
     {
-      "name": "VAH_REJECTION_SHORT_OR_VAL_REJECTION_LONG",
-      "description": "DEPRIORITIZED: Mean Reversion",
-      "trigger": "Price tests the Value Area High (VAH) or Value Area Low (VAL).",
-      "confirmation": "[CURRENTLY DEPRIORITIZED] Focus primary analysis on Imbalance transitions instead."
+      "name": "val_vah_reversal",
+      "description": "Mean-reversion / Failed Auction at Value Area High (VAH) or Value Area Low (VAL)",
+      "trigger": "Price tests VAH/VAL (or IB extremes) during a balance/chop day, attempts to breakout, but is met with heavy passive absorption.",
+      "confirmation": "Aggressive traders punch the wall (high delta/volume on wicks) but fail to progress. Price aggressively closes back inside the Value Area. Target opposite Value Area boundary."
     },
     {
-      "name": "EXHAUSTION",
-      "description": "DEPRIORITIZED: Trend Reversal",
-      "trigger": "Price rejection with intense opposite-side delta.",
-      "confirmation": "[CURRENTLY DEPRIORITIZED] Focus primary analysis on Imbalance transitions instead."
+      "name": "momentum_squeeze",
+      "description": "Trapped traders squeeze in trend direction",
+      "trigger": "Aggressive participants hit a level (e.g. IB edge, swing extreme) but are absorbed by passive limits, trapping them.",
+      "confirmation": "When price breaks past the trapped trader cluster, it triggers a fast liquidation squeeze. Stop is placed tightly behind the defending wall."
     }
   ]
 }

@@ -26,6 +26,28 @@ def filter_ny_window(bars: list) -> list:
             result.append(b)
     return result
 
+def filter_rth_session(bars: list) -> list:
+    """Keep bars strictly within the RTH session [09:30, 16:00) ET."""
+    result = []
+    for b in bars:
+        t = _to_et(b)
+        start = t.replace(hour=9, minute=30, second=0, microsecond=0)
+        end   = t.replace(hour=16, minute=0, second=0, microsecond=0)
+        if start <= t < end:
+            result.append(b)
+    return result
+
+def filter_full_ny_session(bars: list) -> list:
+    """Keep bars for the full NY session [09:00, 16:15) ET for visualization."""
+    result = []
+    for b in bars:
+        t = _to_et(b)
+        start = t.replace(hour=9, minute=0, second=0, microsecond=0)
+        end   = t.replace(hour=16, minute=15, second=0, microsecond=0)
+        if start <= t < end:
+            result.append(b)
+    return result
+
 def filter_overnight_window(bars: list) -> list:
     """Keep bars before NY open (09:30 ET)."""
     result = []
@@ -49,12 +71,21 @@ def compute_ib(bars: list) -> tuple:
         return (0.0, 0.0)
     return (max(b.high for b in ib_bars), min(b.low for b in ib_bars))
 
-def is_fabio_active(bar: Bar) -> bool:
+def is_fabio_active(bar: Bar, ctx: SessionContext = None) -> bool:
     t = _to_et(bar)
-    # Fabio's Core Window: 09:35 ET to 12:30 ET for new entries
-    start_time = t.replace(hour=9, minute=35, second=0, microsecond=0)
-    end_time   = t.replace(hour=12, minute=30, second=0, microsecond=0)
-    return start_time <= t <= end_time
+    # Fabio's Core Window: 09:31 ET to 11:00 ET (Catching the open)
+    start_time = t.replace(hour=9, minute=31, second=0, microsecond=0)
+    end_time   = t.replace(hour=11, minute=0, second=0, microsecond=0)
+    
+    if ctx:
+        if ctx.day_type in ['trend_up', 'trend_down']:
+            # For expansive imbalance days, stop early at 10:30 ET
+            end_time = t.replace(hour=10, minute=30, second=0, microsecond=0)
+        elif ctx.day_type in ['balance', 'transition_state']:
+            # For choppy/manipulation days, extend to 12:00 ET
+            end_time = t.replace(hour=12, minute=0, second=0, microsecond=0)
+        
+    return start_time <= t < end_time
 
 def classify_day_type(bars: list) -> str:
     if len(bars) < 3:
@@ -103,5 +134,114 @@ def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None, histo
         day_type=initial_day_type,
         # initialize history list
         day_type_history=[initial_day_type],
+        session_memory=[],
     )
+    # Internal trackers for session memory filters
+    ctx._last_level_test = {}
+    ctx._last_wall_logged = {}
+    ctx._logged_ib_comp = False
     return ctx
+
+def get_session_memory_up_to(ctx: SessionContext, timestamp: datetime) -> List[str]:
+    """Return all session memory event strings up to the given UTC timestamp."""
+    if not ctx.session_memory:
+        return []
+    return [item['text'] for item in ctx.session_memory if item['timestamp'] <= timestamp]
+
+def update_session_memory(ctx: SessionContext, current_bar: Bar, bars_processed: list) -> None:
+    """Evaluate current bar for key session events (interactions, big trades, day type)
+    and append formatted entries (with timestamps) to ctx.session_memory.
+    """
+    t_et = _to_et(current_bar)
+    time_str = t_et.strftime("%H:%M")
+    
+    # 1. Day Type transition
+    if len(ctx.day_type_history) >= 2:
+        prev_day_type = ctx.day_type_history[-2]
+        if ctx.day_type != prev_day_type:
+            ctx.session_memory.append({
+                'timestamp': current_bar.timestamp,
+                'text': f"[{time_str} ET] Market structure transitioned from {prev_day_type.upper()} to {ctx.day_type.upper()}."
+            })
+
+    # 2. IB Range Completion (at 10:00 ET)
+    if t_et.hour == 10 and t_et.minute == 0 and not getattr(ctx, '_logged_ib_comp', False):
+        ctx.session_memory.append({
+            'timestamp': current_bar.timestamp,
+            'text': f"[{time_str} ET] Initial Balance (IB) range completed. High={ctx.ib_high:.2f}, Low={ctx.ib_low:.2f}, Range={ctx.ib_range:.2f} points."
+        })
+        ctx._logged_ib_comp = True
+
+    # 3. Big Trade Walls (total volume >= 300 or single >= 150)
+    if current_bar.big_trades:
+        total_size = sum(t.size for t in current_bar.big_trades)
+        max_size = max(t.size for t in current_bar.big_trades)
+        if total_size >= 300 or max_size >= 150:
+            prices = [t.price for t in current_bar.big_trades]
+            min_p = min(prices)
+            max_p = max(prices)
+            buy_v = sum(t.size for t in current_bar.big_trades if t.side == 'A')
+            sell_v = sum(t.size for t in current_bar.big_trades if t.side == 'B')
+            side = "Buy" if buy_v > sell_v else "Sell"
+            
+            # Group by 5 points range to prevent spamming
+            rounded_price = round(min_p / 5.0) * 5
+            last_logged_time = ctx._last_wall_logged.get(rounded_price)
+            if last_logged_time is None or (current_bar.timestamp - last_logged_time).total_seconds() > 300:
+                ctx._last_wall_logged[rounded_price] = current_bar.timestamp
+                ctx.session_memory.append({
+                    'timestamp': current_bar.timestamp,
+                    'text': f"[{time_str} ET] Institutional order wall of {total_size} contracts ({side}) detected at {min_p:.2f}-{max_p:.2f}."
+                })
+
+    # 4. Level Interactions (Yesterday VAH/VAL/POC, Today IBH/IBL, Today VAH/VAL/POC)
+    levels = []
+    if ctx.prev_day_vp:
+        levels.append(("Yesterday VAH", ctx.prev_day_vp.va_high))
+        levels.append(("Yesterday VAL", ctx.prev_day_vp.va_low))
+        levels.append(("Yesterday POC", ctx.prev_day_vp.poc))
+    if ctx.ib_high > 0:
+        levels.append(("IB High", ctx.ib_high))
+        levels.append(("IB Low", ctx.ib_low))
+    if ctx.vp:
+        levels.append(("Overnight VAH", ctx.vp.va_high))
+        levels.append(("Overnight VAL", ctx.vp.va_low))
+        levels.append(("Overnight POC", ctx.vp.poc))
+
+    for name, val in levels:
+        if val is None or val <= 0:
+            continue
+        
+        # Check if current bar touches the level
+        if current_bar.low <= val <= current_bar.high:
+            last_tested = ctx._last_level_test.get(name)
+            
+            # Limit interaction logs to once every 10 minutes per level
+            if last_tested is None or (current_bar.timestamp - last_tested).total_seconds() > 600:
+                ctx._last_level_test[name] = current_bar.timestamp
+                
+                # Determine outcome: Close relative to level, delta, wicks
+                bar_range = current_bar.high - current_bar.low
+                top_w = ((current_bar.high - max(current_bar.open, current_bar.close)) / bar_range * 100) if bar_range > 0 else 0
+                bot_w = ((min(current_bar.open, current_bar.close) - current_bar.low) / bar_range * 100) if bar_range > 0 else 0
+                
+                # Check for rejection vs acceptance
+                is_above = current_bar.close > val
+                close_dist = abs(current_bar.close - val)
+                
+                outcome = "Touched"
+                if "Low" in name or "VAL" in name:
+                    if is_above and bot_w >= 35:
+                        outcome = "Rejected (Strong buying wicks)"
+                    elif not is_above and close_dist > 5:
+                        outcome = "Accepted (Closed below)"
+                elif "High" in name or "VAH" in name:
+                    if not is_above and top_w >= 35:
+                        outcome = "Rejected (Strong selling wicks)"
+                    elif is_above and close_dist > 5:
+                        outcome = "Accepted (Closed above)"
+                
+                ctx.session_memory.append({
+                    'timestamp': current_bar.timestamp,
+                    'text': f"[{time_str} ET] Tested {name} ({val:.2f}). Result: {outcome}. Close={current_bar.close:.2f}, Delta={current_bar.delta:+d}."
+                })

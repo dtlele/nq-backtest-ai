@@ -70,13 +70,5 @@ def validate_dynamic_rule(rule: Dict) -> bool:
         
     return True
 
-def get_active_rules(limit: int = 3) -> List[Dict]:
-    """Return a limited list of active dynamic rules.
-
-    The function filters the rules to only include those with status == 'active'.
-    It then returns the first ``limit`` rules from the filtered list.
-    """
-    data = load_dynamic_rules()
-    rules = data.get('dynamic_rules', [])
-    active_rules = [r for r in rules if r.get('status') == 'active']
-    return active_rules[:limit]
+def get_active_rules(limit: int = 10, day_type: str = None, step: int = None) -> List[Dict]:
+    return []

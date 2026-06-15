@@ -23,10 +23,10 @@ def test_andrea_confirms_trade():
     assert c.decision == 'trade'
     assert c.final_confidence > 75  # boosted
 
-def test_andrea_no_confirm_but_not_veto_still_trades():
-    c = build_consensus(_fab(75), _and(False, 50))  # 50 >= veto threshold
-    assert c.decision == 'trade'
-    assert c.final_confidence < 75  # penalized
+def test_andrea_no_confirm_vetoes_trade():
+    c = build_consensus(_fab(75), _and(False, 50))
+    assert c.decision == 'no_trade'
+    assert 'andrea_veto' in c.no_trade_reason
 
 def test_r_ratio_calculated():
     c = build_consensus(_fab(75), _and(True, 65))
@@ -40,8 +40,9 @@ def test_fabio_direction_none_no_trade():
     assert 'fabio' in c.no_trade_reason
     assert 'threshold' not in c.no_trade_reason  # reason says 'direction_none', not 'threshold'
 
-def test_approved_trade_none_prices_raises():
-    """Approved trade with None prices must raise, not silently corrupt."""
+def test_approved_trade_none_prices_skips():
+    """Approved trade with None prices must skip, not crash."""
     fab_none = FabioSignal('long', 75, None, None, None, 'squeeze', 'r', 'nlm')
-    with pytest.raises(ValueError, match='None price fields'):
-        build_consensus(fab_none, _and(True, 65))
+    c = build_consensus(fab_none, _and(True, 65))
+    assert c.decision == 'skip'
+    assert 'missing_price_fields' in c.no_trade_reason

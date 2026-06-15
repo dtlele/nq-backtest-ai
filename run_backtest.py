@@ -16,6 +16,7 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('--days',    type=int, default=0, help='0=all')
     p.add_argument('--start-date', type=str, default=None, help='YYYYMMDD start date')
+    p.add_argument('--end-date', type=str, default=None, help='YYYYMMDD end date')
     p.add_argument('--dry-run', action='store_true')
     p.add_argument('--quiet', '-q', action='store_true',
                    help='Compact output: 1 line per candidate, verbose only on trades')
@@ -23,14 +24,20 @@ def main():
     p.add_argument('--output',   default='output/reports')
     p.add_argument('--fabio-only', action='store_true', help='Skip Andrea confirmation consensus')
     p.add_argument('--reset-equity', action='store_true', help='Reset equity to 50000.0 before starting')
+    p.add_argument('--start-time', type=str, default=None, help='HH:MM start time in ET to begin LLM analysis')
+    p.add_argument('--strategy', default='fabio_andrea_hybrid', help='Strategy JSON file name under strategies/')
     args = p.parse_args()
+
+    if args.strategy:
+        from src.signal_context import set_active_strategy
+        set_active_strategy(args.strategy)
 
     if args.reset_equity:
         from src.agent_memory import force_reset_equity
         force_reset_equity(50000.0)
         print("  [SYSTEM] Equity forcibly reset to $50,000.00 for this run.")
 
-    trades = run_backtest(args.data_dir, args.days, args.dry_run, args.quiet, args.start_date, fabio_only=args.fabio_only)
+    trades = run_backtest(args.data_dir, args.days, args.dry_run, args.quiet, args.start_date, end_date=args.end_date, fabio_only=args.fabio_only, start_time=args.start_time)
     if not trades:
         print("No trades generated.")
         return
