@@ -66,7 +66,7 @@ def _should_prefilter(candidate: CandidateBar) -> Optional[str]:
     """
     return None  # disabled: always run full analysis for every candidate bar
 
-def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_vp=None, fabio_only: bool = False, historical_days: list = None, start_time: str = None) -> tuple:
+def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_vp=None, fabio_only: bool = True, historical_days: list = None, start_time: str = None) -> tuple:
     """Run backtest for one day. Returns (list[ClosedTrade], today_vp, today_close)."""
     date_str = Path(csv_path).name.split('-')[2].split('.')[0]  # e.g. 20250430
     date_str = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
@@ -199,7 +199,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         closed_trades.append(result)
         from src.memory.quantitative_memory import log_trade_for_quantitative_memory
         log_trade_for_quantitative_memory(result)
-        update_pattern_memory(result)
+        # update_pattern_memory(result)
         
         sync_session_state(None, closed_trades, ctx, equity_change=result.pnl_usd)
         
@@ -1369,7 +1369,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         # UPDATE EQUITY and sync EOD close
         sync_session_state(None, closed_trades, ctx, equity_change=result.pnl_usd)
         
-        update_pattern_memory(result)
+        # update_pattern_memory(result)
         log_trade_result(result)
 
     # EOD Post-Mortem Audit Loop
@@ -1584,7 +1584,7 @@ def _read_day_logs(date_str: str) -> list:
     return entries
 
 
-def run_backtest(data_dir: str, max_days: int = 0, dry_run: bool = False, quiet: bool = False, start_date: str = None, end_date: str = None, fabio_only: bool = False, start_time: str = None) -> list:
+def run_backtest(data_dir: str, max_days: int = 0, dry_run: bool = False, quiet: bool = False, start_date: str = None, end_date: str = None, fabio_only: bool = True, start_time: str = None) -> list:
     """Run all days. Returns all ClosedTrades."""
     import re, json, datetime as _dt, os
     
