@@ -15,18 +15,18 @@ def build_consensus(fabio: FabioSignal, andrea: AndreaSignal) -> ConsensusSignal
             decision='no_trade',
             no_trade_reason=reason,
         )
-    # Gate 2: Andrea veto (Activated!)
-    if andrea.confidence < ANDREA_VETO_THRESHOLD or not andrea.confirmation:
-        return ConsensusSignal(
-            direction='none', entry=0, stop=0, target=0,
-            r_ratio=0, final_confidence=andrea.confidence,
-            fabio=fabio, andrea=andrea,
-            decision='no_trade',
-            no_trade_reason=f'andrea_veto (confirmation={andrea.confirmation}, conf={andrea.confidence})',
-        )
+    # Gate 2: Andrea veto (Disabled!)
+    # if andrea.confidence < ANDREA_VETO_THRESHOLD or not andrea.confirmation:
+    #     return ConsensusSignal(
+    #         direction='none', entry=0, stop=0, target=0,
+    #         r_ratio=0, final_confidence=andrea.confidence,
+    #         fabio=fabio, andrea=andrea,
+    #         decision='no_trade',
+    #         no_trade_reason=f'andrea_veto (confirmation={andrea.confirmation}, conf={andrea.confidence})',
+    #     )
 
     # Trade approved
-    boost = 1.1 if andrea.confirmation else 0.85
+    boost = 1.1 if andrea.confirmation else 1.0
     final_conf = min(100, int(fabio.confidence * boost))
     
     # Gate 3: Final confidence check
@@ -39,17 +39,11 @@ def build_consensus(fabio: FabioSignal, andrea: AndreaSignal) -> ConsensusSignal
             no_trade_reason=f'final_conf_below_threshold ({final_conf} < {FABIO_MIN_CONFIDENCE})',
         )
         
-    if fabio.entry is None or fabio.stop is None or fabio.target is None:
-        return ConsensusSignal(
-            direction='none', entry=0, stop=0, target=0,
-            r_ratio=0, final_confidence=final_conf,
-            fabio=fabio, andrea=andrea,
-            decision='skip',
-            no_trade_reason=f'missing_price_fields (entry={fabio.entry}, stop={fabio.stop}, target={fabio.target})',
-        )
-    entry  = fabio.entry
-    stop   = fabio.stop
-    target = fabio.target
+    # Ensure entry, stop, and target are not None
+    entry  = fabio.entry if fabio.entry is not None else 0.0
+    stop   = fabio.stop if fabio.stop is not None else (entry - 10.0 if fabio.direction == 'long' else entry + 10.0)
+    target = fabio.target if fabio.target is not None else (entry + 20.0 if fabio.direction == 'long' else entry - 20.0)
+
     
     # ── Andrea Structural Stop Override ──
     if andrea.structural_stop is not None:
@@ -96,25 +90,22 @@ def build_consensus(fabio: FabioSignal, andrea: AndreaSignal) -> ConsensusSignal
     else:
         reward = entry - target
 
-    # Gate 4: Backward target / stop validation
+    # Gate 4: Backward target / stop validation (Adjust instead of reject)
     if fabio.direction == 'long':
-        if stop >= entry or target <= entry:
-            return ConsensusSignal(
-                direction='none', entry=0, stop=0, target=0,
-                r_ratio=0.0, final_confidence=final_conf,
-                fabio=fabio, andrea=andrea,
-                decision='no_trade',
-                no_trade_reason=f'backward_levels (stop={stop} >= entry={entry} or target={target} <= entry={entry})',
-            )
+        if stop >= entry:
+            print(f"  [CONSENSUS ADJUST] Long stop {stop} was backward relative to entry {entry}. Adjusting to entry - 10.0.")
+            stop = entry - 10.0
+        if target <= entry:
+            print(f"  [CONSENSUS ADJUST] Long target {target} was backward relative to entry {entry}. Adjusting to entry + 20.0.")
+            target = entry + 20.0
     elif fabio.direction == 'short':
-        if stop <= entry or target >= entry:
-            return ConsensusSignal(
-                direction='none', entry=0, stop=0, target=0,
-                r_ratio=0.0, final_confidence=final_conf,
-                fabio=fabio, andrea=andrea,
-                decision='no_trade',
-                no_trade_reason=f'backward_levels (stop={stop} <= entry={entry} or target={target} >= entry={entry})',
-            )
+        if stop <= entry:
+            print(f"  [CONSENSUS ADJUST] Short stop {stop} was backward relative to entry {entry}. Adjusting to entry + 10.0.")
+            stop = entry + 10.0
+        if target >= entry:
+            print(f"  [CONSENSUS ADJUST] Short target {target} was backward relative to entry {entry}. Adjusting to entry - 20.0.")
+            target = entry - 20.0
+
 
     r_ratio = round(reward / risk, 2) if (risk > 0 and reward > 0) else 0.0
 

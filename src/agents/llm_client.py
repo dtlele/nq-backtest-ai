@@ -60,12 +60,14 @@ def _rules_hash() -> str:
     return "norules"
 
 
-def _cache_key(system_prompt: str, user_msg: str, video_path: str = None) -> str:
+def _cache_key(system_prompt: str, user_msg: str, video_path: str = None, provider: str = None, model: str = None) -> str:
     """Cache key built from system_prompt (includes dynamic rules) + user_msg.
     The rules hash is embedded so entries become stale automatically when rules change.
     """
     video_info = f"\x00{video_path}" if video_path else ""
-    raw = f"{system_prompt}\x00{user_msg}{video_info}"
+    provider_info = f"\x00{provider}" if provider else ""
+    model_info = f"\x00{model}" if model else ""
+    raw = f"{system_prompt}\x00{user_msg}{video_info}{provider_info}{model_info}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
@@ -265,7 +267,7 @@ def _get_or_create_gemini_cache(client, model: str, system_prompt: str) -> str:
     return ""
 
 
-def _ask_gemini(system_prompt: str, user_msg: str) -> str:
+def _ask_gemini(system_prompt: str, user_msg: str, model: str = None) -> str:
     from google import genai
     from google.genai.errors import APIError
     import os
@@ -276,7 +278,8 @@ def _ask_gemini(system_prompt: str, user_msg: str) -> str:
         raise ValueError("GEMINI_API_KEY environment variable not set in .env")
         
     client = genai.Client(api_key=api_key)
-    model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+    if not model:
+        model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
     # Opt3: Try to use server-side context cache for the system prompt
     cache_name = _get_or_create_gemini_cache(client, model, system_prompt)
@@ -362,7 +365,7 @@ def _ask_gemini(system_prompt: str, user_msg: str) -> str:
 
 # ── OpenRouter backend ─────────────────────────────────────────────────────────
 
-def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None) -> str:
+def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None, model: str = None) -> str:
     # Append educational context/suggestions to ensure prompt exceeds 4096 tokens for Cache Read
     import os
     from pathlib import Path
@@ -389,7 +392,8 @@ def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None) -
         api_key=api_key,
         http_client=httpx.Client(timeout=120.0)
     )
-    model = os.environ.get("OPENROUTER_MODEL", "deepseek/deepseek-chat")
+    if not model:
+        model = os.environ.get("OPENROUTER_MODEL", "deepseek/deepseek-chat")
     
     # Format messages based on whether video_path is provided
     if video_path and os.path.exists(video_path):
@@ -439,7 +443,7 @@ def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None) -
                     out_tok = getattr(usage, "completion_tokens", 0)
                     log_file = Path(r"C:\Users\Mauro\Documents\nq-backtest\agent_memory\token_usage.log")
                     with open(log_file, "a") as f:
-                        f.write(f"OPENROUTER,{in_tok},{out_tok}\n")
+                        f.write(f"OPENROUTER,{model},{in_tok},{out_tok}\n")
             except Exception:
                 pass
                 
@@ -463,7 +467,8 @@ def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None) -
 # ── Public API ───────────────────────────────────────────────────────────────
 
 def llm_ask(system_prompt: str, user_msg: str, timeout: int = 120,
-            use_cache: bool = True, video_path: str = None) -> str:
+            use_cache: bool = True, video_path: str = None,
+            provider: str = None, model: str = None) -> str:
     # Force cache hits for the Jan 7 "4 win" day to restore state despite prompt tweaks
     if "2025-01-07" in user_msg and "10:00" in user_msg and "Do NOT think about entry prices" in system_prompt:
         return '{"setup_valid": true, "setup_type": "ivb_model_1_continuation", "bias": "short", "trapped_side": "buyers", "market_state": "imbalance", "key_structural_level": 21660.50, "session_narrative": "Trend down"}'
@@ -498,10 +503,11 @@ def llm_ask(system_prompt: str, user_msg: str, timeout: int = 120,
         except Exception as e:
             print(f"  [DEBUG] Error injecting dynamic rules: {e}")
 
-    key = _cache_key(system_prompt, user_msg, video_path)
+    key = _cache_key(system_prompt, user_msg, video_path, provider, model)
 
-    provider = _get_provider()
-    print(f"  [DEBUG] llm_ask using provider: {provider}", flush=True)
+    if provider is None:
+        provider = _get_provider()
+    print(f"  [DEBUG] llm_ask using provider: {provider} (model: {model})", flush=True)
     
     # Check global NO_CACHE environment variable override
     import os
@@ -516,9 +522,9 @@ def llm_ask(system_prompt: str, user_msg: str, timeout: int = 120,
     if provider == "claude":
         response = _ask_claude(system_prompt, user_msg, timeout)
     elif provider == "gemini":
-        response = _ask_gemini(system_prompt, user_msg)
+        response = _ask_gemini(system_prompt, user_msg, model=model)
     elif provider == "openrouter":
-        response = _ask_openrouter(system_prompt, user_msg, video_path)
+        response = _ask_openrouter(system_prompt, user_msg, video_path, model=model)
     elif provider == "human":
         response = _ask_human(system_prompt, user_msg)
     else:

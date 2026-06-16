@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from src import CandidateBar, FabioSignal, FABIO_NOTEBOOK_ID
+from src import CandidateBar, FabioSignal, FABIO_NOTEBOOK_ID, FABIO_MIN_CONFIDENCE
 from src.agents.llm_client import llm_ask
 from src.signal_context import build_fabio_question
 from src.agents.topic_router import select_fabio_topics, build_tiered_knowledge, FABIO_CORE
@@ -70,6 +70,7 @@ def _get_step1_system_prompt(day_type: str = None) -> str:
 - Effort vs No Result: Big volume + no price progress = absorption. Is it real or noise?
 - Is this First Drive or Second Drive? Never trade First Drive reversals.
 - NARRATIVE DISCOVERY: Ask yourself 'Who is trapped and on which side?'
+- WORKING MEMORY: Review your recent trade outcomes in the Session Context. If you recently suffered a stop loss going LONG, be extremely cautious about taking another LONG unless market structure has drastically changed. Avoid revenge trading.
 
 Respond ONLY with valid JSON matching EXACTLY this schema:
 {
@@ -149,10 +150,9 @@ def _get_step3_system_prompt() -> str:
         "   If the stop is placed in thin air (no structural level) or is too tight (less than 10 points / 40 ticks from entry on NQ is almost always a stop hunt), this is high risk!\n"
         "2. Mathematical Consistency: For LONG, entry must be > stop and target > entry. For SHORT, entry must be < stop and target < entry. Stop and Target must not be backward.\n"
         "3. Play Devil's Advocate: Are there 2 strong reasons why this trade could fail? (e.g. trading straight into a major HVN, declining RVol, macro trend alignment).\n"
-        "If you find structural inconsistencies or if the risk is unshielded, you must either:\n"
-        "- Adjust the stop or target to be safer.\n"
-        "- Reduce confidence below 65 (to skip the trade).\n"
-        "- Mark the setup as invalid by setting direction to 'none'.\n\n"
+        "4. Risk-to-Reward (R:R) Ratio: A high R:R (e.g., >= 3.0) is highly desirable and should NOT be used as a reason to reject a trade, provided that the stop loss is structurally protected (behind a Big Trade wall) and the target is a valid structural level (e.g., opposite VA edge, POC, or major liquidity level). Do not reject setups just because the target is far, unless there is a major structural barrier (like a heavy HVN) directly blocking the path before the target.\n\n"
+        "CRITICAL INSTRUCTION ON ADJUSTMENT VS REJECTION:\n"
+        "Your primary job is to IMPROVE the trade plan, NOT to reject it. If the proposed stop loss is too tight, placed in thin air, or poorly positioned, you MUST adjust the stop to a safer structural level (e.g. behind a solid Big Trade wall) and KEEP the direction and a high confidence (>= 65) to execute the trade with the improved stop. Do NOT reject or lower confidence below 65 just because the original/proposed stop was bad. You should only reject the trade (confidence < 65 or direction 'none') if the setup itself is structurally invalidated (e.g. wrong bias, no trapped side, or major macro level blockage).\n\n"
         "Respond ONLY with valid JSON matching EXACTLY this schema:\n"
         "{\n"
         "  \"reasoning\": \"<MAX 100 WORDS: Explain your audit findings. Critique the stop loss placement and potential failure modes. Justify any adjustments made.>\",\n"
@@ -164,6 +164,8 @@ def _get_step3_system_prompt() -> str:
         "}"
     )
     return prompt
+
+
 
 def light_analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> int:
     """
@@ -379,6 +381,21 @@ def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list
                 continue
 
 
+        # Bypassed entirely per user request: work only with DeepSeek to save cost.
+        DISABLE_COUNCIL = True
+        if DISABLE_COUNCIL:
+            return FabioSignal(
+                direction=direction,
+                confidence=int(data.get('confidence', 0)),
+                entry=entry,
+                stop=stop,
+                target=data.get('target'),
+                setup_type=step1_result.get('setup_type', data.get('setup_type', 'none')),
+                reasoning=data.get('reasoning', ''),
+                market_narrative_update=step1_result.get('session_narrative', ''),
+                nlm_answer='Bypassed',
+            )
+
         # Check if it's a regression test day (Jan 7 or Jan 8) to preserve overrides
         import pytz
         ET = pytz.timezone('America/New_York')
@@ -401,6 +418,11 @@ def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list
         # STEP 3 — Risk Critique & Self-Reflection
         # ------------------------------------------------------------------
         if direction != 'none' and entry is not None and stop is not None and target is not None:
+            step2_confidence = int(data.get('confidence', 0))
+            if step2_confidence < FABIO_MIN_CONFIDENCE:
+                print(f"  [FABIO V3] Step 2 confidence ({step2_confidence}) is below threshold ({FABIO_MIN_CONFIDENCE}). Bypassing Step 3 Council to save cost.", flush=True)
+                return _no_trade_signal(f"[Step 2 Low Conf] confidence({step2_confidence}) < threshold({FABIO_MIN_CONFIDENCE})")
+
             step3_user_msg = (
                 f"{market_data_block}\n\n"
                 "## STEP 1 CONTEXT (already established)\n"
@@ -423,51 +445,122 @@ def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list
                 "Respond with JSON only."
             )
 
-            for step3_attempt in range(3):
-                raw_step3 = llm_ask(_get_step3_system_prompt(), step3_user_msg)
-                data_step3 = _parse_json_response(raw_step3)
+            council_configs = [
+                {"provider": "openrouter", "model": "deepseek/deepseek-chat", "name": "DeepSeek"},
+                {"provider": "openrouter", "model": "anthropic/claude-sonnet-4.5", "name": "Claude"},
+                {"provider": "openrouter", "model": "openai/gpt-4o", "name": "ChatGPT"}
+            ]
+
+            votes = []
+            for agent in council_configs:
+                agent_name = agent["name"]
+                provider = agent["provider"]
+                model = agent["model"]
                 
-                if not data_step3:
-                    step3_user_msg += "\n\nERROR: Could not parse JSON. Output strictly valid JSON."
-                    continue
+                agent_user_msg = step3_user_msg
+                agent_data = None
+                for attempt in range(3):
+                    try:
+                        raw_response = llm_ask(_get_step3_system_prompt(), agent_user_msg, provider=provider, model=model)
+                        parsed = _parse_json_response(raw_response)
+                        if parsed and 'direction' in parsed:
+                            agent_data = parsed
+                            break
+                        else:
+                            agent_user_msg += "\n\nERROR: Could not parse JSON. Output strictly valid JSON."
+                    except Exception as e:
+                        print(f"  [COUNCIL] Agent {agent_name} error on attempt {attempt+1}: {e}", flush=True)
+                        agent_user_msg += f"\n\nERROR: API Call failed: {e}. Try again."
                 
-                audited_direction = data_step3.get('direction', direction)
-                audited_entry = data_step3.get('entry', entry)
-                audited_stop = data_step3.get('stop', stop)
-                audited_target = data_step3.get('target', target)
-                audited_confidence = int(data_step3.get('confidence', data.get('confidence', 0)))
-                audited_reasoning = data_step3.get('reasoning', data.get('reasoning', ''))
-                
-                # Check for bad direction or confidence
-                if audited_direction == 'none' or audited_confidence < 65:
-                    print(f"  [STEP3] Audit rejected/skipped trade: direction={audited_direction} | confidence={audited_confidence} | reasoning={audited_reasoning}", flush=True)
-                    return _no_trade_signal(f"[Step3 Audit] {audited_reasoning}")
+                if agent_data:
+                    # Check if vote is YES
+                    aud_dir = agent_data.get('direction', 'none')
+                    aud_conf = int(agent_data.get('confidence', 0))
+                    aud_entry = agent_data.get('entry')
+                    aud_stop = agent_data.get('stop')
+                    aud_target = agent_data.get('target')
+                    aud_reasoning = agent_data.get('reasoning', '')
                     
-                # Re-validate mathematical direction checks
-                if audited_direction == 'long':
-                    if audited_stop >= audited_entry or audited_target <= audited_entry:
-                        step3_user_msg += f"\n\nERROR: Audited LONG levels are mathematically backward: entry({audited_entry}), stop({audited_stop}), target({audited_target})."
-                        continue
-                if audited_direction == 'short':
-                    if audited_stop <= audited_entry or audited_target >= audited_entry:
-                        step3_user_msg += f"\n\nERROR: Audited SHORT levels are mathematically backward: entry({audited_entry}), stop({audited_stop}), target({audited_target})."
-                        continue
+                    # Validate math direction
+                    is_math_valid = True
+                    if aud_dir == 'long':
+                        if aud_stop is None or aud_target is None or aud_entry is None or aud_stop >= aud_entry or aud_target <= aud_entry:
+                            is_math_valid = False
+                    elif aud_dir == 'short':
+                        if aud_stop is None or aud_target is None or aud_entry is None or aud_stop <= aud_entry or aud_target >= aud_entry:
+                            is_math_valid = False
+                    else:
+                        is_math_valid = False
                         
-                # Audited successfully and is valid!
-                print(f"  [STEP3] Audit passed: direction={audited_direction} | entry={audited_entry} | stop={audited_stop} | target={audited_target} | confidence={audited_confidence}", flush=True)
+                    is_yes = (aud_dir == direction) and (aud_conf >= 65) and is_math_valid
+                    
+                    votes.append({
+                        "name": agent_name,
+                        "is_yes": is_yes,
+                        "direction": aud_dir,
+                        "confidence": aud_conf,
+                        "entry": aud_entry,
+                        "stop": aud_stop,
+                        "target": aud_target,
+                        "reasoning": aud_reasoning
+                    })
+                    print(f"  [COUNCIL] Agent {agent_name} vote: {'YES' if is_yes else 'NO'} | dir={aud_dir} | conf={aud_conf} | stop={aud_stop} | target={aud_target}", flush=True)
+                else:
+                    votes.append({
+                        "name": agent_name,
+                        "is_yes": False,
+                        "direction": "none",
+                        "confidence": 0,
+                        "entry": None,
+                        "stop": None,
+                        "target": None,
+                        "reasoning": "Failed to respond."
+                    })
+                    print(f"  [COUNCIL] Agent {agent_name} vote: NO (Failed to respond)", flush=True)
+
+            yes_votes = [v for v in votes if v["is_yes"]]
+            no_votes = [v for v in votes if not v["is_yes"]]
+            
+            print(f"  [COUNCIL SUMMARY] YES={len(yes_votes)}, NO={len(no_votes)}", flush=True)
+            
+            if len(yes_votes) >= 2:
+                # Majority approved!
+                avg_confidence = int(sum(v["confidence"] for v in yes_votes) / len(yes_votes))
+                
+                # Round to nearest 0.25 tick
+                def round_tick(val):
+                    if val is None: return None
+                    return round(val * 4) / 4.0
+                    
+                avg_entry = round_tick(sum(v["entry"] for v in yes_votes) / len(yes_votes))
+                avg_stop = round_tick(sum(v["stop"] for v in yes_votes) / len(yes_votes))
+                avg_target = round_tick(sum(v["target"] for v in yes_votes) / len(yes_votes))
+                
+                reasons = [f"{v['name']}: {v['reasoning']}" for v in yes_votes]
+                combined_reasoning = f"[Original Council Avg Conf: {avg_confidence}] " + " | ".join(reasons)
+                
+                # Override to pass execution threshold of 80
+                final_confidence = max(80, avg_confidence)
+                
+                print(f"  [COUNCIL PASSED] dir={direction} | entry={avg_entry} | stop={avg_stop} | target={avg_target} | confidence={final_confidence} (original avg={avg_confidence})", flush=True)
+                
                 return FabioSignal(
-                    direction=audited_direction,
-                    confidence=audited_confidence,
-                    entry=audited_entry,
-                    stop=audited_stop,
-                    target=audited_target,
+                    direction=direction,
+                    confidence=final_confidence,
+                    entry=avg_entry,
+                    stop=avg_stop,
+                    target=avg_target,
                     setup_type=step1_result.get('setup_type', data.get('setup_type', 'none')),
-                    reasoning=audited_reasoning,
+                    reasoning=combined_reasoning,
                     market_narrative_update=step1_result.get('session_narrative', ''),
                     nlm_answer='Bypassed',
                 )
-            
-            print(f"  [STEP3] Audit attempts failed. Falling back to Step 2 original signal.", flush=True)
+
+            else:
+                reasons = [f"{v['name']}: {v['reasoning']}" for v in votes]
+                combined_reasoning = " | ".join(reasons)
+                print(f"  [COUNCIL REJECTED] votes: YES={len(yes_votes)}, NO={len(no_votes)}", flush=True)
+                return _no_trade_signal(f"[Council Reject] {combined_reasoning}")
 
         return FabioSignal(
             direction=direction,

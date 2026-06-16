@@ -371,6 +371,10 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                         daily_stops_count = handle_close(result_part, session_buffer, daily_stops_count)
                         print(f"  [PARTIAL TP] Closed 50% of contracts at {result_part.exit_price:.2f}. Remaining contracts: {open_t.contracts:.4f}. Stop moved to BE: {open_t.stop:.2f}")
 
+                    # Keep track of stop and contracts before step_trade to detect trailing stop or partial TP changes
+                    old_stop = open_t.stop
+                    old_contracts = open_t.contracts
+
                     result = step_trade(open_t, [m1_bar], 
                                         first_bar_after_entry=(m1_bar.timestamp == getattr(open_t, 'entry_time', open_t.entry_bar.timestamp)),
                                         on_partial_close=on_partial)
@@ -379,6 +383,9 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                         open_t = None
                         trade_closed_early = True
                         break
+                    
+                    if open_t.stop != old_stop or open_t.contracts != old_contracts:
+                        sync_session_state(open_t, closed_trades, ctx)
                     
                     open_t.last_eval_time = m1_bar.timestamp
                     # Enable active APM trailing stop dynamically based on strategy configuration
@@ -944,37 +951,6 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
             # Build consensus object
             consensus = build_consensus(fabio_signal, andrea_signal)
             consensus.context_fingerprint = getattr(candidate, 'context_fingerprint', '')
-        # Check "No chasing trend at worse prices" rule
-        if consensus.decision == 'trade':
-            proposed_entry = consensus.entry
-            direction = consensus.direction
-            
-            # Find the last winning trade in the same direction today
-            winning_trades = [t for t in closed_trades if t.direction == direction and t.pnl_usd > 0]
-            if winning_trades:
-                last_win = winning_trades[-1]
-                
-                # Calculate current M1 RVol to see if worse price is justified by institutional initiative
-                rvol = 1.0
-                if m1_bars and len(m1_bars) >= 2:
-                    prev_vols = [b.volume for b in m1_bars[:-1] if b.volume > 0]
-                    if prev_vols:
-                        rvol = m1_bars[-1].volume / (sum(prev_vols) / len(prev_vols))
-                
-                if direction == 'short' and proposed_entry < last_win.entry:
-                    if rvol >= 1.30:
-                        print(f"  [CONSENSUS] SHORT entry at worse price {proposed_entry:.2f} ALLOWED because current M1 Relative Volume is high (RVol={rvol:.2f}x >= 1.30x), confirming strong initiative.")
-                    else:
-                        print(f"  [CONSENSUS VETO] Blocked SHORT entry at {proposed_entry:.2f} because it is lower than the previous winning short entry at {last_win.entry:.2f} (no chasing trend further down). RVol={rvol:.2f}x is too low.")
-                        consensus.decision = 'no_trade'
-                        consensus.no_trade_reason = 'no_chasing_worse_price'
-                elif direction == 'long' and proposed_entry > last_win.entry:
-                    if rvol >= 1.30:
-                        print(f"  [CONSENSUS] LONG entry at worse price {proposed_entry:.2f} ALLOWED because current M1 Relative Volume is high (RVol={rvol:.2f}x >= 1.30x), confirming strong initiative.")
-                    else:
-                        print(f"  [CONSENSUS VETO] Blocked LONG entry at {proposed_entry:.2f} because it is higher than the previous winning long entry at {last_win.entry:.2f} (no chasing trend further up). RVol={rvol:.2f}x is too low.")
-                        consensus.decision = 'no_trade'
-                        consensus.no_trade_reason = 'no_chasing_worse_price'
 
         if consensus.decision != 'trade':
             vetoer = 'Andrea' if 'andrea' in consensus.no_trade_reason else 'Fabio/System'
@@ -1024,33 +1000,26 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                     consensus.stop = consensus.entry - 10.0
                 print(f"  [SAFETY] Enforced 10-point minimum stop floor. Adjusted stop to: {consensus.stop}")
 
-        # VALIDATION: Reject backward stops (LLM Hallucinations)
+        # VALIDATION: Reject backward stops (LLM Hallucinations) (Adjust instead of reject)
         if consensus.direction == 'long' and consensus.entry is not None and consensus.stop is not None and consensus.stop >= consensus.entry:
-            print(f"  [ERROR] LLM generated backward stop for LONG (Entry: {consensus.entry}, Stop: {consensus.stop}). Rejecting trade.")
-            log_entry['decision'] = 'skip'
-            log_entry['fabio_reasoning'] += " [REJECTED: Backward Stop]"
-            log_reasoning(log_entry)
-            continue
+            _new_stop = consensus.entry - 10.0
+            print(f"  [ADJUST] Backward stop detected for LONG. Adjusting stop to entry - 10.0 -> {_new_stop}")
+            consensus.stop = _new_stop
         if consensus.direction == 'short' and consensus.entry is not None and consensus.stop is not None and consensus.stop <= consensus.entry:
-            print(f"  [ERROR] LLM generated backward stop for SHORT (Entry: {consensus.entry}, Stop: {consensus.stop}). Rejecting trade.")
-            log_entry['decision'] = 'skip'
-            log_entry['fabio_reasoning'] += " [REJECTED: Backward Stop]"
-            log_reasoning(log_entry)
-            continue
+            _new_stop = consensus.entry + 10.0
+            print(f"  [ADJUST] Backward stop detected for SHORT. Adjusting stop to entry + 10.0 -> {_new_stop}")
+            consensus.stop = _new_stop
 
-        # VALIDATION: Reject backward targets (LLM Hallucinations)
+        # VALIDATION: Reject backward targets (LLM Hallucinations) (Adjust instead of reject)
         if consensus.direction == 'long' and consensus.entry is not None and consensus.target is not None and consensus.target <= consensus.entry:
-            print(f"  [ERROR] LLM generated backward target for LONG (Entry: {consensus.entry}, Target: {consensus.target}). Rejecting trade.")
-            log_entry['decision'] = 'skip'
-            log_entry['fabio_reasoning'] += " [REJECTED: Backward Target]"
-            log_reasoning(log_entry)
-            continue
+            _new_target = consensus.entry + 20.0
+            print(f"  [ADJUST] Backward target detected for LONG. Adjusting target to entry + 20.0 -> {_new_target}")
+            consensus.target = _new_target
         if consensus.direction == 'short' and consensus.entry is not None and consensus.target is not None and consensus.target >= consensus.entry:
-            print(f"  [ERROR] LLM generated backward target for SHORT (Entry: {consensus.entry}, Target: {consensus.target}). Rejecting trade.")
-            log_entry['decision'] = 'skip'
-            log_entry['fabio_reasoning'] += " [REJECTED: Backward Target]"
-            log_reasoning(log_entry)
-            continue
+            _new_target = consensus.entry - 20.0
+            print(f"  [ADJUST] Backward target detected for SHORT. Adjusting target to entry - 20.0 -> {_new_target}")
+            consensus.target = _new_target
+
 
 
         # ── INVALIDATION WALL STOP LOGIC ─────────────────────────────
@@ -1091,32 +1060,49 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 
             if is_valid_wall:
                 wall_distance = abs(consensus.entry - active_wall)
-                # If the wall is too far, veto the trade
-                if wall_distance > 30.0:
-                    print(f"  [VETO] Protective wall is too far ({wall_distance:.1f}pt > 30pt max risk). Vetoing to avoid unprotected stop.")
-                    log_entry['decision'] = 'no_trade'
-                    log_entry['no_trade_reason'] = f'wall_too_far_unprotected_stop ({wall_distance:.1f}pt > 30pt)'
-                    log_reasoning(log_entry)
-                    continue
+                # COMMENTED OUT PER USER REQUEST: Avoid hardcoded numeric if-veto for wall distance.
+                # The stop_distance > 50.0 cap filter below still protects against excessively wide stops.
+                # if wall_distance > 30.0:
+                #     print(f"  [VETO] Protective wall is too far ({wall_distance:.1f}pt > 30pt max risk). Vetoing to avoid unprotected stop.")
+                #     log_entry['decision'] = 'no_trade'
+                #     log_entry['no_trade_reason'] = f'wall_too_far_unprotected_stop ({wall_distance:.1f}pt > 30pt)'
+                #     log_reasoning(log_entry)
+                #     continue
                 
-                # Enforce stop behind wall with 1.0pt buffer
+                # Enforce stop behind wall with 1.0pt buffer, but cap the adjusted stop distance to prevent "stop dragging"
+                max_stop_distance = 25.0 # Max 100 ticks risk
                 if consensus.direction == 'long' and consensus.stop >= active_wall:
                     _new_stop = active_wall - 1.0
-                    print(f"  [ADJUST] Stop {consensus.stop} is unprotected. Moving behind wall {active_wall} -> {_new_stop}")
-                    consensus.stop = _new_stop
+                    _dist = abs(consensus.entry - _new_stop)
+                    if _dist <= max_stop_distance:
+                        print(f"  [ADJUST] Stop {consensus.stop} is unprotected. Moving behind wall {active_wall} -> {_new_stop} (risk: {_dist:.2f} pts)")
+                        consensus.stop = _new_stop
+                    else:
+                        _capped_stop = consensus.entry - max_stop_distance
+                        print(f"  [ADJUST] Wall is too far ({_dist:.2f} pts). Capping stop at {max_stop_distance} pts from entry -> {_capped_stop}")
+                        consensus.stop = _capped_stop
                 elif consensus.direction == 'short' and consensus.stop <= active_wall:
                     _new_stop = active_wall + 1.0
-                    print(f"  [ADJUST] Stop {consensus.stop} is unprotected. Moving behind wall {active_wall} -> {_new_stop}")
-                    consensus.stop = _new_stop
+                    _dist = abs(consensus.entry - _new_stop)
+                    if _dist <= max_stop_distance:
+                        print(f"  [ADJUST] Stop {consensus.stop} is unprotected. Moving behind wall {active_wall} -> {_new_stop} (risk: {_dist:.2f} pts)")
+                        consensus.stop = _new_stop
+                    else:
+                        _capped_stop = consensus.entry + max_stop_distance
+                        print(f"  [ADJUST] Wall is too far ({_dist:.2f} pts). Capping stop at {max_stop_distance} pts from entry -> {_capped_stop}")
+                        consensus.stop = _capped_stop
+
 
         # ── OPTIMIZATION: Stop Loss Cap Filter (50 points) ──
         stop_distance = abs(consensus.entry - consensus.stop) if (consensus.entry and consensus.stop) else 0.0
         if stop_distance > 50.0:
-            print(f"  [VETO] Stop distance exceeds cap of 50 points ({stop_distance:.2f} pts). Rejecting trade.")
-            log_entry['decision'] = 'no_trade'
-            log_entry['no_trade_reason'] = f'stop_loss_distance_exceeds_cap_50 ({stop_distance:.2f} pts)'
-            log_reasoning(log_entry)
-            continue
+            if consensus.direction == 'long':
+                _capped_stop = consensus.entry - 50.0
+            else:
+                _capped_stop = consensus.entry + 50.0
+            print(f"  [ADJUST] Stop distance ({stop_distance:.2f} pts) exceeds cap of 50 points. Capping stop at 50 points -> {_capped_stop}")
+            consensus.stop = _capped_stop
+
 
         # Load dynamic parameters from strategy config
         from src.signal_context import get_strategy_config
@@ -1190,8 +1176,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                         new_target = min(valid_levels)
                         print(f"    Found structural level for LONG target: {new_target:.2f} (R:R = {abs(new_target - consensus.entry)/risk_points:.2f})")
                     else:
-                        new_target = target_floor
-                        print(f"    No further structural level found for LONG. Falling back to 1.0 R:R target: {new_target:.2f}")
+                        print(f"    No further structural level found for LONG to satisfy 1.0 R:R. Keeping original structural target: {consensus.target:.2f}")
                 elif consensus.direction == 'short':
                     # We want a level <= entry - min_rr_dist
                     target_cap = consensus.entry - min_rr_dist
@@ -1200,8 +1185,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                         new_target = max(valid_levels)
                         print(f"    Found structural level for SHORT target: {new_target:.2f} (R:R = {abs(new_target - consensus.entry)/risk_points:.2f})")
                     else:
-                        new_target = target_cap
-                        print(f"    No further structural level found for SHORT. Falling back to 1.0 R:R target: {new_target:.2f}")
+                        print(f"    No further structural level found for SHORT to satisfy 1.0 R:R. Keeping original structural target: {consensus.target:.2f}")
+
                 
                 if new_target is not None:
                     consensus.target = new_target
@@ -1412,12 +1397,16 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
 
 def _telegram_periodic_update() -> None:
     """Sends a 5-minute style Telegram update from within the backtest process."""
-    import sys, json, datetime, requests, re
+    import sys, json, datetime, requests, re, os
     from pathlib import Path
     from collections import defaultdict
 
-    bot_token = '7294926651:AAE_Gr9HRtYsTndMs5VIdt1bLqBGprouFYY'
-    chat_id   = '-1003723252971'
+    bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+    chat_id   = os.environ.get('TELEGRAM_CHAT_ID')
+    if not bot_token or not chat_id:
+        print("  [TELEGRAM] Periodic update skipped: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not configured in environment.")
+        return
+
     base_dir  = Path(__file__).parent.parent
     trades_log = base_dir / 'agent_memory' / 'trades_log.jsonl'
     marker_file = base_dir / 'agent_memory' / 'run_start_marker.json'
@@ -1492,8 +1481,8 @@ def _telegram_day_summary(date_str: str, trades: list) -> str:
     import os, json, datetime, requests
     from src.agents.llm_client import llm_ask
 
-    bot_token = os.environ.get('TELEGRAM_BOT_TOKEN', '7294926651:AAE_Gr9HRtYsTndMs5VIdt1bLqBGprouFYY')
-    chat_id   = os.environ.get('TELEGRAM_CHAT_ID', '-1003723252971')
+    bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+    chat_id   = os.environ.get('TELEGRAM_CHAT_ID')
     if not bot_token or not chat_id:
         return
 

@@ -7,7 +7,16 @@ Usage:
   python run_backtest.py --days 1 --dry-run  # no API calls, just detect candidates
 """
 import argparse
+import sys
 from dotenv import load_dotenv
+
+# Reconfigure output encoding to handle Unicode symbols on Windows
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+except Exception:
+    pass
+
 load_dotenv()
 from src.backtest_runner import run_backtest, DATA_DIR
 from src.metrics_reporter import compute_metrics, save_report
