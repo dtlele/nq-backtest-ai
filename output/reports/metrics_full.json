@@ -1,17 +1,27 @@
 {
-  "total_trades": 4,
-  "wins": 4,
-  "losses": 0,
-  "win_rate": 1.0,
-  "profit_factor": 0.0,
-  "total_pnl_usd": 156.34,
-  "avg_pnl_usd": 39.09,
-  "avg_r": 1.5,
+  "total_trades": 523,
+  "wins": 260,
+  "losses": 263,
+  "win_rate": 0.497131931166348,
+  "profit_factor": 0.86,
+  "total_pnl_usd": -1320.94,
+  "avg_pnl_usd": -2.53,
+  "avg_r": 0.2,
   "by_setup": {
-    "ivb_model_1_continuation": {
-      "count": 4,
-      "pnl_usd": 156.34225,
-      "wins": 4
+    "imbalance_hunting": {
+      "count": 494,
+      "pnl_usd": -754.3057300000003,
+      "wins": 250
+    },
+    "none": {
+      "count": 18,
+      "pnl_usd": -450.81786000000005,
+      "wins": 5
+    },
+    "failed_auction": {
+      "count": 11,
+      "pnl_usd": -115.820035,
+      "wins": 5
     }
   }
 }

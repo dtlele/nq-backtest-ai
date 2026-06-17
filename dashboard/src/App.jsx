@@ -1,0 +1,166 @@
+import { useState, useEffect } from 'react'
+import Sidebar from './components/Sidebar'
+import PlatformTopBar from './components/PlatformTopBar'
+import TradingChart from './components/TradingChart'
+import TradePanel from './components/TradePanel'
+import MacroContext from './components/MacroContext'
+import AgentSidebar from './components/AgentSidebar'
+import StrategyRules from './components/StrategyRules'
+import './App.css'
+
+export default function App() {
+  const [dashboardData, setDashboardData] = useState({
+    ALL_TRADES: [],
+    ALL_PROPOSALS: [],
+    ALL_REASONINGS: [],
+    ANALYZED_DATES: [],
+    OPEN_TRADE: null,
+    LIVE_SESSION_STATE: {},
+    LATEST_REASONING: {},
+    MOCK_SESSIONS: [],
+    MOCK_KPI: { totalTrades: 0, totalDays: 0, winRate: 0, totalPnL: 0, wins: 0, losses: 0, asimmetria: 0, maxDrawdown: 0, navAlerts: 0, middayRejections: 0 },
+    KPI_VWAP_NAV: { totalTrades: 0, totalDays: 0, winRate: 0, totalPnL: 0, wins: 0, losses: 0, asimmetria: 0, maxDrawdown: 0, navAlerts: 0, middayRejections: 0 }
+  })
+
+  const [activeDate, setActiveDate] = useState('2025-01-07')
+  const [activeTrade, setActiveTrade] = useState(null)
+  const [activeReasoning, setActiveReasoning] = useState(null)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [runFilter, setRunFilter] = useState('all')
+  const [jumpTimestamp, setJumpTimestamp] = useState(null)
+  const [showStrategyRules, setShowStrategyRules] = useState(false)
+  const [autoScroll, setAutoScroll] = useState(true)
+  const [timeZone, setTimeZone] = useState('America/New_York')
+
+  // Polling data instead of Vite HMR
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch('/data/status.json?t=' + Date.now())
+        if (res.ok) {
+          const data = await res.json()
+          setDashboardData(data)
+        }
+      } catch (err) {
+        console.error("Error fetching status.json", err)
+      }
+    }
+    fetchData()
+    const interval = setInterval(fetchData, 2000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Auto-select date on fresh load
+  useEffect(() => {
+    const availableDates = dashboardData.MOCK_SESSIONS.map(s => s.date)
+    const liveDate = dashboardData.LIVE_SESSION_STATE?.date
+    if (liveDate && availableDates.includes(liveDate)) {
+      if (activeDate !== liveDate) setActiveDate(liveDate)
+    } else if (availableDates.length > 0 && !availableDates.includes(activeDate)) {
+      setActiveDate(availableDates[availableDates.length - 1])
+    }
+  }, [dashboardData.MOCK_SESSIONS, dashboardData.LIVE_SESSION_STATE?.date])
+
+  const handleToggleTimeZone = () => {
+    const localTZ = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Rome'
+    setTimeZone(prev => prev === 'America/New_York' ? localTZ : 'America/New_York')
+  }
+
+  const handleSetActiveTrade = (t) => {
+    setActiveTrade(t)
+  }
+
+  const allDayTrades = dashboardData.ALL_TRADES.filter(t => t.date === activeDate)
+  const dayTrades = runFilter === 'all' ? allDayTrades : allDayTrades.filter(t => t.run === runFilter)
+  const dayProposals = dashboardData.ALL_PROPOSALS.filter(p => p.date === activeDate)
+  const dayReasonings = dashboardData.ALL_REASONINGS.filter(r => r.date === activeDate)
+  const kpi = runFilter === 'vwap_nav' ? dashboardData.KPI_VWAP_NAV : dashboardData.MOCK_KPI
+  const multiDayCtx = { trend: 'UP', volumeAvg: 12000, atr: 150 }
+
+  return (
+    <div className="platform-shell">
+      {/* TOP BAR — full width */}
+      <PlatformTopBar
+        kpi={kpi}
+        sessions={dashboardData.MOCK_SESSIONS}
+        activeDate={activeDate}
+        openTrade={dashboardData.OPEN_TRADE}
+        liveReasoning={dashboardData.LATEST_REASONING}
+        runFilter={runFilter}
+        onRunFilterChange={setRunFilter}
+      />
+
+      {/* MAIN CONTENT — 3 columns */}
+      <div className="platform-body">
+        {/* LEFT — Session Navigator */}
+        <Sidebar
+          sessions={dashboardData.MOCK_SESSIONS}
+          activeDate={activeDate}
+          onSelect={(d) => { setActiveDate(d); handleSetActiveTrade(null) }}
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(c => !c)}
+          onOpenStrategy={() => setShowStrategyRules(true)}
+        />
+
+        {/* CENTER — Chart Area */}
+        <div className="platform-center">
+          <MacroContext ctx={multiDayCtx} date={activeDate} trades={dayTrades} reasonings={dayReasonings} />
+          <TradingChart
+            key={`${activeDate}-${runFilter}-${timeZone}`}
+            trades={dayTrades}
+            proposals={dayProposals}
+            date={activeDate}
+            activeTrade={activeTrade}
+            activeReasoning={activeReasoning}
+            onTradeClick={handleSetActiveTrade}
+            openTrade={dashboardData.OPEN_TRADE}
+            latestReasoning={dashboardData.LATEST_REASONING}
+            jumpTimestamp={jumpTimestamp}
+            runFilter={runFilter}
+            autoScroll={autoScroll}
+            onAutoScrollChange={setAutoScroll}
+            timeZone={timeZone}
+            onToggleTimeZone={handleToggleTimeZone}
+          />
+
+          {/* Trade Panel below chart — shown when a trade is selected */}
+          {activeTrade && (
+            <div className="platform-trade-detail">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.06em' }}>📊 TRADE DETAIL</div>
+                <button
+                  onClick={() => setActiveTrade(null)}
+                  style={{ fontSize: 16, color: 'var(--text-muted)', lineHeight: 1, padding: '2px 6px', borderRadius: 4 }}
+                >×</button>
+              </div>
+              <div style={{ overflowY: 'auto', flex: 1 }}>
+                <TradePanel
+                  trade={activeTrade}
+                  allTrades={dayTrades}
+                  proposals={dayProposals}
+                  onSelect={handleSetActiveTrade}
+                  timeZone={timeZone}
+                  compact
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT — Agent Sidebar */}
+        <AgentSidebar
+          latestReasoning={dashboardData.LATEST_REASONING}
+          openTrade={dashboardData.OPEN_TRADE}
+          reasonings={dayReasonings}
+          onJump={(r) => {
+            setActiveReasoning(r)
+            setJumpTimestamp(Date.now() + Math.random())
+          }}
+          timeZone={timeZone}
+        />
+      </div>
+
+      {showStrategyRules && <StrategyRules onClose={() => setShowStrategyRules(false)} />}
+    </div>
+  )
+}

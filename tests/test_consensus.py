@@ -36,19 +36,45 @@ def test_fabio_direction_none_no_trade():
     assert 'threshold' not in c.no_trade_reason
 
 def test_approved_trade_none_prices_adjusted():
-    """Approved trade with None prices must adjust to default levels, not skip or crash."""
+    """Verify behavior for None prices in both strict and adjusted modes."""
+    import src.consensus as consensus
     fab_none = FabioSignal('long', 85, None, None, None, 'squeeze', 'r', 'nlm')
-    c = build_consensus(fab_none, _and(True, 65))
+    
+    # 1. STRICT_PROD_MODE = True -> Skip/Reject
+    consensus.STRICT_PROD_MODE = True
+    try:
+        c = consensus.build_consensus(fab_none, _and(True, 65))
+        assert c.decision == 'skip'
+        assert 'missing_price_fields' in c.no_trade_reason
+    finally:
+        consensus.STRICT_PROD_MODE = False
+        
+    # 2. STRICT_PROD_MODE = False -> Adjust
+    consensus.STRICT_PROD_MODE = False
+    c = consensus.build_consensus(fab_none, _and(True, 65))
     assert c.decision == 'trade'
     assert c.entry == 0.0
     assert c.stop == -10.0
     assert c.target == 20.0
 
 def test_backward_levels_adjusted():
-    """Backward levels must be adjusted, not rejected."""
-    # Long trade with stop >= entry
+    """Verify behavior for backward levels in both strict and adjusted modes."""
+    import src.consensus as consensus
+    # Long trade with stop >= entry and target <= entry
     fab_backward = FabioSignal('long', 85, 20000.0, 20010.0, 19990.0, 'squeeze', 'r', 'nlm')
-    c = build_consensus(fab_backward, _and(True, 65))
+    
+    # 1. STRICT_PROD_MODE = True -> Reject/No Trade
+    consensus.STRICT_PROD_MODE = True
+    try:
+        c = consensus.build_consensus(fab_backward, _and(True, 65))
+        assert c.decision == 'no_trade'
+        assert 'backward_levels' in c.no_trade_reason
+    finally:
+        consensus.STRICT_PROD_MODE = False
+        
+    # 2. STRICT_PROD_MODE = False -> Adjust
+    consensus.STRICT_PROD_MODE = False
+    c = consensus.build_consensus(fab_backward, _and(True, 65))
     assert c.decision == 'trade'
     assert c.stop == 19990.0  # entry (20000) - 10
     assert c.target == 20020.0  # entry (20000) + 20

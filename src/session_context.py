@@ -122,12 +122,22 @@ def update_day_type(ctx: SessionContext, bars: list) -> str:
 def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None, historical_days=None) -> SessionContext:
     ib_high, ib_low = compute_ib(bars)
     initial_day_type = classify_day_type(bars)
+    
+    # IB is complete if the latest bar's time is >= NY open + IB_DURATION_MIN
+    is_complete = False
+    if bars:
+        latest_t = _to_et(bars[-1])
+        ny_open = latest_t.replace(hour=9, minute=30, second=0, microsecond=0)
+        ib_end = ny_open + timedelta(minutes=IB_DURATION_MIN)
+        if latest_t >= ib_end:
+            is_complete = True
+
     ctx = SessionContext(
         date=date_str,
         ib_high=ib_high,
         ib_low=ib_low,
-        ib_range=round(ib_high - ib_low, 2),
-        ib_complete=ib_high > 0,
+        ib_range=round(ib_high - ib_low, 2) if ib_high > 0 else 0.0,
+        ib_complete=is_complete,
         vp=vp,
         prev_day_vp=prev_day_vp,
         historical_days=historical_days or [],

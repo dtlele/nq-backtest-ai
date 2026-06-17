@@ -1,0 +1,169 @@
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.panel-tabs {
+  display: flex;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 4px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  padding: 8px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-btn.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.panel-content {
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.view-title {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+/* Trades View */
+.trade-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trade-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 12px;
+  transition: var(--transition);
+}
+
+.trade-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.trade-header, .trade-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.trade-header {
+  margin-bottom: 8px;
+}
+
+.trade-type {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.trade-type.long {
+  background: var(--success-glow);
+  color: var(--success);
+}
+
+.trade-type.short {
+  background: var(--danger-glow);
+  color: var(--danger);
+}
+
+.trade-time, .trade-price {
+  font-family: 'SF Mono', Consolas, monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.trade-pnl {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.trade-pnl.profit {
+  color: var(--success);
+}
+
+.trade-pnl.loss {
+  color: var(--danger);
+}
+
+/* Logs View */
+.log-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: 'SF Mono', Consolas, monospace;
+  font-size: 11px;
+}
+
+.log-entry {
+  display: flex;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-left: 2px solid transparent;
+}
+
+.log-entry.info {
+  border-left-color: var(--accent-primary);
+}
+
+.log-entry.trade {
+  border-left-color: var(--warning);
+}
+
+.log-entry.signal {
+  border-left-color: var(--success);
+}
+
+.log-time {
+  color: var(--text-secondary);
+}
+
+.log-level {
+  font-weight: 600;
+  width: 50px;
+}
+
+.log-entry.info .log-level { color: var(--accent-primary); }
+.log-entry.trade .log-level { color: var(--warning); }
+.log-entry.signal .log-level { color: var(--success); }
+
+.log-msg {
+  color: var(--text-primary);
+  word-break: break-word;
+}

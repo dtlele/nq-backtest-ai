@@ -1,0 +1,26 @@
+{
+  "trend_down|imbalance_hunting|large_wall": {
+    "seen": 2,
+    "wins": 0,
+    "losses": 2,
+    "win_rate": 0.0,
+    "total_pnl_usd": -180.8,
+    "total_ticks": -176.0,
+    "gross_profit": 0.0,
+    "gross_loss": 180.8,
+    "winning_trades": 0,
+    "losing_trades": 2
+  },
+  "trend_down|imbalance_hunting|small_wall": {
+    "seen": 2,
+    "wins": 2,
+    "losses": 0,
+    "win_rate": 100.0,
+    "total_pnl_usd": 41.6,
+    "total_ticks": 88.0,
+    "gross_profit": 41.6,
+    "gross_loss": 0.0,
+    "winning_trades": 2,
+    "losing_trades": 0
+  }
+}

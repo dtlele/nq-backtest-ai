@@ -1,0 +1,14 @@
+{
+  "balance|imbalance_hunting|medium_wall": {
+    "seen": 1,
+    "wins": 1,
+    "losses": 0,
+    "win_rate": 100.0,
+    "total_pnl_usd": 289.6,
+    "total_ticks": 292.0,
+    "gross_profit": 289.6,
+    "gross_loss": 0.0,
+    "winning_trades": 1,
+    "losing_trades": 0
+  }
+}

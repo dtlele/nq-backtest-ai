@@ -9,7 +9,7 @@ def _bar(h, m, hi, lo, vol=4000):
                vol//2, vol//2, 0, 0.0, 0, (hi+lo)/2)
 
 def _consensus(direction='long', entry=20000.0, stop=19990.0, target=20020.0):
-    fab = FabioSignal(direction, 75, entry, stop, target, 'squeeze', 'r', 'nlm')
+    fab = FabioSignal(direction, 85, entry, stop, target, 'squeeze', 'r', 'nlm')
     and_ = AndreaSignal(True, 70, 'ibob', 'r', 'nlm')
     from src.consensus import build_consensus
     return build_consensus(fab, and_)

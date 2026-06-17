@@ -1,0 +1,137 @@
+{
+  "step.predict": {
+    "traces": [],
+    "train": [],
+    "demos": [
+      {
+        "augmented": true,
+        "market_data": "{\n  \"bar_close\": 22006.25,\n  \"bar_time_et\": \"09:51\",\n  \"day_type\": \"trend_up\",\n  \"initial_balance\": {\n    \"ib_high\": 21993.5,\n    \"ib_low\": 21902.5,\n    \"ib_range\": 91.0,\n    \"ib_position\": \"above Overnight VA\"\n  },\n  \"vwap_status\": {\n    \"vwap\": null,\n    \"sd_distance\": 0.0\n  },\n  \"volume_profile\": {\n    \"poc\": 21909.75,\n    \"va_high\": 21956.25,\n    \"va_low\": 21880.5,\n    \"prev_day_poc\": 21724.25\n  },\n  \"multi_day_trend\": \"MIXED / BALANCE MULTI-DAY\",\n  \"order_flow\": {\n    \"bar_delta\": -1184,\n    \"bar_volume\": 11120,\n    \"m1_buy_contracts\": 314,\n    \"m1_sell_contracts\": 0,\n    \"nav_alert\": false\n  },\n  \"wall_level\": 22000.0,\n  \"wall_size\": 314,\n  \"session_memory\": []\n}",
+        "reasoning": "The market is in a clear uptrend with substantial price action evident. An institutional BUY wall at 22000.0 with a notable size of 314 contracts indicates strong support at this level. The current price of 22006.25 provides a favorable entry point for a long position. The stop loss can be strategically set at 21999.0, just below the wall to safeguard against any reversal. A reasonable target can be established at 22050.00, aligning with potential resistance ahead and allowing for a profitable trade setup.",
+        "setup_valid": "True",
+        "direction": "long",
+        "confidence": "80.0",
+        "entry": "22006.25",
+        "stop": "21999.0",
+        "target": "22050.00"
+      },
+      {
+        "augmented": true,
+        "market_data": "{\n  \"bar_close\": 21869.5,\n  \"bar_time_et\": \"11:00\",\n  \"day_type\": \"trend_up\",\n  \"initial_balance\": {\n    \"ib_high\": 21886.75,\n    \"ib_low\": 21723.5,\n    \"ib_range\": 163.25,\n    \"ib_position\": \"inside IVB\"\n  },\n  \"vwap_status\": {\n    \"vwap\": null,\n    \"sd_distance\": 0.0\n  },\n  \"volume_profile\": {\n    \"poc\": 21734.25,\n    \"va_high\": 21754.0,\n    \"va_low\": 21662.5,\n    \"prev_day_poc\": null\n  },\n  \"multi_day_trend\": \"MIXED / BALANCE MULTI-DAY\",\n  \"order_flow\": {\n    \"bar_delta\": 134,\n    \"bar_volume\": 866,\n    \"m1_buy_contracts\": 0,\n    \"m1_sell_contracts\": 67,\n    \"nav_alert\": false\n  },\n  \"wall_level\": 21867.5,\n  \"wall_size\": 67,\n  \"session_memory\": [\n    \"[09:31 ET] Tested Overnight VAH (21754.00). Result: Rejected (Strong selling wicks). Close=21735.00, Delta=+274.\",\n    \"[09:31 ET] Tested Overnight POC (21734.25). Result: Touched. Close=21735.00, Delta=+274.\",\n    \"[09:32 ET] Institutional order wall of 448 contracts (Sell) detected at 21745.00-21770.00.\",\n    \"[09:32 ET] Tested IB High (21769.50). Result: Rejected (Strong selling wicks). Close=21743.75, Delta=-17.\",\n    \"[09:34 ET] Institutional order wall of 317 contracts (Sell) detected at 21772.75-21782.00.\",\n    \"[09:39 ET] Institutional order wall of 320 contracts (Buy) detected at 21768.00-21772.25.\",\n    \"[09:40 ET] Institutional order wall of 382 contracts (Sell) detected at 21780.50-21800.25.\",\n    \"[09:41 ET] Institutional order wall of 436 contracts (Buy) detected at 21797.50-21808.25.\",\n    \"[09:42 ET] Institutional order wall of 367 contracts (Buy) detected at 21805.75-21809.75.\",\n    \"[09:43 ET] Institutional order wall of 373 contracts (Sell) detected at 21809.75-21826.00.\",\n    \"[09:43 ET] Tested IB High (21817.00). Result: Rejected (Strong selling wicks). Close=21808.00, Delta=-438.\",\n    \"[09:46 ET] Institutional order wall of 1042 contracts (Buy) detected at 21814.75-21833.75.\",\n    \"[09:53 ET] Institutional order wall of 325 contracts (Buy) detected at 21830.00-21840.00.\",\n    \"[09:57 ET] Institutional order wall of 751 contracts (Buy) detected at 21798.75-21816.00.\",\n    \"[10:00 ET] Initial Balance (IB) range completed. High=21848.75, Low=21723.50, Range=125.25 points.\",\n    \"[10:00 ET] Institutional order wall of 504 contracts (Buy) detected at 21822.75-21827.75.\",\n    \"[10:03 ET] Institutional order wall of 160 contracts (Buy) detected at 21827.75-21827.75.\",\n    \"[10:11 ET] Institutional order wall of 351 contracts (Sell) detected at 21794.00-21819.50.\",\n    \"[10:12 ET] Institutional order wall of 1270 contracts (Sell) detected at 21820.00-21830.00.\",\n    \"[10:14 ET] Institutional order wall of 952 contracts (Sell) detected at 21836.50-21854.00.\",\n    \"[10:14 ET] Tested IB High (21848.75). Result: Touched. Close=21852.50, Delta=-319.\",\n    \"[10:18 ET] Institutional order wall of 480 contracts (Sell) detected at 21853.50-21863.00.\",\n    \"[10:22 ET] Institutional order wall of 320 contracts (Sell) detected at 21868.25-21873.75.\",\n    \"[10:28 ET] Tested IB High (21882.00). Result: Rejected (Strong selling wicks). Close=21878.75, Delta=-339.\",\n    \"[10:29 ET] Institutional order wall of 541 contracts (Sell) detected at 21878.50-21885.00.\",\n    \"[10:30 ET] Institutional order wall of 363 contracts (Buy) detected at 21869.00-21872.50.\",\n    \"[10:31 ET] Institutional order wall of 582 contracts (Buy) detected at 21856.50-21865.00.\",\n    \"[10:35 ET] Institutional order wall of 405 contracts (Buy) detected at 21845.00-21850.00.\",\n    \"[10:42 ET] Institutional order wall of 373 contracts (Sell) detected at 21868.25-21871.75.\",\n    \"[10:45 ET] Institutional order wall of 747 contracts (Sell) detected at 21873.00-21884.00.\",\n    \"[10:46 ET] Institutional order wall of 533 contracts (Sell) detected at 21881.50-21890.00.\",\n    \"[10:46 ET] Tested IB High (21886.75). Result: Rejected (Strong selling wicks). Close=21884.00, Delta=-467.\",\n    \"[10:48 ET] Institutional order wall of 249 contracts (Buy) detected at 21883.00-21891.00.\",\n    \"[10:50 ET] Institutional order wall of 393 contracts (Buy) detected at 21862.25-21880.00.\",\n    \"[10:53 ET] Institutional order wall of 473 contracts (Sell) detected at 21880.00-21888.00.\"\n  ]\n}",
+        "reasoning": "The market is currently in a bullish trend, closing at 21869.5. A significant selling wall is present at 21867.5, which can serve as resistance. With a recent institutional buying wall below the current price, entering a long position is feasible. An optimal entry could be at 21869.5, with a stop loss placed just below the wall at 21866.0 to limit risk. A profit target can be set at 21900.0, taking advantage of potential upward movement in a bullish environment.",
+        "setup_valid": "True",
+        "direction": "long",
+        "confidence": "80.0",
+        "entry": "21869.5",
+        "stop": "21866.0",
+        "target": "21900.0"
+      },
+      {
+        "augmented": true,
+        "market_data": "{\n  \"bar_close\": 21815.0,\n  \"bar_time_et\": \"10:01\",\n  \"day_type\": \"trend_up\",\n  \"initial_balance\": {\n    \"ib_high\": 21886.75,\n    \"ib_low\": 21723.5,\n    \"ib_range\": 163.25,\n    \"ib_position\": \"above Overnight VA\"\n  },\n  \"vwap_status\": {\n    \"vwap\": null,\n    \"sd_distance\": 0.0\n  },\n  \"volume_profile\": {\n    \"poc\": 21734.25,\n    \"va_high\": 21754.0,\n    \"va_low\": 21662.5,\n    \"prev_day_poc\": null\n  },\n  \"multi_day_trend\": \"MIXED / BALANCE MULTI-DAY\",\n  \"order_flow\": {\n    \"bar_delta\": 8,\n    \"bar_volume\": 1646,\n    \"m1_buy_contracts\": 0,\n    \"m1_sell_contracts\": 55,\n    \"nav_alert\": false\n  },\n  \"wall_level\": 21825.0,\n  \"wall_size\": 55,\n  \"session_memory\": [\n    \"[09:31 ET] Tested Overnight VAH (21754.00). Result: Rejected (Strong selling wicks). Close=21735.00, Delta=+274.\",\n    \"[09:31 ET] Tested Overnight POC (21734.25). Result: Touched. Close=21735.00, Delta=+274.\",\n    \"[09:32 ET] Institutional order wall of 448 contracts (Sell) detected at 21745.00-21770.00.\",\n    \"[09:32 ET] Tested IB High (21769.50). Result: Rejected (Strong selling wicks). Close=21743.75, Delta=-17.\",\n    \"[09:34 ET] Institutional order wall of 317 contracts (Sell) detected at 21772.75-21782.00.\",\n    \"[09:39 ET] Institutional order wall of 320 contracts (Buy) detected at 21768.00-21772.25.\",\n    \"[09:40 ET] Institutional order wall of 382 contracts (Sell) detected at 21780.50-21800.25.\",\n    \"[09:41 ET] Institutional order wall of 436 contracts (Buy) detected at 21797.50-21808.25.\",\n    \"[09:42 ET] Institutional order wall of 367 contracts (Buy) detected at 21805.75-21809.75.\",\n    \"[09:43 ET] Institutional order wall of 373 contracts (Sell) detected at 21809.75-21826.00.\",\n    \"[09:43 ET] Tested IB High (21817.00). Result: Rejected (Strong selling wicks). Close=21808.00, Delta=-438.\",\n    \"[09:46 ET] Institutional order wall of 1042 contracts (Buy) detected at 21814.75-21833.75.\",\n    \"[09:53 ET] Institutional order wall of 325 contracts (Buy) detected at 21830.00-21840.00.\",\n    \"[09:57 ET] Institutional order wall of 751 contracts (Buy) detected at 21798.75-21816.00.\",\n    \"[10:00 ET] Initial Balance (IB) range completed. High=21848.75, Low=21723.50, Range=125.25 points.\",\n    \"[10:00 ET] Institutional order wall of 504 contracts (Buy) detected at 21822.75-21827.75.\"\n  ]\n}",
+        "reasoning": "The market is displaying a strong uptrend with a recent close at 21815.0 and good momentum. Notably, there is a significant BUY wall at 21825.0, which can act as structural support for further upward movement. A long entry can be considered at the current price of 21815.0, with a stop loss placed below the wall at 21824.0 to limit downside risk. Given the current dynamics, a target can reasonably be set at 21850.0, allowing for a profit capture aligned with bullish momentum.",
+        "setup_valid": "True",
+        "direction": "long",
+        "confidence": "78.0",
+        "entry": "21815.0",
+        "stop": "21824.0",
+        "target": "21850.0"
+      },
+      {
+        "augmented": true,
+        "market_data": "{\n  \"bar_close\": 21031.0,\n  \"bar_time_et\": \"09:49\",\n  \"day_type\": \"trend_down\",\n  \"initial_balance\": {\n    \"ib_high\": 21197.25,\n    \"ib_low\": 20874.75,\n    \"ib_range\": 322.5,\n    \"ib_position\": \"below Overnight VA\"\n  },\n  \"vwap_status\": {\n    \"vwap\": null,\n    \"sd_distance\": 0.0\n  },\n  \"volume_profile\": {\n    \"poc\": 21286.25,\n    \"va_high\": 21372.5,\n    \"va_low\": 21143.0,\n    \"prev_day_poc\": 21345.0\n  },\n  \"multi_day_trend\": \"MIXED / BALANCE MULTI-DAY\",\n  \"order_flow\": {\n    \"bar_delta\": -179,\n    \"bar_volume\": 3719,\n    \"m1_buy_contracts\": 0,\n    \"m1_sell_contracts\": 158,\n    \"nav_alert\": false\n  },\n  \"wall_level\": 21050.0,\n  \"wall_size\": 158,\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1139 contracts (Buy) detected at 21120.50-21142.00.\",\n    \"[09:31 ET] Tested IB Low (21150.75). Result: Accepted (Closed below). Close=21142.25, Delta=+308.\",\n    \"[09:31 ET] Tested Overnight VAL (21143.00). Result: Touched. Close=21142.25, Delta=+308.\",\n    \"[09:37 ET] Institutional order wall of 568 contracts (Buy) detected at 21100.00-21126.75.\",\n    \"[09:38 ET] Institutional order wall of 577 contracts (Buy) detected at 21080.00-21098.00.\",\n    \"[09:39 ET] Institutional order wall of 718 contracts (Buy) detected at 21070.00-21100.00.\",\n    \"[09:43 ET] Institutional order wall of 375 contracts (Buy) detected at 21100.00-21116.50.\",\n    \"[09:46 ET] Tested IB Low (21067.75). Result: Accepted (Closed below). Close=21061.75, Delta=+553.\",\n    \"[09:47 ET] Institutional order wall of 860 contracts (Buy) detected at 21036.00-21063.50.\",\n    \"[09:48 ET] Institutional order wall of 1338 contracts (Sell) detected at 21015.50-21032.25.\"\n  ]\n}",
+        "reasoning": "The market is exhibiting a downward trend and has a significant SELL wall at 21015.50 with a size of 1338 contracts. This indicates potential resistance at that level. Given the current price (21031.0) is near this wall, a short position could be taken to capitalize on the anticipated decline. The stop loss should be placed above this wall at 21016.5 for protection against upside risks. A conservative target could be set at 20900.0, looking for price action to continue downward within the trend.",
+        "setup_valid": "True",
+        "direction": "short",
+        "confidence": "70.0",
+        "entry": "21031.0",
+        "stop": "21016.5",
+        "target": "20900.0"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21356.5,\n  \"bar_time_et\": \"10:01\",\n  \"day_type\": \"balance\",\n  \"initial_balance\": {\n    \"ib_high\": 21319.5,\n    \"ib_low\": 21159.5,\n    \"ib_range\": 160.0,\n    \"ib_position\": \"inside Overnight VA\"\n  },\n  \"vwap_status\": {\n    \"vwap\": null,\n    \"sd_distance\": 0.0\n  },\n  \"volume_profile\": {\n    \"poc\": 21297.25,\n    \"va_high\": 21358.0,\n    \"va_low\": 21215.0,\n    \"prev_day_poc\": 21205.25\n  },\n  \"multi_day_trend\": \"MIXED / BALANCE MULTI-DAY\",\n  \"order_flow\": {\n    \"bar_delta\": -1203,\n    \"bar_volume\": 15081,\n    \"m1_buy_contracts\": 231,\n    \"m1_sell_contracts\": 0,\n    \"nav_alert\": false\n  },\n  \"wall_level\": 21323.0,\n  \"wall_size\": 231,\n  \"session_memory\": []\n}",
+        "setup_valid": "True",
+        "direction": "long",
+        "confidence": "75.0",
+        "entry": "21356.5",
+        "stop": "21321.0",
+        "target": "21400.0",
+        "reasoning": "The market is in a developing bullish trend with positive momentum and there is substantial support at the wall level of 21323.0. Given the price closed above this level at 21356.5, a long trade setup can be considered. The entry should be at the current price, with a protective stop loss just below the support at 21321.5. This allows for a safe distance while targeting a reasonable profit area to capitalize on the upward movement, potentially set at 21400.0 to maximize gains while considering market fluctuations."
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21056.25,\n  \"bar_time_et\": \"09:58\",\n  \"day_type\": \"trend_down\",\n  \"initial_balance\": {\n    \"ib_high\": 21197.25,\n    \"ib_low\": 20874.75,\n    \"ib_range\": 322.5,\n    \"ib_position\": \"below Overnight VA\"\n  },\n  \"vwap_status\": {\n    \"vwap\": null,\n    \"sd_distance\": 0.0\n  },\n  \"volume_profile\": {\n    \"poc\": 21286.25,\n    \"va_high\": 21372.5,\n    \"va_low\": 21143.0,\n    \"prev_day_poc\": 21345.0\n  },\n  \"multi_day_trend\": \"MIXED / BALANCE MULTI-DAY\",\n  \"order_flow\": {\n    \"bar_delta\": -272,\n    \"bar_volume\": 2274,\n    \"m1_buy_contracts\": 62,\n    \"m1_sell_contracts\": 0,\n    \"nav_alert\": false\n  },\n  \"wall_level\": 21027.75,\n  \"wall_size\": 62,\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1139 contracts (Buy) detected at 21120.50-21142.00.\",\n    \"[09:31 ET] Tested IB Low (21150.75). Result: Accepted (Closed below). Close=21142.25, Delta=+308.\",\n    \"[09:31 ET] Tested Overnight VAL (21143.00). Result: Touched. Close=21142.25, Delta=+308.\",\n    \"[09:37 ET] Institutional order wall of 568 contracts (Buy) detected at 21100.00-21126.75.\",\n    \"[09:38 ET] Institutional order wall of 577 contracts (Buy) detected at 21080.00-21098.00.\",\n    \"[09:39 ET] Institutional order wall of 718 contracts (Buy) detected at 21070.00-21100.00.\",\n    \"[09:43 ET] Institutional order wall of 375 contracts (Buy) detected at 21100.00-21116.50.\",\n    \"[09:46 ET] Tested IB Low (21067.75). Result: Accepted (Closed below). Close=21061.75, Delta=+553.\",\n    \"[09:47 ET] Institutional order wall of 860 contracts (Buy) detected at 21036.00-21063.50.\",\n    \"[09:48 ET] Institutional order wall of 1338 contracts (Sell) detected at 21015.50-21032.25.\"\n  ]\n}",
+        "setup_valid": "False",
+        "direction": "none",
+        "confidence": "0",
+        "entry": "None",
+        "stop": "None",
+        "target": "None",
+        "reasoning": "The market conditions do not align with a high-probability setup. Structural rules or institutional order flow do not support an entry."
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 22027.5,\n  \"bar_time_et\": \"09:45\",\n  \"day_type\": \"trend_down\",\n  \"initial_balance\": {\n    \"ib_high\": 22078.25,\n    \"ib_low\": 21987.25,\n    \"ib_range\": 91.0,\n    \"ib_position\": \"above Overnight VA\"\n  },\n  \"vwap_status\": {\n    \"vwap\": null,\n    \"sd_distance\": 0.0\n  },\n  \"volume_profile\": {\n    \"poc\": 22007.5,\n    \"va_high\": 22020.75,\n    \"va_low\": 21987.5,\n    \"prev_day_poc\": 22019.75\n  },\n  \"multi_day_trend\": \"MIXED / BALANCE MULTI-DAY\",\n  \"order_flow\": {\n    \"bar_delta\": -72,\n    \"bar_volume\": 954,\n    \"m1_buy_contracts\": 0,\n    \"m1_sell_contracts\": 47,\n    \"nav_alert\": false\n  },\n  \"wall_level\": 22030.0,\n  \"wall_size\": 47,\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1858 contracts (Buy) detected at 22026.50-22043.25.\",\n    \"[09:31 ET] Tested IB Low (22036.50). Result: Accepted (Closed below). Close=22027.25, Delta=+191.\",\n    \"[09:32 ET] Institutional order wall of 2549 contracts (Buy) detected at 22012.75-22023.75.\",\n    \"[09:32 ET] Tested Yesterday POC (22019.75). Result: Touched. Close=22018.25, Delta=+205.\",\n    \"[09:32 ET] Tested Overnight VAH (22020.75). Result: Touched. Close=22018.25, Delta=+205.\",\n    \"[09:38 ET] Institutional order wall of 936 contracts (Buy) detected at 22000.00-22011.50.\",\n    \"[09:38 ET] Tested Overnight POC (22007.50). Result: Touched. Close=22006.50, Delta=+125.\",\n    \"[09:39 ET] Institutional order wall of 343 contracts (Sell) detected at 22010.75-22022.75.\",\n    \"[09:40 ET] Institutional order wall of 490 contracts (Sell) detected at 22021.00-22032.50.\",\n    \"[09:41 ET] Institutional order wall of 1006 contracts (Sell) detected at 22023.50-22030.75.\",\n    \"[09:43 ET] Tested Yesterday POC (22019.75). Result: Touched. Close=22019.00, Delta=+256.\",\n    \"[09:43 ET] Tested Overnight VAH (22020.75). Result: Touched. Close=22019.00, Delta=+256.\"\n  ]\n}",
+        "setup_valid": "False",
+        "direction": "none",
+        "confidence": "0",
+        "entry": "None",
+        "stop": "None",
+        "target": "None",
+        "reasoning": "The market conditions do not align with a high-probability setup. Structural rules or institutional order flow do not support an entry."
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21952.5,\n  \"bar_time_et\": \"09:32\",\n  \"day_type\": \"unknown\",\n  \"initial_balance\": {\n    \"ib_high\": 22037.0,\n    \"ib_low\": 21902.5,\n    \"ib_range\": 134.5,\n    \"ib_position\": \"above Overnight VA\"\n  },\n  \"vwap_status\": {\n    \"vwap\": null,\n    \"sd_distance\": 0.0\n  },\n  \"volume_profile\": {\n    \"poc\": 21909.75,\n    \"va_high\": 21930.75,\n    \"va_low\": 21885.25,\n    \"prev_day_poc\": 21724.25\n  },\n  \"multi_day_trend\": \"MIXED / BALANCE MULTI-DAY\",\n  \"order_flow\": {\n    \"bar_delta\": -597,\n    \"bar_volume\": 5709,\n    \"m1_buy_contracts\": 285,\n    \"m1_sell_contracts\": 0,\n    \"nav_alert\": false\n  },\n  \"wall_level\": 21950.0,\n  \"wall_size\": 285,\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 2201 contracts (Sell) detected at 21912.75-21955.00.\",\n    \"[09:31 ET] Tested IB High (21923.50). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight VAH (21930.75). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight POC (21909.75). Result: Touched. Close=21952.50, Delta=-597.\"\n  ]\n}",
+        "setup_valid": "False",
+        "direction": "none",
+        "confidence": "0",
+        "entry": "None",
+        "stop": "None",
+        "target": "None",
+        "reasoning": "The market conditions do not align with a high-probability setup. Structural rules or institutional order flow do not support an entry."
+      }
+    ],
+    "signature": {
+      "instructions": "Evaluate the current market context (trend, VWAP, Big Trades).\nIdentify structural imbalances and determine if a valid trading setup exists.\nIf valid, calculate precise mechanical execution: entry, structurally-placed stop loss (behind a Big Trade wall), and target.\nIf no setup exists, set setup_valid to False.",
+      "fields": [
+        {
+          "prefix": "Market Data:",
+          "description": "Recent M1 bars, volume profile, VWAP context, and active rules."
+        },
+        {
+          "prefix": "Reasoning:",
+          "description": "MAX 150 WORDS: cite the specific Big Trade wall protecting the stop, exact stop placement logic, and target rationale. If no setup, explain why."
+        },
+        {
+          "prefix": "setup_valid:",
+          "description": "Boolean indicating if a valid setup exists."
+        },
+        {
+          "prefix": "Direction:",
+          "description": "Execution direction: long, short, or none."
+        },
+        {
+          "prefix": "Confidence:",
+          "description": "Confidence score 0-100."
+        },
+        {
+          "prefix": "Entry:",
+          "description": "Entry price."
+        },
+        {
+          "prefix": "Stop:",
+          "description": "Stop loss price (structurally protected)."
+        },
+        {
+          "prefix": "Target:",
+          "description": "Profit target price."
+        }
+      ]
+    },
+    "lm": null
+  },
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.13",
+      "dspy": "3.2.1",
+      "cloudpickle": "3.1"
+    }
+  }
+}

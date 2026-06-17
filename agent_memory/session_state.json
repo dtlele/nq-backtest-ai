@@ -1,12 +1,12 @@
 {
-  "date": "2025-01-07",
-  "ib_high": 21806.0,
-  "ib_low": 21525.25,
-  "poc": 21754.75,
-  "day_type": "trend_down",
+  "date": "2025-01-13",
+  "ib_high": 20855.5,
+  "ib_low": 20702.0,
+  "poc": 20821.75,
+  "day_type": "balance",
   "open_trade": null,
-  "equity": 50156.34225,
-  "daily_pnl_usd": 156.34225,
-  "trade_count_today": 4,
+  "equity": 50207.42040499999,
+  "daily_pnl_usd": 45.63635000000001,
+  "trade_count_today": 5,
   "session_stopped": false
 }

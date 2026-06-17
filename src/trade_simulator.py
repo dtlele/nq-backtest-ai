@@ -41,7 +41,8 @@ def check_pending_fill(pending: PendingTrade, bar: Bar) -> OpenTrade | None:
             target=pending.target,
             entry_bar=bar,
             consensus=pending.consensus,
-            contracts=pending.contracts
+            contracts=pending.contracts,
+            entry_time=bar.timestamp
         )
     elif pending.direction == 'short' and bar.high >= pending.limit_price:
         return OpenTrade(
@@ -51,7 +52,8 @@ def check_pending_fill(pending: PendingTrade, bar: Bar) -> OpenTrade | None:
             target=pending.target,
             entry_bar=bar,
             consensus=pending.consensus,
-            contracts=pending.contracts
+            contracts=pending.contracts,
+            entry_time=bar.timestamp
         )
     return None
 
@@ -119,8 +121,21 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
             if risk_points > 0 and bar.high >= trade.entry + 1.6 * risk_points:
                 lock_in_stop = trade.entry + 1.0 * risk_points
                 if lock_in_stop > trade.stop:
-                    print(f"  [MANAGEMENT] Near-TP reached (80%). Trailing stop to lock in 1.0 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
+                    print(f"  [MANAGEMENT] Near-TP reached (1.6 R:R). Trailing stop to lock in 1.0 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
                     trade.stop = lock_in_stop
+                    
+            # --- Check High-RR Trailing Tiers ---
+            if risk_points > 0:
+                if bar.high >= trade.entry + 3.5 * risk_points:
+                    lock_in_stop = trade.entry + 2.5 * risk_points
+                    if lock_in_stop > trade.stop:
+                        print(f"  [MANAGEMENT] 3.5 R:R reached. Trailing stop to lock in 2.5 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
+                        trade.stop = lock_in_stop
+                elif bar.high >= trade.entry + 2.5 * risk_points:
+                    lock_in_stop = trade.entry + 1.5 * risk_points
+                    if lock_in_stop > trade.stop:
+                        print(f"  [MANAGEMENT] 2.5 R:R reached. Trailing stop to lock in 1.5 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
+                        trade.stop = lock_in_stop
             
             # --- 3. Check Target Hit ---
             if bar.high >= trade.target:
@@ -153,8 +168,21 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
             if risk_points > 0 and bar.low <= trade.entry - 1.6 * risk_points:
                 lock_in_stop = trade.entry - 1.0 * risk_points
                 if lock_in_stop < trade.stop:
-                    print(f"  [MANAGEMENT] Near-TP reached (80%). Trailing stop to lock in 1.0 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
+                    print(f"  [MANAGEMENT] Near-TP reached (1.6 R:R). Trailing stop to lock in 1.0 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
                     trade.stop = lock_in_stop
+                    
+            # --- Check High-RR Trailing Tiers ---
+            if risk_points > 0:
+                if bar.low <= trade.entry - 3.5 * risk_points:
+                    lock_in_stop = trade.entry - 2.5 * risk_points
+                    if lock_in_stop < trade.stop:
+                        print(f"  [MANAGEMENT] 3.5 R:R reached. Trailing stop to lock in 2.5 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
+                        trade.stop = lock_in_stop
+                elif bar.low <= trade.entry - 2.5 * risk_points:
+                    lock_in_stop = trade.entry - 1.5 * risk_points
+                    if lock_in_stop < trade.stop:
+                        print(f"  [MANAGEMENT] 2.5 R:R reached. Trailing stop to lock in 1.5 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
+                        trade.stop = lock_in_stop
             
             # --- 3. Check Target Hit ---
             if bar.low <= trade.target:

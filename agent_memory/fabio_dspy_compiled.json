@@ -1,0 +1,545 @@
+{
+  "step1.predict": {
+    "traces": [],
+    "train": [],
+    "demos": [
+      {
+        "augmented": true,
+        "market_data": "{\n  \"bar_close\": 21599.5,\n  \"wall_level\": 21635.5,\n  \"wall_size\": 83,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\"\n  ]\n}",
+        "reasoning": "The market is in a strong downtrend below Initial Balance Low with significant sell-side Big Trades (786 contracts at 21591.25-21599.75). The nearest counter-trend BUY wall is at 21645.75-21670.50 (1175 contracts), providing structural protection for the stop. Stop is placed above this wall with a 2pt buffer (21672.50). Target is set at 21550.00, aligning with next structural LVN and providing favorable risk-reward.",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential."
+      },
+      {
+        "augmented": true,
+        "market_data": "{\n  \"bar_close\": 21617.0,\n  \"wall_level\": 21599.0,\n  \"wall_size\": 67,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\"\n  ]\n}",
+        "reasoning": "Price is in a strong downtrend below Initial Balance Low, with significant institutional selling and buyers trapped above recent highs. The nearest counter-trend BUY wall is at 21599.00-21622.50 with 333 contracts, providing structural protection for the stop. Stop is placed above this wall at 21623.50 (wall top + 1pt buffer). Target is set at 21550.00, aligning with the next LVN level and providing a favorable risk-reward ratio.",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential."
+      },
+      {
+        "augmented": true,
+        "market_data": "{\n  \"bar_close\": 21633.25,\n  \"wall_level\": 21599.0,\n  \"wall_size\": 67,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\"\n  ]\n}",
+        "reasoning": "Price is trending below Initial Balance Low with strong sell-side Big Trades (786 contracts at 21591.25-21599.75). The nearest counter-trend BUY wall is at 21634.75-21644.75 (1251 contracts), providing structural protection for the stop. Stop is placed above this wall at 21645.75 (wall top + 1pt buffer). Target is set at 21589.50 (IB Low), aligning with the next structural support level.",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential."
+      },
+      {
+        "augmented": true,
+        "market_data": "{\n  \"bar_close\": 21619.0,\n  \"wall_level\": 21639.5,\n  \"wall_size\": 106,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.\",\n  \"session_memory\": []\n}",
+        "reasoning": "Price is trending below Initial Balance Low, confirming a short bias imbalance session. The nearest counter-trend BUY wall is at 21639.5 with 106 contracts, providing structural protection for the stop. Stop is placed above this wall at 21641.5 (wall_top + 2pt buffer). Target is set at 21589.5 (IB Low) for continuation.",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential."
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21619.0,\n  \"wall_level\": 21599.0,\n  \"wall_size\": 67,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.",
+        "reasoning": "The market is in a strong downtrend with price below Initial Balance Low, confirmed by institutional sell-side Big Trades. The nearest counter-trend BUY wall is at 21634.75-21644.75 (1251 contracts), providing structural protection for the stop. Stop is placed above this wall with a 2pt buffer. Target is set at the next LVN level (21578.5) for continuation.",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21619.0",
+        "stop": "21647.25",
+        "target": "21578.5"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21947.0,\n  \"wall_level\": 21950.75,\n  \"wall_size\": 166,\n  \"day_type\": \"trend_up\",\n  \"market_narrative\": \"Price is trending outside the Initial Balance, indicating a strong imbalance day. Institutional Big Trades show a strong buy wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential on pullbacks to key levels.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 2201 contracts (Sell) detected at 21912.75-21955.00.\",\n    \"[09:31 ET] Tested IB High (21923.50). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight VAH (21930.75). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight POC (21909.75). Result: Touched. Close=21952.50, Delta=-597.\",\n    \"[09:32 ET] Institutional order wall of 1902 contracts (Buy) detected at 21950.00-21976.25.\",\n    \"[09:35 ET] Institutional order wall of 1393 contracts (Buy) detected at 21947.00-21952.50.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "long",
+        "trapped_side": "sellers",
+        "market_state": "imbalance",
+        "session_narrative": "Price is trending outside the Initial Balance, indicating a strong imbalance day. Institutional Big Trades show a strong buy wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential on pullbacks to key levels.",
+        "reasoning": "The market is in an imbalance state with price trending outside the Initial Balance. A strong buy wall was detected at 21950.0-21976.25 with 1902 contracts, indicating institutional absorption. The nearest counter-trend SELL wall is at 21947.00-21952.50 with 1393 contracts. The stop is placed 2 ticks below this wall to avoid liquidity sweeps. Target is set at the next resistance level based on volume profile.",
+        "direction": "long",
+        "confidence": "85",
+        "entry": "21957.75",
+        "stop": "21944.5",
+        "target": "21990.0"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21652.25,\n  \"wall_level\": 21622.25,\n  \"wall_size\": 98,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\",\n    \"[09:45 ET] Institutional order wall of 424 contracts (Buy) detected at 21619.00-21630.00.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.",
+        "reasoning": "Price is in a strong downtrend below Initial Balance Low, confirming a short bias imbalance session. Nearest counter-trend BUY wall is at 21662.50-21665.75 (Big Trade cluster size=484 contracts), protecting the stop above at 21667.25 (wall top + 2pt buffer). Target is set at 21600.00, aligning with previous LVN and institutional absorption level.",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21652.25",
+        "stop": "21667.75",
+        "target": "21600.0"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21974.5,\n  \"wall_level\": 21950.0,\n  \"wall_size\": 285,\n  \"day_type\": \"unknown\",\n  \"market_narrative\": \"Price is trending outside the Initial Balance, indicating an imbalance day. Institutional Big Trades show a strong buy wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential on pullbacks to key levels.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 2201 contracts (Sell) detected at 21912.75-21955.00.\",\n    \"[09:31 ET] Tested IB High (21923.50). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight VAH (21930.75). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight POC (21909.75). Result: Touched. Close=21952.50, Delta=-597.\",\n    \"[09:32 ET] Institutional order wall of 1902 contracts (Buy) detected at 21950.00-21976.25.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "long",
+        "trapped_side": "sellers",
+        "market_state": "imbalance",
+        "session_narrative": "Price is trending outside the Initial Balance, indicating an imbalance day. Institutional Big Trades show a strong buy wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential on pullbacks to key levels.",
+        "reasoning": "The nearest counter-trend SELL wall is at 21950.00-21976.25 with 1902 contracts. This wall acts as a structural shield for the stop placement. The stop should be placed below this wall to protect against a reversal. The target is set based on the next significant resistance level.",
+        "direction": "long",
+        "confidence": "75",
+        "entry": "21974.5",
+        "stop": "21948.5",
+        "target": "22000.0"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21545.0,\n  \"wall_level\": 21541.25,\n  \"wall_size\": 45,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"The market is in a strong downtrend below the Initial Balance Low (21589.5) with significant institutional selling. Price has rejected the Overnight VAL (21665.0) multiple times, indicating trapped buyers. Recent M1 footprint shows aggressive selling with delta divergence, reinforcing the short bias.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\",\n    \"[09:45 ET] Institutional order wall of 424 contracts (Buy) detected at 21619.00-21630.00.\",\n    \"[09:48 ET] Institutional order wall of 978 contracts (Sell) detected at 21660.00-21666.00.\",\n    \"[09:48 ET] Tested Overnight VAL (21665.00). Result: Touched. Close=21666.25, Delta=-123.\",\n    \"[09:49 ET] Tested Yesterday VAL (21674.75). Result: Accepted (Closed below). Close=21650.50, Delta=+220.\",\n    \"[09:53 ET] Institutional order wall of 815 contracts (Sell) detected at 21599.75-21628.25.\",\n    \"[09:54 ET] Institutional order wall of 1696 contracts (Buy) detected at 21577.00-21590.75.\",\n    \"[09:54 ET] Tested IB Low (21589.50). Result: Accepted (Closed below). Close=21583.50, Delta=+109.\",\n    \"[10:00 ET] Initial Balance (IB) range completed. High=21718.25, Low=21572.75, Range=145.50 points.\",\n    \"[10:02 ET] Institutional order wall of 554 contracts (Sell) detected at 21587.50-21592.75.\",\n    \"[10:11 ET] Tested IB Low (21572.75). Result: Accepted (Closed below). Close=21565.75, Delta=+436.\",\n    \"[10:12 ET] Institutional order wall of 764 contracts (Buy) detected at 21540.00-21560.00.\",\n    \"[10:15 ET] Institutional order wall of 646 contracts (Sell) detected at 21526.00-21542.00.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "The market is in a strong downtrend below the Initial Balance Low (21589.5) with significant institutional selling. Price has rejected the Overnight VAL (21665.0) multiple times, indicating trapped buyers. Recent M1 footprint shows aggressive selling with delta divergence, reinforcing the short bias.",
+        "reasoning": "The market is in a strong downtrend below the Initial Balance Low (21589.5) with significant institutional selling. The nearest counter-trend BUY wall is at 21540.00-21560.00 with 764 contracts (Big Trade cluster). This wall acts as a structural shield for the stop. Stop is placed above the wall with a 2pt buffer. Target is set at the next LVN level (21525.75) with a 1pt buffer.",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21545.0",
+        "stop": "21562.5",
+        "target": "21524.75"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21945.25,\n  \"wall_level\": 21935.0,\n  \"wall_size\": 215,\n  \"day_type\": \"trend_up\",\n  \"market_narrative\": \"Price is trending outside the Initial Balance, indicating a strong imbalance day. Institutional Big Trades show a strong buy wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential on pullbacks to key levels.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 2201 contracts (Sell) detected at 21912.75-21955.00.\",\n    \"[09:31 ET] Tested IB High (21923.50). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight VAH (21930.75). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight POC (21909.75). Result: Touched. Close=21952.50, Delta=-597.\",\n    \"[09:32 ET] Institutional order wall of 1902 contracts (Buy) detected at 21950.00-21976.25.\",\n    \"[09:35 ET] Institutional order wall of 1393 contracts (Buy) detected at 21947.00-21952.50.\",\n    \"[09:36 ET] Institutional order wall of 1620 contracts (Buy) detected at 21930.00-21944.25.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "long",
+        "trapped_side": "sellers",
+        "market_state": "imbalance",
+        "session_narrative": "Price is trending outside the Initial Balance, indicating a strong imbalance day. Institutional Big Trades show a strong buy wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential on pullbacks to key levels.",
+        "reasoning": "The nearest counter-trend SELL wall is at 21930.00-21944.25 with 628 contracts. This wall provides structural protection for the stop loss. Stop is placed 2 points below the wall bottom at 21928.25 to avoid liquidity sweeps. Target is set at 21976.25, the top of the nearest BUY wall, providing a favorable risk-reward ratio.",
+        "direction": "long",
+        "confidence": "85",
+        "entry": "21945.25",
+        "stop": "21927.75",
+        "target": "21976.25"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21956.0,\n  \"wall_level\": 21950.0,\n  \"wall_size\": 285,\n  \"day_type\": \"unknown\",\n  \"market_narrative\": \"Price is trending outside the Initial Balance, indicating an imbalance day. Institutional Big Trades show a strong buy wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential on pullbacks to key levels.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 2201 contracts (Sell) detected at 21912.75-21955.00.\",\n    \"[09:31 ET] Tested IB High (21923.50). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight VAH (21930.75). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight POC (21909.75). Result: Touched. Close=21952.50, Delta=-597.\",\n    \"[09:32 ET] Institutional order wall of 1902 contracts (Buy) detected at 21950.00-21976.25.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "long",
+        "trapped_side": "sellers",
+        "market_state": "imbalance",
+        "session_narrative": "Price is trending outside the Initial Balance, indicating an imbalance day. Institutional Big Trades show a strong buy wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential on pullbacks to key levels.",
+        "reasoning": "Price is trending outside the Initial Balance, indicating a strong imbalance day. Institutional Big Trades show a strong BUY wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential. The nearest counter-trend SELL wall is at 21950.0-21976.25 with 1902 contracts, providing structural protection for the stop. Stop is placed 2 ticks below the wall bottom for safety.",
+        "direction": "long",
+        "confidence": "85",
+        "entry": "21956.0",
+        "stop": "21947.5",
+        "target": "21990.0"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21539.0,\n  \"wall_level\": 21589.5,\n  \"wall_size\": 148,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"The market is in a strong downtrend below Initial Balance Low (21589.5) with significant institutional selling. Price has rejected the Overnight VAL (21665.0) multiple times, indicating trapped buyers. Recent M1 footprint shows aggressive selling with delta divergence, reinforcing the short bias.\",\n  \"session_memory\": []\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "The market is in a strong downtrend below Initial Balance Low (21589.5) with significant institutional selling. Price has rejected the Overnight VAL (21665.0) multiple times, indicating trapped buyers. Recent M1 footprint shows aggressive selling with delta divergence, reinforcing the short bias.",
+        "reasoning": "The market is in a strong downtrend below the Initial Balance Low (21589.5) with significant institutional selling. The nearest counter-trend BUY wall is observed at 21540.00-21560.00 with 389 contracts, providing structural protection for the stop. Stop is placed 2 points above the wall at 21562.00 to avoid liquidity sweeps. Target is set at 21489.5, aligning with the next significant LVN and providing a favorable risk-reward ratio.",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21539.0",
+        "stop": "21562.5",
+        "target": "21489.5"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21666.25,\n  \"wall_level\": 21663.75,\n  \"wall_size\": 63,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\",\n    \"[09:45 ET] Institutional order wall of 424 contracts (Buy) detected at 21619.00-21630.00.\",\n    \"[09:48 ET] Institutional order wall of 978 contracts (Sell) detected at 21660.00-21666.00.\",\n    \"[09:48 ET] Tested Overnight VAL (21665.00). Result: Touched. Close=21666.25, Delta=-123.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.",
+        "reasoning": "The nearest counter-trend BUY wall is at 21660.00-21666.00 with 978 contracts. This wall acts as the structural shield for our short position. The stop should be placed above this wall to avoid being caught in a liquidity sweep. The wall top is at 21666.00, so adding a 2pt buffer gives us a stop at 21668.00. The target is set at the next significant LVN at 21643.75, providing a favorable risk-reward ratio.",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21666.25",
+        "stop": "21668.5",
+        "target": "21643.75"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21632.25,\n  \"wall_level\": 21622.25,\n  \"wall_size\": 98,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\",\n    \"[09:45 ET] Institutional order wall of 424 contracts (Buy) detected at 21619.00-21630.00.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.",
+        "reasoning": "Price is trending below Initial Balance Low with strong sell-side Big Trades (424 contracts at 21619.00-21630.00). The nearest counter-trend BUY wall is at 21662.50-21665.75 (484 contracts). Stop is placed above this wall at 21667.25 (wall top + 1.5pt buffer). Target is set at 21589.50 (recent low with institutional absorption).",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21632.25",
+        "stop": "21667.75",
+        "target": "21589.5"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21613.75,\n  \"wall_level\": 21620.0,\n  \"wall_size\": 52,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"The market is in a strong downtrend below Initial Balance Low (21589.5) with significant institutional selling detected. Price has rejected the Overnight VAL (21665.0) multiple times, indicating trapped buyers. Recent M1 footprint shows aggressive selling with delta divergence, reinforcing the short bias.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\",\n    \"[09:45 ET] Institutional order wall of 424 contracts (Buy) detected at 21619.00-21630.00.\",\n    \"[09:48 ET] Institutional order wall of 978 contracts (Sell) detected at 21660.00-21666.00.\",\n    \"[09:48 ET] Tested Overnight VAL (21665.00). Result: Touched. Close=21666.25, Delta=-123.\",\n    \"[09:49 ET] Tested Yesterday VAL (21674.75). Result: Accepted (Closed below). Close=21650.50, Delta=+220.\",\n    \"[09:53 ET] Institutional order wall of 815 contracts (Sell) detected at 21599.75-21628.25.\",\n    \"[09:54 ET] Institutional order wall of 1696 contracts (Buy) detected at 21577.00-21590.75.\",\n    \"[09:54 ET] Tested IB Low (21589.50). Result: Accepted (Closed below). Close=21583.50, Delta=+109.\",\n    \"[10:00 ET] Initial Balance (IB) range completed. High=21718.25, Low=21572.75, Range=145.50 points.\",\n    \"[10:02 ET] Institutional order wall of 554 contracts (Sell) detected at 21587.50-21592.75.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "The market is in a strong downtrend below Initial Balance Low (21589.5) with significant institutional selling detected. Price has rejected the Overnight VAL (21665.0) multiple times, indicating trapped buyers. Recent M1 footprint shows aggressive selling with delta divergence, reinforcing the short bias.",
+        "reasoning": "Price is in a strong downtrend below Initial Balance Low (21589.5) with significant institutional selling. The nearest counter-trend BUY wall is at 21540.00-21560.00 (389 contracts). Stop should be placed above this absorption cluster with a 1-2pt buffer. Target is set at the next LVN (21538.50) with room for continuation. [REJECTED: Backward Stop]",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21542.25",
+        "stop": "21562.5",
+        "target": "21538.5"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21565.75,\n  \"wall_level\": 21613.0,\n  \"wall_size\": 43,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"The market is in a strong downtrend below Initial Balance Low (21589.5) with significant institutional selling. Price has rejected the Overnight VAL (21665.0) multiple times, indicating trapped buyers. Recent M1 footprint shows aggressive selling with delta divergence, reinforcing the short bias.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\",\n    \"[09:45 ET] Institutional order wall of 424 contracts (Buy) detected at 21619.00-21630.00.\",\n    \"[09:48 ET] Institutional order wall of 978 contracts (Sell) detected at 21660.00-21666.00.\",\n    \"[09:48 ET] Tested Overnight VAL (21665.00). Result: Touched. Close=21666.25, Delta=-123.\",\n    \"[09:49 ET] Tested Yesterday VAL (21674.75). Result: Accepted (Closed below). Close=21650.50, Delta=+220.\",\n    \"[09:53 ET] Institutional order wall of 815 contracts (Sell) detected at 21599.75-21628.25.\",\n    \"[09:54 ET] Institutional order wall of 1696 contracts (Buy) detected at 21577.00-21590.75.\",\n    \"[09:54 ET] Tested IB Low (21589.50). Result: Accepted (Closed below). Close=21583.50, Delta=+109.\",\n    \"[10:00 ET] Initial Balance (IB) range completed. High=21718.25, Low=21572.75, Range=145.50 points.\",\n    \"[10:02 ET] Institutional order wall of 554 contracts (Sell) detected at 21587.50-21592.75.\",\n    \"[10:11 ET] Tested IB Low (21572.75). Result: Accepted (Closed below). Close=21565.75, Delta=+436.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "The market is in a strong downtrend below Initial Balance Low (21589.5) with significant institutional selling. Price has rejected the Overnight VAL (21665.0) multiple times, indicating trapped buyers. Recent M1 footprint shows aggressive selling with delta divergence, reinforcing the short bias.",
+        "reasoning": "The market is in a strong downtrend below the Initial Balance Low (21589.5) with significant institutional selling. The nearest counter-trend BUY wall is at 21588.00-21591.25 with 226 contracts (Big Trade cluster on ask side). Stop is placed above this wall at 21592.25 (wall_top + 1pt buffer). Target is set at 21530.00, aligning with the next structural LVN and recent low.",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21565.75",
+        "stop": "21592.75",
+        "target": "21530.0"
+      }
+    ],
+    "signature": {
+      "instructions": "Evaluate whether a high-probability Triple A (A+) setup EXISTS in the current market context.\nDo NOT think about entry prices, stop levels, or targets yet.\nFocus exclusively on: market state, trapped side, structural confluence, and setup type.",
+      "fields": [
+        {
+          "prefix": "Market Data:",
+          "description": "Recent M1 bars, volume profile, VWAP context, and active rules."
+        },
+        {
+          "prefix": "Reasoning:",
+          "description": "${reasoning}"
+        },
+        {
+          "prefix": "setup_valid:",
+          "description": "Boolean indicating if a valid setup exists."
+        },
+        {
+          "prefix": "Setup Type:",
+          "description": "Type of setup: ivb_model_1_continuation, val_vah_reversal, momentum_squeeze, or none."
+        },
+        {
+          "prefix": "Bias:",
+          "description": "Direction bias: long, short, or none."
+        },
+        {
+          "prefix": "Trapped Side:",
+          "description": "Who is trapped: buyers, sellers, or none."
+        },
+        {
+          "prefix": "Market State:",
+          "description": "Current market state: imbalance, balance, or transition."
+        },
+        {
+          "prefix": "Session Narrative:",
+          "description": "MAX 120 WORDS: evolving session context, what happened, what changed, who is in control."
+        }
+      ]
+    },
+    "lm": null
+  },
+  "step2.predict": {
+    "traces": [],
+    "train": [],
+    "demos": [
+      {
+        "augmented": true,
+        "market_data": "{\n  \"bar_close\": 21599.5,\n  \"wall_level\": 21635.5,\n  \"wall_size\": 83,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\"\n  ]\n}",
+        "step1_narrative": "Bias: short, State: imbalance, Trapped: buyers. Narrative: Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.",
+        "reasoning": "Price is in a strong downtrend below Initial Balance Low with institutional sell-side absorption (786 contracts at 21591.25-21599.75). The nearest counter-trend BUY wall is at 21600.00-21622.50 (333 contracts). Stop is placed 2 points above this wall at 21624.50 to avoid liquidity sweeps. Target is set at 21550.00, aligning with the next LVN and providing a favorable risk-reward ratio.",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21599.5",
+        "stop": "21625.0",
+        "target": "21550.0"
+      },
+      {
+        "augmented": true,
+        "market_data": "{\n  \"bar_close\": 21617.0,\n  \"wall_level\": 21599.0,\n  \"wall_size\": 67,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\"\n  ]\n}",
+        "step1_narrative": "Bias: short, State: imbalance, Trapped: buyers. Narrative: Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.",
+        "reasoning": "Price is in a strong downtrend below Initial Balance Low with institutional selling dominance. The nearest counter-trend BUY wall is at 21622.50 (333 contracts), providing structural protection. Stop is placed above this wall at 21624.50 (wall top + 2pt buffer). Target is set at 21578.50, aligning with the next structural LVN and providing a favorable risk-reward ratio.",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21617.0",
+        "stop": "21625.0",
+        "target": "21578.5"
+      },
+      {
+        "augmented": true,
+        "market_data": "{\n  \"bar_close\": 21633.25,\n  \"wall_level\": 21599.0,\n  \"wall_size\": 67,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\"\n  ]\n}",
+        "step1_narrative": "Bias: short, State: imbalance, Trapped: buyers. Narrative: Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.",
+        "reasoning": "Price is in a strong downtrend below Initial Balance Low with institutional sell-side absorption (786 contracts at 21591.25-21599.75). Nearest counter-trend BUY wall is at 21634.75-21644.75 (1251 contracts). Stop placed above this wall at 21646.75 (wall top + 2pt buffer). Target set at 21589.50 (previous low with institutional absorption), providing a favorable risk-reward ratio.",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21633.25",
+        "stop": "21647.25",
+        "target": "21589.5"
+      },
+      {
+        "augmented": true,
+        "market_data": "{\n  \"bar_close\": 21619.0,\n  \"wall_level\": 21639.5,\n  \"wall_size\": 106,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.\",\n  \"session_memory\": []\n}",
+        "step1_narrative": "Bias: short, State: imbalance, Trapped: buyers. Narrative: Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.",
+        "reasoning": "Price is in a strong downtrend below Initial Balance Low with significant institutional selling. The nearest counter-trend BUY wall is at 21639.5 with 106 contracts, providing structural protection for the stop. Stop is placed above this wall at 21642.0 (wall_level + 2.5pt buffer) to avoid liquidity sweeps. Target is set at 21589.5, aligning with the next LVN and providing a favorable risk-reward ratio.",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21619.0",
+        "stop": "21642.0",
+        "target": "21589.5"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21974.5,\n  \"wall_level\": 21950.0,\n  \"wall_size\": 285,\n  \"day_type\": \"unknown\",\n  \"market_narrative\": \"Price is trending outside the Initial Balance, indicating an imbalance day. Institutional Big Trades show a strong buy wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential on pullbacks to key levels.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 2201 contracts (Sell) detected at 21912.75-21955.00.\",\n    \"[09:31 ET] Tested IB High (21923.50). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight VAH (21930.75). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight POC (21909.75). Result: Touched. Close=21952.50, Delta=-597.\",\n    \"[09:32 ET] Institutional order wall of 1902 contracts (Buy) detected at 21950.00-21976.25.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "long",
+        "trapped_side": "sellers",
+        "market_state": "imbalance",
+        "session_narrative": "Price is trending outside the Initial Balance, indicating an imbalance day. Institutional Big Trades show a strong buy wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential on pullbacks to key levels.",
+        "reasoning": "The nearest counter-trend SELL wall is at 21950.00-21976.25 with 1902 contracts. This wall acts as a structural shield for the stop placement. The stop should be placed below this wall to protect against a reversal. The target is set based on the next significant resistance level.",
+        "direction": "long",
+        "confidence": "75",
+        "entry": "21974.5",
+        "stop": "21948.5",
+        "target": "22000.0"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21666.25,\n  \"wall_level\": 21663.75,\n  \"wall_size\": 63,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\",\n    \"[09:45 ET] Institutional order wall of 424 contracts (Buy) detected at 21619.00-21630.00.\",\n    \"[09:48 ET] Institutional order wall of 978 contracts (Sell) detected at 21660.00-21666.00.\",\n    \"[09:48 ET] Tested Overnight VAL (21665.00). Result: Touched. Close=21666.25, Delta=-123.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.",
+        "reasoning": "The nearest counter-trend BUY wall is at 21660.00-21666.00 with 978 contracts. This wall acts as the structural shield for our short position. The stop should be placed above this wall to avoid being caught in a liquidity sweep. The wall top is at 21666.00, so adding a 2pt buffer gives us a stop at 21668.00. The target is set at the next significant LVN at 21643.75, providing a favorable risk-reward ratio.",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21666.25",
+        "stop": "21668.5",
+        "target": "21643.75"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21652.25,\n  \"wall_level\": 21622.25,\n  \"wall_size\": 98,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\",\n    \"[09:45 ET] Institutional order wall of 424 contracts (Buy) detected at 21619.00-21630.00.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.",
+        "reasoning": "Price is in a strong downtrend below Initial Balance Low, confirming a short bias imbalance session. Nearest counter-trend BUY wall is at 21662.50-21665.75 (Big Trade cluster size=484 contracts), protecting the stop above at 21667.25 (wall top + 2pt buffer). Target is set at 21600.00, aligning with previous LVN and institutional absorption level.",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21652.25",
+        "stop": "21667.75",
+        "target": "21600.0"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21545.0,\n  \"wall_level\": 21541.25,\n  \"wall_size\": 45,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"The market is in a strong downtrend below the Initial Balance Low (21589.5) with significant institutional selling. Price has rejected the Overnight VAL (21665.0) multiple times, indicating trapped buyers. Recent M1 footprint shows aggressive selling with delta divergence, reinforcing the short bias.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\",\n    \"[09:45 ET] Institutional order wall of 424 contracts (Buy) detected at 21619.00-21630.00.\",\n    \"[09:48 ET] Institutional order wall of 978 contracts (Sell) detected at 21660.00-21666.00.\",\n    \"[09:48 ET] Tested Overnight VAL (21665.00). Result: Touched. Close=21666.25, Delta=-123.\",\n    \"[09:49 ET] Tested Yesterday VAL (21674.75). Result: Accepted (Closed below). Close=21650.50, Delta=+220.\",\n    \"[09:53 ET] Institutional order wall of 815 contracts (Sell) detected at 21599.75-21628.25.\",\n    \"[09:54 ET] Institutional order wall of 1696 contracts (Buy) detected at 21577.00-21590.75.\",\n    \"[09:54 ET] Tested IB Low (21589.50). Result: Accepted (Closed below). Close=21583.50, Delta=+109.\",\n    \"[10:00 ET] Initial Balance (IB) range completed. High=21718.25, Low=21572.75, Range=145.50 points.\",\n    \"[10:02 ET] Institutional order wall of 554 contracts (Sell) detected at 21587.50-21592.75.\",\n    \"[10:11 ET] Tested IB Low (21572.75). Result: Accepted (Closed below). Close=21565.75, Delta=+436.\",\n    \"[10:12 ET] Institutional order wall of 764 contracts (Buy) detected at 21540.00-21560.00.\",\n    \"[10:15 ET] Institutional order wall of 646 contracts (Sell) detected at 21526.00-21542.00.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "The market is in a strong downtrend below the Initial Balance Low (21589.5) with significant institutional selling. Price has rejected the Overnight VAL (21665.0) multiple times, indicating trapped buyers. Recent M1 footprint shows aggressive selling with delta divergence, reinforcing the short bias.",
+        "reasoning": "The market is in a strong downtrend below the Initial Balance Low (21589.5) with significant institutional selling. The nearest counter-trend BUY wall is at 21540.00-21560.00 with 764 contracts (Big Trade cluster). This wall acts as a structural shield for the stop. Stop is placed above the wall with a 2pt buffer. Target is set at the next LVN level (21525.75) with a 1pt buffer.",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21545.0",
+        "stop": "21562.5",
+        "target": "21524.75"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21632.25,\n  \"wall_level\": 21622.25,\n  \"wall_size\": 98,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\",\n    \"[09:45 ET] Institutional order wall of 424 contracts (Buy) detected at 21619.00-21630.00.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.",
+        "reasoning": "Price is trending below Initial Balance Low with strong sell-side Big Trades (424 contracts at 21619.00-21630.00). The nearest counter-trend BUY wall is at 21662.50-21665.75 (484 contracts). Stop is placed above this wall at 21667.25 (wall top + 1.5pt buffer). Target is set at 21589.50 (recent low with institutional absorption).",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21632.25",
+        "stop": "21667.75",
+        "target": "21589.5"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21956.0,\n  \"wall_level\": 21950.0,\n  \"wall_size\": 285,\n  \"day_type\": \"unknown\",\n  \"market_narrative\": \"Price is trending outside the Initial Balance, indicating an imbalance day. Institutional Big Trades show a strong buy wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential on pullbacks to key levels.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 2201 contracts (Sell) detected at 21912.75-21955.00.\",\n    \"[09:31 ET] Tested IB High (21923.50). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight VAH (21930.75). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight POC (21909.75). Result: Touched. Close=21952.50, Delta=-597.\",\n    \"[09:32 ET] Institutional order wall of 1902 contracts (Buy) detected at 21950.00-21976.25.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "long",
+        "trapped_side": "sellers",
+        "market_state": "imbalance",
+        "session_narrative": "Price is trending outside the Initial Balance, indicating an imbalance day. Institutional Big Trades show a strong buy wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential on pullbacks to key levels.",
+        "reasoning": "Price is trending outside the Initial Balance, indicating a strong imbalance day. Institutional Big Trades show a strong BUY wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential. The nearest counter-trend SELL wall is at 21950.0-21976.25 with 1902 contracts, providing structural protection for the stop. Stop is placed 2 ticks below the wall bottom for safety.",
+        "direction": "long",
+        "confidence": "85",
+        "entry": "21956.0",
+        "stop": "21947.5",
+        "target": "21990.0"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21619.0,\n  \"wall_level\": 21599.0,\n  \"wall_size\": 67,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "Price broke below Initial Balance Low, confirming a short bias imbalance session. Institutional absorption is present with buyers trapped above recent highs. The market is trending downwards with significant sell-side big trades indicating continuation potential.",
+        "reasoning": "The market is in a strong downtrend with price below Initial Balance Low, confirmed by institutional sell-side Big Trades. The nearest counter-trend BUY wall is at 21634.75-21644.75 (1251 contracts), providing structural protection for the stop. Stop is placed above this wall with a 2pt buffer. Target is set at the next LVN level (21578.5) for continuation.",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21619.0",
+        "stop": "21647.25",
+        "target": "21578.5"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21613.75,\n  \"wall_level\": 21620.0,\n  \"wall_size\": 52,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"The market is in a strong downtrend below Initial Balance Low (21589.5) with significant institutional selling detected. Price has rejected the Overnight VAL (21665.0) multiple times, indicating trapped buyers. Recent M1 footprint shows aggressive selling with delta divergence, reinforcing the short bias.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\",\n    \"[09:45 ET] Institutional order wall of 424 contracts (Buy) detected at 21619.00-21630.00.\",\n    \"[09:48 ET] Institutional order wall of 978 contracts (Sell) detected at 21660.00-21666.00.\",\n    \"[09:48 ET] Tested Overnight VAL (21665.00). Result: Touched. Close=21666.25, Delta=-123.\",\n    \"[09:49 ET] Tested Yesterday VAL (21674.75). Result: Accepted (Closed below). Close=21650.50, Delta=+220.\",\n    \"[09:53 ET] Institutional order wall of 815 contracts (Sell) detected at 21599.75-21628.25.\",\n    \"[09:54 ET] Institutional order wall of 1696 contracts (Buy) detected at 21577.00-21590.75.\",\n    \"[09:54 ET] Tested IB Low (21589.50). Result: Accepted (Closed below). Close=21583.50, Delta=+109.\",\n    \"[10:00 ET] Initial Balance (IB) range completed. High=21718.25, Low=21572.75, Range=145.50 points.\",\n    \"[10:02 ET] Institutional order wall of 554 contracts (Sell) detected at 21587.50-21592.75.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "The market is in a strong downtrend below Initial Balance Low (21589.5) with significant institutional selling detected. Price has rejected the Overnight VAL (21665.0) multiple times, indicating trapped buyers. Recent M1 footprint shows aggressive selling with delta divergence, reinforcing the short bias.",
+        "reasoning": "Price is in a strong downtrend below Initial Balance Low (21589.5) with significant institutional selling. The nearest counter-trend BUY wall is at 21540.00-21560.00 (389 contracts). Stop should be placed above this absorption cluster with a 1-2pt buffer. Target is set at the next LVN (21538.50) with room for continuation. [REJECTED: Backward Stop]",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21542.25",
+        "stop": "21562.5",
+        "target": "21538.5"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21539.0,\n  \"wall_level\": 21589.5,\n  \"wall_size\": 148,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"The market is in a strong downtrend below Initial Balance Low (21589.5) with significant institutional selling. Price has rejected the Overnight VAL (21665.0) multiple times, indicating trapped buyers. Recent M1 footprint shows aggressive selling with delta divergence, reinforcing the short bias.\",\n  \"session_memory\": []\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "The market is in a strong downtrend below Initial Balance Low (21589.5) with significant institutional selling. Price has rejected the Overnight VAL (21665.0) multiple times, indicating trapped buyers. Recent M1 footprint shows aggressive selling with delta divergence, reinforcing the short bias.",
+        "reasoning": "The market is in a strong downtrend below the Initial Balance Low (21589.5) with significant institutional selling. The nearest counter-trend BUY wall is observed at 21540.00-21560.00 with 389 contracts, providing structural protection for the stop. Stop is placed 2 points above the wall at 21562.00 to avoid liquidity sweeps. Target is set at 21489.5, aligning with the next significant LVN and providing a favorable risk-reward ratio.",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21539.0",
+        "stop": "21562.5",
+        "target": "21489.5"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21565.75,\n  \"wall_level\": 21613.0,\n  \"wall_size\": 43,\n  \"day_type\": \"trend_down\",\n  \"market_narrative\": \"The market is in a strong downtrend below Initial Balance Low (21589.5) with significant institutional selling. Price has rejected the Overnight VAL (21665.0) multiple times, indicating trapped buyers. Recent M1 footprint shows aggressive selling with delta divergence, reinforcing the short bias.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 1015 contracts (Sell) detected at 21696.75-21709.75.\",\n    \"[09:31 ET] Tested Yesterday POC (21701.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:31 ET] Tested Overnight POC (21705.75). Result: Touched. Close=21699.75, Delta=-45.\",\n    \"[09:32 ET] Institutional order wall of 492 contracts (Sell) detected at 21685.00-21695.75.\",\n    \"[09:32 ET] Tested IB Low (21689.25). Result: Rejected (Strong buying wicks). Close=21694.25, Delta=+19.\",\n    \"[09:36 ET] Tested Yesterday VAL (21674.75). Result: Touched. Close=21671.25, Delta=+226.\",\n    \"[09:37 ET] Institutional order wall of 1175 contracts (Buy) detected at 21645.75-21670.50.\",\n    \"[09:37 ET] Tested Overnight VAL (21665.00). Result: Accepted (Closed below). Close=21647.00, Delta=+251.\",\n    \"[09:38 ET] Institutional order wall of 1251 contracts (Buy) detected at 21634.75-21644.75.\",\n    \"[09:41 ET] Institutional order wall of 786 contracts (Sell) detected at 21591.25-21599.75.\",\n    \"[09:42 ET] Institutional order wall of 333 contracts (Buy) detected at 21599.00-21622.50.\",\n    \"[09:45 ET] Institutional order wall of 424 contracts (Buy) detected at 21619.00-21630.00.\",\n    \"[09:48 ET] Institutional order wall of 978 contracts (Sell) detected at 21660.00-21666.00.\",\n    \"[09:48 ET] Tested Overnight VAL (21665.00). Result: Touched. Close=21666.25, Delta=-123.\",\n    \"[09:49 ET] Tested Yesterday VAL (21674.75). Result: Accepted (Closed below). Close=21650.50, Delta=+220.\",\n    \"[09:53 ET] Institutional order wall of 815 contracts (Sell) detected at 21599.75-21628.25.\",\n    \"[09:54 ET] Institutional order wall of 1696 contracts (Buy) detected at 21577.00-21590.75.\",\n    \"[09:54 ET] Tested IB Low (21589.50). Result: Accepted (Closed below). Close=21583.50, Delta=+109.\",\n    \"[10:00 ET] Initial Balance (IB) range completed. High=21718.25, Low=21572.75, Range=145.50 points.\",\n    \"[10:02 ET] Institutional order wall of 554 contracts (Sell) detected at 21587.50-21592.75.\",\n    \"[10:11 ET] Tested IB Low (21572.75). Result: Accepted (Closed below). Close=21565.75, Delta=+436.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "short",
+        "trapped_side": "buyers",
+        "market_state": "imbalance",
+        "session_narrative": "The market is in a strong downtrend below Initial Balance Low (21589.5) with significant institutional selling. Price has rejected the Overnight VAL (21665.0) multiple times, indicating trapped buyers. Recent M1 footprint shows aggressive selling with delta divergence, reinforcing the short bias.",
+        "reasoning": "The market is in a strong downtrend below the Initial Balance Low (21589.5) with significant institutional selling. The nearest counter-trend BUY wall is at 21588.00-21591.25 with 226 contracts (Big Trade cluster on ask side). Stop is placed above this wall at 21592.25 (wall_top + 1pt buffer). Target is set at 21530.00, aligning with the next structural LVN and recent low.",
+        "direction": "short",
+        "confidence": "85",
+        "entry": "21565.75",
+        "stop": "21592.75",
+        "target": "21530.0"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21945.25,\n  \"wall_level\": 21935.0,\n  \"wall_size\": 215,\n  \"day_type\": \"trend_up\",\n  \"market_narrative\": \"Price is trending outside the Initial Balance, indicating a strong imbalance day. Institutional Big Trades show a strong buy wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential on pullbacks to key levels.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 2201 contracts (Sell) detected at 21912.75-21955.00.\",\n    \"[09:31 ET] Tested IB High (21923.50). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight VAH (21930.75). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight POC (21909.75). Result: Touched. Close=21952.50, Delta=-597.\",\n    \"[09:32 ET] Institutional order wall of 1902 contracts (Buy) detected at 21950.00-21976.25.\",\n    \"[09:35 ET] Institutional order wall of 1393 contracts (Buy) detected at 21947.00-21952.50.\",\n    \"[09:36 ET] Institutional order wall of 1620 contracts (Buy) detected at 21930.00-21944.25.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "long",
+        "trapped_side": "sellers",
+        "market_state": "imbalance",
+        "session_narrative": "Price is trending outside the Initial Balance, indicating a strong imbalance day. Institutional Big Trades show a strong buy wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential on pullbacks to key levels.",
+        "reasoning": "The nearest counter-trend SELL wall is at 21930.00-21944.25 with 628 contracts. This wall provides structural protection for the stop loss. Stop is placed 2 points below the wall bottom at 21928.25 to avoid liquidity sweeps. Target is set at 21976.25, the top of the nearest BUY wall, providing a favorable risk-reward ratio.",
+        "direction": "long",
+        "confidence": "85",
+        "entry": "21945.25",
+        "stop": "21927.75",
+        "target": "21976.25"
+      },
+      {
+        "market_data": "{\n  \"bar_close\": 21947.0,\n  \"wall_level\": 21950.75,\n  \"wall_size\": 166,\n  \"day_type\": \"trend_up\",\n  \"market_narrative\": \"Price is trending outside the Initial Balance, indicating a strong imbalance day. Institutional Big Trades show a strong buy wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential on pullbacks to key levels.\",\n  \"session_memory\": [\n    \"[09:31 ET] Institutional order wall of 2201 contracts (Sell) detected at 21912.75-21955.00.\",\n    \"[09:31 ET] Tested IB High (21923.50). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight VAH (21930.75). Result: Accepted (Closed above). Close=21952.50, Delta=-597.\",\n    \"[09:31 ET] Tested Overnight POC (21909.75). Result: Touched. Close=21952.50, Delta=-597.\",\n    \"[09:32 ET] Institutional order wall of 1902 contracts (Buy) detected at 21950.00-21976.25.\",\n    \"[09:35 ET] Institutional order wall of 1393 contracts (Buy) detected at 21947.00-21952.50.\"\n  ]\n}",
+        "setup_valid": "True",
+        "setup_type": "ivb_model_1_continuation",
+        "bias": "long",
+        "trapped_side": "sellers",
+        "market_state": "imbalance",
+        "session_narrative": "Price is trending outside the Initial Balance, indicating a strong imbalance day. Institutional Big Trades show a strong buy wall at 21950.0-21976.25, trapping sellers. The market has accepted higher prices despite negative delta spikes, suggesting continuation potential on pullbacks to key levels.",
+        "reasoning": "The market is in an imbalance state with price trending outside the Initial Balance. A strong buy wall was detected at 21950.0-21976.25 with 1902 contracts, indicating institutional absorption. The nearest counter-trend SELL wall is at 21947.00-21952.50 with 1393 contracts. The stop is placed 2 ticks below this wall to avoid liquidity sweeps. Target is set at the next resistance level based on volume profile.",
+        "direction": "long",
+        "confidence": "85",
+        "entry": "21957.75",
+        "stop": "21944.5",
+        "target": "21990.0"
+      }
+    ],
+    "signature": {
+      "instructions": "Calculate the PRECISE mechanical execution: entry price, structurally-placed stop loss (behind a Big Trade wall), and profit target.",
+      "fields": [
+        {
+          "prefix": "Market Data:",
+          "description": "Recent M1 bars and Big Trades."
+        },
+        {
+          "prefix": "Step 1 Narrative:",
+          "description": "Narrative and bias from Step 1."
+        },
+        {
+          "prefix": "Reasoning:",
+          "description": "MAX 150 WORDS: cite the specific Big Trade wall protecting the stop, exact stop placement logic, target rationale."
+        },
+        {
+          "prefix": "Direction:",
+          "description": "Execution direction: long or short."
+        },
+        {
+          "prefix": "Confidence:",
+          "description": "Confidence score 0-100."
+        },
+        {
+          "prefix": "Entry:",
+          "description": "Entry price."
+        },
+        {
+          "prefix": "Stop:",
+          "description": "Stop loss price (structurally protected)."
+        },
+        {
+          "prefix": "Target:",
+          "description": "Profit target price."
+        }
+      ]
+    },
+    "lm": null
+  },
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.13",
+      "dspy": "3.2.1",
+      "cloudpickle": "3.1"
+    }
+  }
+}

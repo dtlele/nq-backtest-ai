@@ -527,12 +527,11 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                                 
 
                 
-            # Skip searching for new trades if we still have an active open position
-            if open_t is not None:
-                continue
+            # We do NOT skip candidate evaluation when a trade is active because we want to see if
+            # new signals confirm holding the trade. However, we will not open a new trade if one is active.
+            pass
 
-        # ── MONEY MANAGEMENT CHECKS ──────────────────────────────────
-        # (3 daily stops limit removed to evaluate full unthrottled performance)
+
         if dry_run:
             import pytz
             ET = pytz.timezone('America/New_York')
@@ -985,8 +984,9 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         print(f"  [PRECISION] Bypassed. Using Fabio's original structural levels.")
         precision = {'entry_reasoning': 'Bypassed'}
         
-        # Keep consensus levels as defined by Fabio/Andrea (Force entry at market close)
-        consensus.entry = candidate.bar.close
+        # Keep consensus levels as defined by Fabio/Andrea
+        # Do not force consensus.entry = candidate.bar.close; respect the LLM's limit/pullback entry!
+        consensus.entry = consensus.entry
         consensus.stop  = consensus.stop
         consensus.target = consensus.target
         
@@ -1069,8 +1069,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 #     log_reasoning(log_entry)
                 #     continue
                 
-                # Enforce stop behind wall with 1.0pt buffer, but cap the adjusted stop distance to prevent "stop dragging"
-                max_stop_distance = 25.0 # Max 100 ticks risk
+                # Enforce stop behind wall with 1.0pt buffer, but reject the trade if the stop distance would exceed 45.0 points to prevent unprotected/excessive risk.
+                max_stop_distance = 45.0 # Max 180 ticks risk (contracts scale down dynamically to keep $50 risk constant)
                 if consensus.direction == 'long' and consensus.stop >= active_wall:
                     _new_stop = active_wall - 1.0
                     _dist = abs(consensus.entry - _new_stop)
@@ -1078,9 +1078,11 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                         print(f"  [ADJUST] Stop {consensus.stop} is unprotected. Moving behind wall {active_wall} -> {_new_stop} (risk: {_dist:.2f} pts)")
                         consensus.stop = _new_stop
                     else:
-                        _capped_stop = consensus.entry - max_stop_distance
-                        print(f"  [ADJUST] Wall is too far ({_dist:.2f} pts). Capping stop at {max_stop_distance} pts from entry -> {_capped_stop}")
-                        consensus.stop = _capped_stop
+                        print(f"  [VETO] Wall is too far ({_dist:.2f} pts > {max_stop_distance} pts). Vetoing trade to avoid unprotected/excessive risk.")
+                        log_entry['decision'] = 'no_trade'
+                        log_entry['no_trade_reason'] = f'wall_too_far_excessive_risk ({_dist:.2f} pts)'
+                        log_reasoning(log_entry)
+                        continue
                 elif consensus.direction == 'short' and consensus.stop <= active_wall:
                     _new_stop = active_wall + 1.0
                     _dist = abs(consensus.entry - _new_stop)
@@ -1088,9 +1090,11 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                         print(f"  [ADJUST] Stop {consensus.stop} is unprotected. Moving behind wall {active_wall} -> {_new_stop} (risk: {_dist:.2f} pts)")
                         consensus.stop = _new_stop
                     else:
-                        _capped_stop = consensus.entry + max_stop_distance
-                        print(f"  [ADJUST] Wall is too far ({_dist:.2f} pts). Capping stop at {max_stop_distance} pts from entry -> {_capped_stop}")
-                        consensus.stop = _capped_stop
+                        print(f"  [VETO] Wall is too far ({_dist:.2f} pts > {max_stop_distance} pts). Vetoing trade to avoid unprotected/excessive risk.")
+                        log_entry['decision'] = 'no_trade'
+                        log_entry['no_trade_reason'] = f'wall_too_far_excessive_risk ({_dist:.2f} pts)'
+                        log_reasoning(log_entry)
+                        continue
 
 
         # ── OPTIMIZATION: Stop Loss Cap Filter (50 points) ──
@@ -1280,8 +1284,9 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 print(f"  [A+ SETUP DETECTED] Volume: {candidate.bar.volume} (th={a_plus_vol_th}) | Big Trade: {candidate.wall_max_size} | Size multipliers are disabled for constant risk.")
 
 
-            # Force market entries to ensure entries are truthful and match the signal candle close
-            use_limit_order = False
+            # If the LLM's entry is significantly different from the current close (e.g. > 1 point), place a Limit Order.
+            # Otherwise, execute at Market.
+            use_limit_order = abs(consensus.entry - candidate.bar.close) > 1.0
 
             if use_limit_order:
                 # Place a pending limit order
@@ -1312,6 +1317,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 else:
                     actual_entry_time = eval_ts + _dt.timedelta(minutes=5)
                 open_t = open_trade(consensus, candidate.bar, contracts=contracts, entry_time=actual_entry_time)
+                pending_t = None  # Cancel any pending trade to ensure only one active trade at a time
                 consensus.entry = open_t.entry 
                 consensus.stop = open_t.stop
                 print(f"  [TRADE OPEN] dir={consensus.direction} entry={consensus.entry:.2f} "
@@ -1340,8 +1346,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
             # FORCE the stop to be the pending_t structural stop (safeguard)
             open_t.stop = pending_t.stop
             
-            # Adjust pending_t contracts so the total doesn't exceed original plan if it fills later
-            pending_t.contracts = max(1, pending_t.contracts - override_contracts)
+            # Cancel the pending trade completely to avoid scale-in / multiple active operations
+            pending_t = None
             
             print(f"  [TRADE OPEN] (Chaser Override) dir={consensus.direction} entry={candidate.bar.close} "
                   f"stop={open_t.stop} target={open_t.target} contracts={override_contracts}")
@@ -1353,9 +1359,18 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
             log_entry['contracts']       = override_contracts
             sync_session_state(open_t, closed_trades, ctx)
         else:
-            print(f"  [TRADE SKIPPED] Existing trade active (open or pending), new trade ignored.")
-            log_entry['decision'] = 'no_trade'
-            log_entry['no_trade_reason'] = 'existing_trade_active'
+            if open_t is not None:
+                if consensus.direction == open_t.direction:
+                    print(f"  [HOLD CONFIRMATION] 👍 Fabio signal confirms holding our active {open_t.direction.upper()} trade.")
+                    log_entry['decision'] = 'hold_confirmed'
+                else:
+                    print(f"  [TRADE IGNORED] Inverse/Opposite signal {consensus.direction.upper()} ignored during active {open_t.direction.upper()} trade.")
+                    log_entry['decision'] = 'no_trade'
+                    log_entry['no_trade_reason'] = 'inverse_trade_ignored'
+            else:
+                print(f"  [TRADE SKIPPED] Existing active trade or pending order in progress, new trade ignored.")
+                log_entry['decision'] = 'no_trade'
+                log_entry['no_trade_reason'] = 'existing_trade_active'
             
         log_reasoning(log_entry)
 
@@ -1755,6 +1770,7 @@ if __name__ == "__main__":
     parser.add_argument("--auto", action="store_true", help="Auto-confirm decisions")
     parser.add_argument("--mailbox", action="store_true", help="Use human mailbox")
     parser.add_argument("--fabio_only", action="store_true", help="Run in Fabio-only mode, skipping Andrea confirmation")
+    parser.add_argument("--dspy", action="store_true", help="Use compiled DSPy optimized agent for Fabio")
     parser.add_argument("--start_time", help="HH:MM start time in ET")
     args = parser.parse_args()
 
@@ -1763,6 +1779,8 @@ if __name__ == "__main__":
         os.environ['BACKTEST_FORCE'] = 'true'
     if args.mailbox:
         os.environ['LLM_PROVIDER'] = 'human'
+    if args.dspy:
+        os.environ['FABIO_USE_DSPY'] = 'true'
     
     # Run the backtest
     run_backtest(DATA_DIR, max_days=args.max_days, start_date=args.start_date, end_date=args.end_date, fabio_only=args.fabio_only, start_time=args.start_time)

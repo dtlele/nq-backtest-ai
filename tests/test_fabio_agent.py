@@ -17,7 +17,17 @@ def _candidate():
     ctx = SessionContext('2025-04-30', 20020.0, 19980.0, 40.0, True, vp, day_type='balance')
     return CandidateBar(bar, ctx, 20000.0, 'ask', 1, 50, 'lvn', 20000.0, 15, True)
 
-MOCK_CLAUDE_RESPONSE = json.dumps({
+MOCK_STEP1_RESPONSE = json.dumps({
+    "setup_valid": True,
+    "setup_type": "squeeze",
+    "bias": "long",
+    "trapped_side": "sellers",
+    "key_structural_level": 20000.0,
+    "market_state": "imbalance",
+    "session_narrative": "Test narrative"
+})
+
+MOCK_STEP2_RESPONSE = json.dumps({
     "direction": "long",
     "confidence": 78,
     "entry": 20002.0,
@@ -28,21 +38,25 @@ MOCK_CLAUDE_RESPONSE = json.dumps({
 })
 
 def test_analyze_returns_fabio_signal(tmp_path):
-    with patch('src.agents.fabio_agent.llm_ask', return_value=MOCK_CLAUDE_RESPONSE):
+    with patch('src.agents.fabio_agent.llm_ask', side_effect=[MOCK_STEP1_RESPONSE, MOCK_STEP2_RESPONSE]):
         signal = analyze(_candidate())
     assert isinstance(signal, FabioSignal)
     assert signal.direction == 'long'
     assert signal.confidence == 78
     assert signal.entry == pytest.approx(20002.0)
 
+MOCK_NO_TRADE_STEP1 = json.dumps({
+    "setup_valid": False,
+    "setup_type": "none",
+    "bias": "none",
+    "trapped_side": "none",
+    "key_structural_level": None,
+    "market_state": "balance",
+    "session_narrative": "No clear setup."
+})
+
 def test_analyze_returns_none_signal_on_no_trade():
-    no_trade_response = json.dumps({
-        "direction": "none", "confidence": 30,
-        "entry": None, "stop": None, "target": None,
-        "setup_type": "none",
-        "reasoning": "No clear setup."
-    })
-    with patch('src.agents.fabio_agent.llm_ask', return_value=no_trade_response):
+    with patch('src.agents.fabio_agent.llm_ask', side_effect=[MOCK_NO_TRADE_STEP1]):
         signal = analyze(_candidate())
     assert signal.direction == 'none'
-    assert signal.confidence == 30
+    assert signal.confidence == 0

@@ -1,197 +1,119 @@
 {
   "dynamic_rules": [
     {
-      "rule_id": "AMT_CORE_01",
-      "topic": "Market State Filter",
-      "description": "Before any trade entry, verify if the market is in Balance (range day, P-shape or b-shape profile consolidation) or Imbalance (trend day, active value migration). Trade Mean Reversion (buy VAL, sell VAH) only during Balance; trade breakouts/continuation only during Imbalance. Skip trading if in a transition state with mixed delta and choppy horizontal overlap inside the Value Area.",
+      "rule_id": "AMT_NEW_34",
+      "topic": "Trade Entry in Weak Momentum",
+      "description": "Avoid entering trades in weak momentum conditions unless there is clear institutional absorption or delta confirmation at the entry point. Weak momentum increases the risk of stop runs.",
       "action": "skip_trade",
       "status": "active",
-      "successes": 0,
+      "successes": 9,
       "failures": 0,
-      "probation_days": 50,
-      "step": 1,
-      "applies_to": [
-        "all"
-      ]
+      "probation_days": 29
     },
     {
-      "rule_id": "AMT_CORE_02",
-      "topic": "IBOB Breakout Validation",
-      "description": "Validate Initial Balance (IB) range breakouts only when a candle BODY (not just the wick) closes completely outside the IB High or IB Low. If only the wick extends beyond the boundary, treat it as a liquidity sweep and prepare for a contrarian Failed Auction setup. Do not chase breakout candle wicks without delta confirmation.",
-      "action": "require_delta_confirmation",
-      "status": "active",
-      "successes": 0,
-      "failures": 0,
-      "probation_days": 50,
-      "step": 1,
-      "applies_to": [
-        "all"
-      ]
-    },
-    {
-      "rule_id": "AMT_CORE_03",
-      "topic": "Failed Auction & Reversals",
-      "description": "Do not enter reversal or contrarian trades on the first vertical spike (First Drive) to prevent being swept. Wait for a second test of the extreme level (Second Drive). Enter only if the Second Drive shows delta exhaustion, institutional absorption (effort vs no result), or a clear delta flip, confirming that the initial breakout has failed.",
-      "action": "require_delta_confirmation",
-      "status": "active",
-      "successes": 0,
-      "failures": 0,
-      "probation_days": 50,
-      "step": 1,
-      "applies_to": [
-        "all"
-      ]
-    },
-    {
-      "rule_id": "AMT_CORE_04",
-      "topic": "Surgical Stop Placement",
-      "description": "Never place stop losses at obvious wick extremes, support/resistance lines, or round numbers \u2014 primary targets for liquidity sweeps. Place stops structurally behind dense HVN clusters, POC lines, or large Big Trade walls (observable in M1 footprint). For SHORT: stop goes ABOVE the nearest counter-trend BUY cluster. For LONG: stop goes BELOW the nearest counter-trend SELL cluster. Add 1-2pt buffer beyond the wall.",
-      "action": "adjust_stop_placement_beyond_nearest_absorption",
-      "status": "active",
-      "successes": 0,
-      "failures": 0,
-      "probation_days": 50,
-      "step": 2,
-      "applies_to": [
-        "all"
-      ]
-    },
-    {
-      "rule_id": "AMT_CORE_05",
-      "topic": "Dynamic Position Sizing",
-      "description": "Adjust contract size inversely to structural stop distance. Wider stop = smaller size to keep absolute dollar risk constant. Do not use fixed contract sizing across different volatility regimes.",
-      "action": "reduce_contracts_or_skip",
-      "status": "active",
-      "successes": 0,
-      "failures": 0,
-      "probation_days": 50,
-      "step": 2,
-      "applies_to": [
-        "all"
-      ]
-    },
-    {
-      "rule_id": "AMT_CORE_06",
-      "topic": "Scale Out & Trade Management",
-      "description": "Two-target scale-out: at Target 1 (nearest VP ledge, POC, or local HVN) exit 50% and trail remaining stop to Breakeven. Do not exit 100% at Target 1 on strong imbalance days.",
-      "action": "reduce_contracts_or_skip",
-      "status": "active",
-      "successes": 0,
-      "failures": 0,
-      "probation_days": 50,
-      "step": 2,
-      "applies_to": [
-        "all"
-      ]
-    },
-    {
-      "rule_id": "AMT_CORE_07",
-      "topic": "Institutional Absorption Filter",
-      "description": "Do not trade AGAINST a verified absorption zone. Large volume + delta spike with NO price progress (Effort vs No Result) = passive institutional defense. Observable via M1 Big Trades: if >= 150 contracts hit at a level and price does not break through, the wall is real. Trade WITH the absorption direction, not against it.",
+      "rule_id": "AMT_NEW_40",
+      "topic": "Trade Entry in High Delta Conditions",
+      "description": "Avoid entering trades when delta is excessively high (> 500) without clear institutional absorption. High delta conditions often lead to reversals and stop runs.",
       "action": "skip_trade",
       "status": "active",
-      "successes": 0,
+      "successes": 9,
       "failures": 0,
-      "probation_days": 50,
-      "step": 1,
-      "applies_to": [
-        "all"
-      ]
+      "probation_days": 26
     },
     {
-      "rule_id": "AMT_CORE_08",
-      "topic": "Volume Profile Ledge Pullbacks",
-      "description": "In trending markets, never chase price at session highs/lows. Wait for pullback to HVN ledge or VA boundary. Verify absorption or delta confirmation at the ledge before entering. Stop structural behind the ledge.",
-      "action": "adjust_stop_placement_beyond_nearest_absorption",
+      "rule_id": "AMT_NEW_41",
+      "topic": "Trade Entry Near Key Levels",
+      "description": "Avoid entering trades near key levels (POC, VAH, VAL) without confirmation of institutional absorption or delta divergence. These levels often act as magnets for price, increasing the risk of stop runs.",
+      "action": "skip_trade",
       "status": "active",
-      "successes": 0,
+      "successes": 9,
       "failures": 0,
-      "probation_days": 50,
-      "step": 2,
-      "applies_to": [
-        "all"
-      ]
+      "probation_days": 26
     },
     {
-      "rule_id": "AMT_CORE_10",
-      "topic": "Pullback Rejection Confirmation",
-      "description": "For trend-continuation on pullback: entry bar must show clear rejection. SHORT entry: bar must print top_wick_ratio >= 0.35 OR bar_delta < 0. LONG entry: bar must print bottom_wick_ratio >= 0.35 OR bar_delta > 0. If candle closes strongly in the pullback direction without wick rejection or delta flip, skip the trade.",
-      "action": "require_delta_confirmation",
+      "rule_id": "AMT_NEW_42",
+      "topic": "Trade Entry in Weak Momentum",
+      "description": "Avoid entering trades in weak momentum conditions unless there is clear institutional absorption or delta confirmation at the entry point. Weak momentum increases the risk of stop runs.",
+      "action": "skip_trade",
       "status": "active",
-      "successes": 0,
+      "successes": 9,
       "failures": 0,
-      "probation_days": 50,
-      "step": 1,
-      "applies_to": [
-        "all"
-      ]
+      "probation_days": 24
     },
     {
-      "rule_id": "AMT_CORE_11",
-      "topic": "Failed Auction Reversal from Big Trades",
-      "description": "When price tests a key extreme (IB Low/High, VAL/VAH) with a Big Trade >= 100 contracts but fails to hold the breakout (Effort vs No Result) and closes back inside with wick_ratio >= 0.40, this confirms trapped traders. Enter contrarian Failed Auction (Long at IBL/VAL traps; Short at IBH/VAH traps). Stop behind the failed wick extreme.",
-      "action": "require_delta_confirmation",
+      "rule_id": "AMT_NEW_43",
+      "topic": "Trade Entry in Developing Uptrend",
+      "description": "Avoid entering trades in a developing uptrend without clear institutional absorption or delta confirmation at the entry point. Developing uptrends can be susceptible to reversals if momentum weakens.",
+      "action": "skip_trade",
       "status": "active",
-      "successes": 0,
+      "successes": 8,
       "failures": 0,
-      "probation_days": 50,
-      "step": 1,
-      "applies_to": [
-        "all"
-      ]
+      "probation_days": 23
     },
     {
-      "rule_id": "AMT_CORE_13",
-      "topic": "AVWAP Pullback in Trend Day",
-      "description": "In confirmed strong trending markets, AVWAP anchored to RTH open or session extreme acts as institutional support/resistance. Wait for pullback to AVWAP + Second Drive rejection with delta and volume confirmation. Place stop 20-30 ticks structurally behind AVWAP.",
-      "action": "require_delta_confirmation",
-      "status": "active",
+      "rule_id": "AMT_NEW_45",
+      "topic": "Trade Entry in Developing Trend",
+      "description": "Avoid entering trades in a developing trend without confirmation of institutional absorption or delta divergence. Developing trends can be susceptible to reversals if momentum weakens.",
+      "action": "skip_trade",
+      "status": "probation",
       "successes": 0,
       "failures": 0,
-      "probation_days": 46,
-      "step": 1,
-      "applies_to": [
-        "imbalance_day"
-      ]
+      "probation_days": 18
     },
     {
-      "rule_id": "AMT_CORE_14",
-      "topic": "Failed Auction Second Drive Confirmation",
-      "description": "Never enter Failed Auction / Spring / Trap reversal on First Drive (liquidity sweep probe). Wait for pullback and Second Drive retest with volume exhaustion, delta divergence, or active delta flip. Enter only on Second Drive confirmation.",
-      "action": "require_delta_confirmation",
-      "status": "active",
+      "rule_id": "AMT_NEW_47",
+      "topic": "Trade Entry in Developing Uptrend",
+      "description": "Avoid entering trades in a developing uptrend without clear institutional absorption or delta confirmation at the entry point. Developing uptrends can be susceptible to reversals if momentum weakens.",
+      "action": "skip_trade",
+      "status": "probation",
       "successes": 0,
       "failures": 0,
-      "probation_days": 46,
-      "step": 1,
-      "applies_to": [
-        "all"
-      ]
+      "probation_days": 16
     },
     {
-      "rule_id": "AMT_NEW_01",
-      "topic": "Stop Placement Beyond Institutional Walls",
-      "description": "When placing stops, ensure they are positioned beyond significant institutional absorption walls observed in the M1 footprint. For SHORT: stop goes above the nearest BUY cluster with significant volume. For LONG: stop goes below the nearest SELL cluster with significant volume. Add a buffer of 1-2pts to avoid liquidity sweeps.",
-      "action": "adjust_stop_placement_beyond_nearest_absorption",
-      "status": "active",
-      "successes": 5,
+      "rule_id": "AMT_NEW_50",
+      "topic": "Trade Entry in Developing Downtrend",
+      "description": "Avoid entering trades in a developing downtrend without clear institutional absorption or delta confirmation at the entry point. Developing downtrends can be susceptible to reversals if momentum weakens.",
+      "action": "skip_trade",
+      "status": "probation",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 12
+    },
+    {
+      "rule_id": "AMT_NEW_51",
+      "topic": "Trade Entry in High Delta Conditions",
+      "description": "Avoid entering trades when delta is excessively high (> 600) without clear institutional absorption. High delta conditions often lead to reversals and stop runs.",
+      "action": "skip_trade",
+      "status": "probation",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 9
+    },
+    {
+      "rule_id": "AMT_NEW_52",
+      "topic": "Trade Entry in High Delta Conditions",
+      "description": "Avoid entering trades when delta is excessively high (> 300) near key levels without clear institutional absorption. High delta near key levels often leads to reversals and stop runs.",
+      "action": "skip_trade",
+      "status": "probation",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 8
+    },
+    {
+      "rule_id": "AMT_NEW_53",
+      "topic": "Trade Entry in High Delta Conditions",
+      "description": "Avoid entering trades when delta is excessively high (> 1000) without clear institutional absorption. Extremely high delta conditions often lead to reversals and stop runs.",
+      "action": "skip_trade",
+      "status": "probation",
+      "successes": 0,
       "failures": 0,
       "probation_days": 7
     },
     {
-      "rule_id": "AMT_NEW_02",
-      "topic": "Trade Management in Strong Trends",
-      "description": "In strong trending markets, avoid taking partial profits too early. Let the trade run to the full target unless there is a clear reversal signal or delta exhaustion. This prevents leaving money on the table during strong momentum moves.",
-      "action": "reduce_contracts_or_skip",
-      "status": "probation",
-      "successes": 0,
-      "failures": 0,
-      "probation_days": 6
-    },
-    {
-      "rule_id": "AMT_NEW_03",
-      "topic": "High R-Ratio Trade Filter",
-      "description": "Avoid trades with R-ratio > 5 unless there is clear institutional absorption or delta confirmation at the entry point. High R-ratio trades often have wider stops and are more susceptible to stop runs.",
+      "rule_id": "AMT_NEW_54",
+      "topic": "Trade Entry in Negative Delta Conditions",
+      "description": "Avoid entering trades when delta is excessively negative (< -300) without clear institutional absorption. Negative delta conditions often lead to reversals and stop runs.",
       "action": "skip_trade",
       "status": "probation",
       "successes": 0,
@@ -199,9 +121,9 @@
       "probation_days": 4
     },
     {
-      "rule_id": "AMT_NEW_04",
-      "topic": "R-Ratio Filter for Continuation Trades",
-      "description": "Avoid continuation trades with R-ratio > 3 unless there is clear institutional absorption or delta confirmation at the entry point. High R-ratio continuation trades in strong trends are more susceptible to stop runs due to wider stops.",
+      "rule_id": "AMT_NEW_55",
+      "topic": "Trade Entry in High Delta Conditions",
+      "description": "Avoid entering trades when delta is excessively high (> 400) near key levels without clear institutional absorption. High delta near key levels often leads to reversals and stop runs.",
       "action": "skip_trade",
       "status": "probation",
       "successes": 0,
@@ -210,8 +132,8 @@
     }
   ],
   "session_learnings": [
-    "All trades were profitable, indicating strong trend continuation and effective use of institutional absorption walls for stop placement.",
-    "The strategy successfully avoided high R-ratio trades, with all trades having R-ratios below 3, which contributed to the positive performance.",
-    "The probation rule AMT_NEW_02 (Trade Management in Strong Trends) was not tested today as all trades hit their full targets, suggesting the need for more varied market conditions to evaluate its effectiveness."
+    "High delta conditions near key levels led to reversals and stop runs, confirming the need for rules AMT_NEW_40 and AMT_NEW_52.",
+    "Trades entered in weak momentum conditions without clear institutional absorption resulted in stop runs, reinforcing the validity of rule AMT_NEW_34.",
+    "Developing trends without confirmation of institutional absorption or delta divergence were susceptible to reversals, highlighting the importance of rules AMT_NEW_45 and AMT_NEW_47."
   ]
 }

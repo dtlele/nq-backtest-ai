@@ -259,9 +259,12 @@ def select_andrea_topics(candidate: CandidateBar,
     """
     day = candidate.session_ctx.day_type
     prox = candidate.proximity_to
+    
+    if fabio_setup in ('none', 'dspy_optimized', ''):
+        fabio_setup = _infer_preliminary_setup(candidate)
 
     topics = list(ANDREA_CORE)
-    topics.extend(ANDREA_BY_SETUP.get(fabio_setup, ANDREA_BY_SETUP['none']))
+    topics.extend(ANDREA_BY_SETUP.get(fabio_setup, ANDREA_BY_SETUP.get('none', [])))
     topics.extend(ANDREA_BY_DAY_TYPE.get(day, []))
     topics.extend(ANDREA_BY_PROXIMITY.get(prox, []))
 
