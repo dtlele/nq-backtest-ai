@@ -240,12 +240,18 @@ Based on the M1 data, find the precise entry, stop, and target. Respond with JSO
 
 def get_m1_context(bars_1min: list[Bar], m5_bar: Bar,
                    context_before: int = 14, context_after: int = 0) -> list[Bar]:
-    """Extract M1 bars around the M5 candidate bar timestamp (historical context only by default)."""
+    """Extract M1 bars around the M5 candidate bar timestamp (historical context only by default).
+    
+    LOOK-AHEAD SAFE: window_end is capped at m5_start (exclusive) so that M1 bars
+    that occur INSIDE the current M5 bar are never included. Those bars have not
+    yet closed at the time the M5 bar is being evaluated.
+    context_after is intentionally kept as 0 by default to enforce this.
+    """
     from datetime import timedelta
     m5_start = m5_bar.timestamp
-    m5_end = m5_start + timedelta(minutes=5)
     window_start = m5_start - timedelta(minutes=context_before)
-    window_end = m5_end + timedelta(minutes=context_after)
+    # CRITICAL: Do NOT include bars >= m5_start — those are inside the current bar (future data)
+    window_end = m5_start  # exclusive: only bars that closed BEFORE this M5 bar opened
 
     return [b for b in bars_1min
             if window_start <= b.timestamp < window_end]

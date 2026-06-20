@@ -84,6 +84,10 @@ def log_trade_result(closed_trade) -> None:
         'andrea_reasoning': closed_trade.andrea_reasoning,
         'contracts': closed_trade.contracts,
         'news_flag': getattr(closed_trade, "news_flag", "none"),
+        'amt_day_profile': getattr(closed_trade, "amt_day_profile", None),
+        'macro_regime': getattr(closed_trade, "macro_regime", None),
+        'trapped_info': getattr(closed_trade, "trapped_info", None),
+        'trapped_follow_through': getattr(closed_trade, "trapped_follow_through", None),
         'logged_at': datetime.now(timezone.utc).isoformat(),
     }
     with open(TRADES_FILE, 'a', encoding='utf-8') as f:
@@ -100,6 +104,9 @@ def get_already_processed_candidates() -> set:
                 for line in f:
                     if line.strip():
                         data = json.loads(line)
+                        # Skip APM entries — they share bar_time_et with regular entries
+                        if data.get('entry_type') == 'apm':
+                            continue
                         # We use date + bar_time_et for identification
                         processed.add((data.get('date'), data.get('bar_time_et')))
         except Exception:

@@ -7,12 +7,6 @@
       "confirmation": "Look for institutional absorption (large Big Trades, delta divergence) on the pullback, followed by a 'Second Drive' resuming the trend in the breakout direction."
     },
     {
-      "name": "val_vah_reversal",
-      "description": "Mean-reversion / Failed Auction at Value Area High (VAH) or Value Area Low (VAL)",
-      "trigger": "Price tests VAH/VAL (or IB extremes) during a balance/chop day, attempts to breakout, but is met with heavy passive absorption.",
-      "confirmation": "Aggressive traders punch the wall (high delta/volume on wicks) but fail to progress. Price aggressively closes back inside the Value Area. Target opposite Value Area boundary."
-    },
-    {
       "name": "momentum_squeeze",
       "description": "Trapped traders squeeze in trend direction",
       "trigger": "Aggressive participants hit a level (e.g. IB edge, swing extreme) but are absorbed by passive limits, trapping them.",

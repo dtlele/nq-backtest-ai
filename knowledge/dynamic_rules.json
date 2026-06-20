@@ -1,109 +1,39 @@
 {
   "dynamic_rules": [
     {
-      "rule_id": "AMT_NEW_34",
-      "topic": "Trade Entry in Weak Momentum",
-      "description": "Avoid entering trades in weak momentum conditions unless there is clear institutional absorption or delta confirmation at the entry point. Weak momentum increases the risk of stop runs.",
-      "action": "skip_trade",
-      "status": "active",
-      "successes": 9,
-      "failures": 0,
-      "probation_days": 29
-    },
-    {
-      "rule_id": "AMT_NEW_40",
-      "topic": "Trade Entry in High Delta Conditions",
-      "description": "Avoid entering trades when delta is excessively high (> 500) without clear institutional absorption. High delta conditions often lead to reversals and stop runs.",
-      "action": "skip_trade",
-      "status": "active",
-      "successes": 9,
-      "failures": 0,
-      "probation_days": 26
-    },
-    {
-      "rule_id": "AMT_NEW_41",
-      "topic": "Trade Entry Near Key Levels",
-      "description": "Avoid entering trades near key levels (POC, VAH, VAL) without confirmation of institutional absorption or delta divergence. These levels often act as magnets for price, increasing the risk of stop runs.",
-      "action": "skip_trade",
-      "status": "active",
-      "successes": 9,
-      "failures": 0,
-      "probation_days": 26
-    },
-    {
-      "rule_id": "AMT_NEW_42",
-      "topic": "Trade Entry in Weak Momentum",
-      "description": "Avoid entering trades in weak momentum conditions unless there is clear institutional absorption or delta confirmation at the entry point. Weak momentum increases the risk of stop runs.",
-      "action": "skip_trade",
-      "status": "active",
-      "successes": 9,
-      "failures": 0,
-      "probation_days": 24
-    },
-    {
-      "rule_id": "AMT_NEW_43",
-      "topic": "Trade Entry in Developing Uptrend",
-      "description": "Avoid entering trades in a developing uptrend without clear institutional absorption or delta confirmation at the entry point. Developing uptrends can be susceptible to reversals if momentum weakens.",
-      "action": "skip_trade",
-      "status": "active",
-      "successes": 8,
-      "failures": 0,
-      "probation_days": 23
-    },
-    {
-      "rule_id": "AMT_NEW_45",
-      "topic": "Trade Entry in Developing Trend",
-      "description": "Avoid entering trades in a developing trend without confirmation of institutional absorption or delta divergence. Developing trends can be susceptible to reversals if momentum weakens.",
-      "action": "skip_trade",
-      "status": "probation",
-      "successes": 0,
-      "failures": 0,
-      "probation_days": 18
-    },
-    {
-      "rule_id": "AMT_NEW_47",
-      "topic": "Trade Entry in Developing Uptrend",
-      "description": "Avoid entering trades in a developing uptrend without clear institutional absorption or delta confirmation at the entry point. Developing uptrends can be susceptible to reversals if momentum weakens.",
-      "action": "skip_trade",
-      "status": "probation",
-      "successes": 0,
-      "failures": 0,
-      "probation_days": 16
-    },
-    {
       "rule_id": "AMT_NEW_50",
       "topic": "Trade Entry in Developing Downtrend",
-      "description": "Avoid entering trades in a developing downtrend without clear institutional absorption or delta confirmation at the entry point. Developing downtrends can be susceptible to reversals if momentum weakens.",
+      "description": "Avoid entering short trades in a developing downtrend without clear institutional absorption or initiative delta confirmation at the entry point to prevent entering at the bottom of a move.",
       "action": "skip_trade",
-      "status": "probation",
-      "successes": 0,
+      "status": "active",
+      "successes": 6,
       "failures": 0,
-      "probation_days": 12
-    },
-    {
-      "rule_id": "AMT_NEW_51",
-      "topic": "Trade Entry in High Delta Conditions",
-      "description": "Avoid entering trades when delta is excessively high (> 600) without clear institutional absorption. High delta conditions often lead to reversals and stop runs.",
-      "action": "skip_trade",
-      "status": "probation",
-      "successes": 0,
-      "failures": 0,
-      "probation_days": 9
+      "probation_days": 30
     },
     {
       "rule_id": "AMT_NEW_52",
-      "topic": "Trade Entry in High Delta Conditions",
-      "description": "Avoid entering trades when delta is excessively high (> 300) near key levels without clear institutional absorption. High delta near key levels often leads to reversals and stop runs.",
+      "topic": "Trade Entry in High Delta near Key Levels",
+      "description": "Avoid entering trades when delta is excessively high (> 300) near key levels (POC, VAH, VAL, IB edges) without clear institutional absorption or divergence. High delta near key levels often leads to reversals.",
       "action": "skip_trade",
-      "status": "probation",
-      "successes": 0,
+      "status": "active",
+      "successes": 7,
       "failures": 0,
-      "probation_days": 8
+      "probation_days": 26
     },
     {
-      "rule_id": "AMT_NEW_53",
-      "topic": "Trade Entry in High Delta Conditions",
-      "description": "Avoid entering trades when delta is excessively high (> 1000) without clear institutional absorption. Extremely high delta conditions often lead to reversals and stop runs.",
+      "rule_id": "AMT_NEW_54",
+      "topic": "Trade Entry in Negative Delta Conditions",
+      "description": "Avoid entering trades when delta is excessively negative (< -300) without clear institutional absorption. Negative delta conditions often lead to reversals and stop runs.",
+      "action": "skip_trade",
+      "status": "active",
+      "successes": 4,
+      "failures": 0,
+      "probation_days": 22
+    },
+    {
+      "rule_id": "AMT_NEW_60",
+      "topic": "Trapped Participants Follow-Through",
+      "description": "When trapped participants are confirmed (e.g., trapped sellers followed by higher close and aggressive delta), wait for the follow-through confirmation before entering a trade to avoid early entries that might get stopped out.",
       "action": "skip_trade",
       "status": "probation",
       "successes": 0,
@@ -111,29 +41,29 @@
       "probation_days": 7
     },
     {
-      "rule_id": "AMT_NEW_54",
-      "topic": "Trade Entry in Negative Delta Conditions",
-      "description": "Avoid entering trades when delta is excessively negative (< -300) without clear institutional absorption. Negative delta conditions often lead to reversals and stop runs.",
-      "action": "skip_trade",
-      "status": "probation",
-      "successes": 0,
-      "failures": 0,
-      "probation_days": 4
-    },
-    {
-      "rule_id": "AMT_NEW_55",
-      "topic": "Trade Entry in High Delta Conditions",
-      "description": "Avoid entering trades when delta is excessively high (> 400) near key levels without clear institutional absorption. High delta near key levels often leads to reversals and stop runs.",
+      "rule_id": "AMT_NEW_61",
+      "topic": "Ignition Bar Confirmation",
+      "description": "Wait for a confirmed ignition bar (close outside IB with |delta| >= 30) before entering a trade to avoid premature entries during accumulation/balance phases.",
       "action": "skip_trade",
       "status": "probation",
       "successes": 0,
       "failures": 0,
       "probation_days": 2
+    },
+    {
+      "rule_id": "AMT_NEW_62",
+      "topic": "Accumulation/Balance Phase",
+      "description": "Avoid entering trades during accumulation/balance phases inside the IB range. Wait for a clear breakout or breakdown with ignition bar confirmation.",
+      "action": "skip_trade",
+      "status": "probation",
+      "successes": 0,
+      "failures": 0,
+      "probation_days": 1
     }
   ],
   "session_learnings": [
-    "High delta conditions near key levels led to reversals and stop runs, confirming the need for rules AMT_NEW_40 and AMT_NEW_52.",
-    "Trades entered in weak momentum conditions without clear institutional absorption resulted in stop runs, reinforcing the validity of rule AMT_NEW_34.",
-    "Developing trends without confirmation of institutional absorption or delta divergence were susceptible to reversals, highlighting the importance of rules AMT_NEW_45 and AMT_NEW_47."
+    "No trades were executed today as the market remained in a balance phase inside the Initial Balance range, validating the 'Accumulation/Balance Phase' rule.",
+    "The 'Ignition Bar Confirmation' rule was correctly applied to skip trades inside the IB range without a clear breakout or breakdown.",
+    "The session reinforced the importance of waiting for clear ignition signals outside the IB range before entering trades."
   ]
 }

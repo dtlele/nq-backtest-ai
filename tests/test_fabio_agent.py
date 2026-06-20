@@ -38,7 +38,7 @@ MOCK_STEP2_RESPONSE = json.dumps({
 })
 
 def test_analyze_returns_fabio_signal(tmp_path):
-    with patch('src.agents.fabio_agent.llm_ask', side_effect=[MOCK_STEP1_RESPONSE, MOCK_STEP2_RESPONSE]):
+    with patch('src.agents.fabio_agent.llm_ask', return_value=MOCK_STEP2_RESPONSE):
         signal = analyze(_candidate())
     assert isinstance(signal, FabioSignal)
     assert signal.direction == 'long'
@@ -46,17 +46,17 @@ def test_analyze_returns_fabio_signal(tmp_path):
     assert signal.entry == pytest.approx(20002.0)
 
 MOCK_NO_TRADE_STEP1 = json.dumps({
-    "setup_valid": False,
+    "direction": "none",
+    "confidence": 0,
+    "entry": None,
+    "stop": None,
+    "target": None,
     "setup_type": "none",
-    "bias": "none",
-    "trapped_side": "none",
-    "key_structural_level": None,
-    "market_state": "balance",
-    "session_narrative": "No clear setup."
+    "reasoning": "No clear setup."
 })
 
 def test_analyze_returns_none_signal_on_no_trade():
-    with patch('src.agents.fabio_agent.llm_ask', side_effect=[MOCK_NO_TRADE_STEP1]):
+    with patch('src.agents.fabio_agent.llm_ask', return_value=MOCK_NO_TRADE_STEP1):
         signal = analyze(_candidate())
     assert signal.direction == 'none'
     assert signal.confidence == 0

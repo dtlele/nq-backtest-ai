@@ -69,6 +69,112 @@ try {
   console.log('DevVA indicator registration or already registered:', e.message)
 }
 
+try {
+  registerIndicator({
+    name: 'Footprint',
+    shortName: 'Footprint',
+    series: 'normal',
+    zLevel: 100, // Ensure it draws on top of candles
+    calc: (dataList) => dataList.map(d => ({ footprint: d.footprint })),
+    draw: ({ ctx, xAxis, yAxis, chart }) => {
+      const barSpace = chart.getBarSpace().bar;
+      // Show footprint text only when zoomed in (candle width > 20px)
+      if (barSpace < 20) return false;
+
+      const kLineDataList = chart.getDataList();
+      ctx.font = '10px "Inter", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const visibleRange = chart.getVisibleRange();
+      for (let i = visibleRange.from; i < visibleRange.to; i++) {
+        const data = kLineDataList[i];
+        if (!data || !data.footprint) continue;
+        
+        const footprint = data.footprint;
+        
+        // Find POC and max volume for shading
+        let maxTotalVol = 0;
+        let maxCellVol = 0;
+        let pocPriceStrs = [];
+        Object.keys(footprint).forEach(priceStr => {
+           const { bid, ask } = footprint[priceStr];
+           const totalVol = bid + ask;
+           if (totalVol > maxTotalVol) {
+               maxTotalVol = totalVol;
+               pocPriceStrs = [priceStr];
+           } else if (totalVol === maxTotalVol && totalVol > 0) {
+               pocPriceStrs.push(priceStr);
+           }
+           if (bid > maxCellVol) maxCellVol = bid;
+           if (ask > maxCellVol) maxCellVol = ask;
+        });
+        
+        Object.keys(footprint).forEach(priceStr => {
+           const price = parseFloat(priceStr);
+           const { bid, ask } = footprint[priceStr];
+           
+           const coordCenter = chart.convertToPixel({ dataIndex: i, value: price }, { paneId: 'candle_pane' });
+           const coordTop = chart.convertToPixel({ dataIndex: i, value: price + 0.125 }, { paneId: 'candle_pane' });
+           const coordBottom = chart.convertToPixel({ dataIndex: i, value: price - 0.125 }, { paneId: 'candle_pane' });
+           
+           if (!coordCenter || !coordTop || !coordBottom) return;
+           
+           const { x, y } = coordCenter;
+           // y is inverted in canvas (higher price = lower y)
+           const boxTop = coordTop.y;
+           const boxHeight = Math.abs(coordBottom.y - coordTop.y);
+           
+           const boxWidth = barSpace * 0.45;
+           const bidX = x - boxWidth;
+           const askX = x;
+           
+           // Shading calculations
+           const bidAlpha = maxCellVol > 0 ? (bid / maxCellVol) * 0.7 : 0;
+           const askAlpha = maxCellVol > 0 ? (ask / maxCellVol) * 0.7 : 0;
+           
+           // Draw Bid Background & Border
+           if (bid > 0) {
+               ctx.fillStyle = `rgba(239, 83, 80, ${bidAlpha})`;
+               ctx.fillRect(bidX, boxTop, boxWidth, boxHeight);
+           }
+           ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+           ctx.lineWidth = 1;
+           ctx.strokeRect(bidX, boxTop, boxWidth, boxHeight);
+           
+           // Draw Ask Background & Border
+           if (ask > 0) {
+               ctx.fillStyle = `rgba(38, 166, 154, ${askAlpha})`;
+               ctx.fillRect(askX, boxTop, boxWidth, boxHeight);
+           }
+           ctx.strokeRect(askX, boxTop, boxWidth, boxHeight);
+           
+           // Highlight POC Row (border around both boxes)
+           if (pocPriceStrs.includes(priceStr)) {
+               ctx.strokeStyle = 'rgba(241, 196, 15, 0.8)'; // Yellow border
+               ctx.lineWidth = 2;
+               ctx.strokeRect(bidX, boxTop, boxWidth * 2, boxHeight);
+           }
+           
+           // Draw Text
+           if (boxHeight > 8) { // Only draw text if cell is tall enough to read
+             ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; // White text for contrast
+             if (bid > 0) {
+               ctx.fillText(bid.toString(), bidX + boxWidth / 2, y);
+             }
+             if (ask > 0) {
+               ctx.fillText(ask.toString(), askX + boxWidth / 2, y);
+             }
+           }
+        });
+      }
+      return false;
+    }
+  })
+} catch (e) {
+  console.log('Footprint indicator registration or already registered:', e.message)
+}
+
 function fmtET(iso) {
   try {
     return new Date(iso).toLocaleTimeString('it-IT',
@@ -138,7 +244,7 @@ const saveUserDrawings = (chart, currentDate) => {
   }
 }
 
-export default function TradingChart({ trades = [], proposals = [], date, activeTrade, activeReasoning, onTradeClick, openTrade, latestReasoning, jumpTimestamp, runFilter, autoScroll, onAutoScrollChange, timeZone, onToggleTimeZone }) {
+export default function TradingChart({ trades = [], proposals = [], reasonings = [], date, activeTrade, activeReasoning, onTradeClick, openTrade, latestReasoning, jumpTimestamp, runFilter, autoScroll, onAutoScrollChange, timeZone, onToggleTimeZone }) {
   const containerRef = useRef(null)
   const chartRef     = useRef(null)
   const prevActiveTradeRef = useRef(null)
@@ -162,12 +268,58 @@ export default function TradingChart({ trades = [], proposals = [], date, active
     const timer = setTimeout(() => {
       if (!el.clientWidth || !el.clientHeight) return
 
-      // Fresh mount (guaranteed by key prop in App.jsx) — just init
       const chart = init(el)
       chartRef.current = chart
       chartInstance = chart
 
+      // Hack to allow trackpad two-finger scroll to zoom axes (simulating pointer drag)
+      const handleWheelZoom = (e) => {
+        if (!el || e.deltaY === 0) return;
+        const rect = el.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const isYAxis = x > rect.width - 64;
+        const isXAxis = y > rect.height - 30;
+        
+        if (isYAxis || isXAxis) {
+          e.preventDefault();
+          e.stopPropagation();
+          const target = e.target;
+          
+          target.dispatchEvent(new PointerEvent('pointerdown', {
+            bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY, buttons: 1
+          }));
+          
+          requestAnimationFrame(() => {
+            target.dispatchEvent(new PointerEvent('pointermove', {
+              bubbles: true, cancelable: true, 
+              clientX: isYAxis ? e.clientX : e.clientX - e.deltaY * 1.5, 
+              clientY: isYAxis ? e.clientY - e.deltaY * 1.5 : e.clientY, 
+              buttons: 1
+            }));
+            requestAnimationFrame(() => {
+              target.dispatchEvent(new PointerEvent('pointerup', {
+                bubbles: true, cancelable: true, 
+                clientX: isYAxis ? e.clientX : e.clientX - e.deltaY * 1.5, 
+                clientY: isYAxis ? e.clientY - e.deltaY * 1.5 : e.clientY, 
+                buttons: 0
+              }));
+            });
+          });
+        }
+      };
+      
+      // Store on ref to cleanup later
+      el._handleWheelZoom = handleWheelZoom;
+      el.addEventListener('wheel', handleWheelZoom, { passive: false });
+
       chart.setStyles({
+        yAxis: {
+          show: true,
+          inside: false,
+          axisLine: { show: true, color: 'rgba(255, 255, 255, 0.2)' },
+          tickText: { color: 'rgba(255, 255, 255, 0.8)' }
+        },
         grid: { horizontal: { show: true, color: '#2A2C39', size: 1, style: 'dashed', dashValue: [2, 2] }, vertical: { show: false } },
         candle: {
           type: 'candle_solid',
@@ -202,6 +354,8 @@ export default function TradingChart({ trades = [], proposals = [], date, active
 
       chart.setSymbol({ ticker: 'NQ', pricePrecision: 2, volumePrecision: 0 })
       chart.setTimezone(timeZone)
+      chart.overrideXAxis({ scrollZoomEnabled: true })
+      chart.overrideYAxis({ scrollZoomEnabled: true })
       chart.setPeriod({ type: 'minute', span: 1 })
       chart.setDataLoader({
         getBars: ({ timestamp, callback }) => {
@@ -221,6 +375,7 @@ export default function TradingChart({ trades = [], proposals = [], date, active
 
       // Add price indicators on main pane
       chart.createIndicator('VWAP', { pane: { id: 'candle_pane' }, isStack: true })
+      chart.createIndicator('Footprint', { pane: { id: 'candle_pane' }, isStack: true })
       
       // Explicitly remove DevPOC and DevVA indicators if they were previously created/restored
       try {
@@ -278,6 +433,9 @@ export default function TradingChart({ trades = [], proposals = [], date, active
       el.removeEventListener('mousedown', handleUserInteraction)
       el.removeEventListener('wheel', handleUserInteraction)
       el.removeEventListener('touchstart', handleUserInteraction)
+      if (el._handleWheelZoom) {
+        el.removeEventListener('wheel', el._handleWheelZoom)
+      }
       if (chartInstance) {
         dispose(el)
         chartRef.current = null
@@ -339,7 +497,8 @@ export default function TradingChart({ trades = [], proposals = [], date, active
       vwap: vwapMap[c.time] || null,
       poc: devVaMap[c.time]?.poc || null,
       vah: devVaMap[c.time]?.vah || null,
-      val: devVaMap[c.time]?.val || null
+      val: devVaMap[c.time]?.val || null,
+      footprint: c.footprint || null
     }));
 
     // ONLY update data if candles actually changed (prevents scrolling to start on layer toggle)
@@ -539,7 +698,7 @@ export default function TradingChart({ trades = [], proposals = [], date, active
 
 
     // 6. Create OPEN TRADE overlay
-    if (layers.trades && openTrade && openTrade.date === date && candles.length) {
+    if (layers.trades && openTrade && openTrade.entry_time && candles.length) {
       const tradeDate = openTrade.entry_time.split('T')[0];
       if (tradeDate === date) {
         const entryTimeMs = new Date(openTrade.entry_time).getTime();
@@ -579,11 +738,13 @@ export default function TradingChart({ trades = [], proposals = [], date, active
     if (targetReasoning && targetReasoning.date === date && candles.length) {
       let analysisTimeMs = null;
       if (targetReasoning.bar_time_utc) {
-        analysisTimeMs = new Date(targetReasoning.date + 'T' + targetReasoning.bar_time_utc + ':00Z').getTime();
+        if (targetReasoning.bar_time_utc.includes('T')) {
+          analysisTimeMs = new Date(targetReasoning.bar_time_utc).getTime();
+        } else {
+          analysisTimeMs = new Date(targetReasoning.date + 'T' + targetReasoning.bar_time_utc + ':00Z').getTime();
+        }
       } else if (targetReasoning.bar_time_et) {
-        // Fallback for older mock data structures if needed, although utc is usually present
         const dtStr = `${targetReasoning.date}T${targetReasoning.bar_time_et}:00`;
-        // Not perfect timezone mapping, but usually close enough for fallback
         analysisTimeMs = new Date(dtStr).getTime();
       }
 
@@ -604,6 +765,36 @@ export default function TradingChart({ trades = [], proposals = [], date, active
           lock: true
         });
       }
+    }
+
+    // 7b. Create Phase Bands
+    if (reasonings && reasonings.length && candles.length) {
+      reasonings.forEach((r, idx) => {
+        const phase = r.fabio_imbalance_phase || 'none';
+        if (phase === 'accumulation' || phase === 'expansive') {
+          let rTimeMs = null;
+          if (r.bar_time_utc) {
+            if (r.bar_time_utc.includes('T')) {
+              rTimeMs = new Date(r.bar_time_utc).getTime();
+            } else {
+              rTimeMs = new Date(r.date + 'T' + r.bar_time_utc + ':00Z').getTime();
+            }
+          } else if (r.bar_time_et) {
+            const dtStr = `${r.date}T${r.bar_time_et}:00`;
+            rTimeMs = new Date(dtStr).getTime();
+          }
+
+          if (rTimeMs && rTimeMs <= maxTimeMs) {
+            chart.createOverlay({
+              id: `system_phase_${idx}`,
+              name: 'phaseBand',
+              points: [{ timestamp: rTimeMs }],
+              styles: { phase: phase },
+              lock: true
+            });
+          }
+        }
+      });
     }
 
     // 8. Create Big Trades markers
@@ -914,7 +1105,14 @@ export default function TradingChart({ trades = [], proposals = [], date, active
           )}
           
           {/* Floating Open Trade Widget */}
-          {openTrade && openTrade.entry_time && openTrade.entry_time.split('T')[0] === date && (
+          {(() => {
+            const widgetTrade = openTrade || activeTrade;
+            if (!widgetTrade || !widgetTrade.entry_time) return null;
+            const tradeDate = widgetTrade.entry_time.split('T')[0];
+            if (tradeDate !== date) return null;
+            const isLive = !!openTrade && openTrade.entry_time === widgetTrade.entry_time;
+            
+            return (
             <div style={{
               position: 'absolute', top: 16, right: 16, zIndex: 10,
               background: 'rgba(30, 41, 59, 0.85)', backdropFilter: 'blur(8px)',
@@ -923,23 +1121,24 @@ export default function TradingChart({ trades = [], proposals = [], date, active
               boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 4 }}>
-                <span style={{ fontWeight: 'bold', color: 'var(--accent-blue)' }}>TRADE IN CORSO</span>
-                <span className={`tag tag-${(openTrade.direction && openTrade.direction.toLowerCase() === 'long') ? 'long' : 'short'}`}>{openTrade.direction.toUpperCase()}</span>
+                <span style={{ fontWeight: 'bold', color: 'var(--accent-blue)' }}>{isLive ? 'TRADE IN CORSO' : 'TRADE SELEZIONATO'}</span>
+                <span className={`tag tag-${(widgetTrade.direction && widgetTrade.direction.toLowerCase() === 'long') ? 'long' : 'short'}`}>{widgetTrade.direction.toUpperCase()}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                 <span style={{ color: 'var(--text-muted)' }}>Entry</span>
-                <span style={{ fontFamily: 'var(--font-mono)' }}>{openTrade.entry}</span>
+                <span style={{ fontFamily: 'var(--font-mono)' }}>{widgetTrade.entry}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                 <span style={{ color: 'var(--text-muted)' }}>Target</span>
-                <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-green)' }}>{openTrade.target}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-green)' }}>{widgetTrade.target}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Stop</span>
-                <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>{openTrade.stop}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-red)' }}>{widgetTrade.stop}</span>
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {selectedDrawing && (
             <DrawingSettingsModal

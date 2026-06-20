@@ -50,16 +50,19 @@ export default function App() {
     return () => clearInterval(interval)
   }, [])
 
-  // Auto-select date on fresh load
+  // Auto-select date only if the current activeDate is not available (e.g. fresh load)
   useEffect(() => {
     const availableDates = dashboardData.MOCK_SESSIONS.map(s => s.date)
     const liveDate = dashboardData.LIVE_SESSION_STATE?.date
-    if (liveDate && availableDates.includes(liveDate)) {
-      if (activeDate !== liveDate) setActiveDate(liveDate)
-    } else if (availableDates.length > 0 && !availableDates.includes(activeDate)) {
-      setActiveDate(availableDates[availableDates.length - 1])
+    
+    if (availableDates.length > 0 && !availableDates.includes(activeDate)) {
+      if (liveDate && availableDates.includes(liveDate)) {
+        setActiveDate(liveDate)
+      } else {
+        setActiveDate(availableDates[availableDates.length - 1])
+      }
     }
-  }, [dashboardData.MOCK_SESSIONS, dashboardData.LIVE_SESSION_STATE?.date])
+  }, [dashboardData.MOCK_SESSIONS, dashboardData.LIVE_SESSION_STATE?.date, activeDate])
 
   const handleToggleTimeZone = () => {
     const localTZ = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Rome'
@@ -109,6 +112,7 @@ export default function App() {
             key={`${activeDate}-${runFilter}-${timeZone}`}
             trades={dayTrades}
             proposals={dayProposals}
+            reasonings={dayReasonings}
             date={activeDate}
             activeTrade={activeTrade}
             activeReasoning={activeReasoning}
@@ -123,28 +127,6 @@ export default function App() {
             onToggleTimeZone={handleToggleTimeZone}
           />
 
-          {/* Trade Panel below chart — shown when a trade is selected */}
-          {activeTrade && (
-            <div className="platform-trade-detail">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', borderBottom: '1px solid var(--border)', background: 'var(--bg-surface)' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.06em' }}>📊 TRADE DETAIL</div>
-                <button
-                  onClick={() => setActiveTrade(null)}
-                  style={{ fontSize: 16, color: 'var(--text-muted)', lineHeight: 1, padding: '2px 6px', borderRadius: 4 }}
-                >×</button>
-              </div>
-              <div style={{ overflowY: 'auto', flex: 1 }}>
-                <TradePanel
-                  trade={activeTrade}
-                  allTrades={dayTrades}
-                  proposals={dayProposals}
-                  onSelect={handleSetActiveTrade}
-                  timeZone={timeZone}
-                  compact
-                />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* RIGHT — Agent Sidebar */}
@@ -157,6 +139,10 @@ export default function App() {
             setJumpTimestamp(Date.now() + Math.random())
           }}
           timeZone={timeZone}
+          dayTrades={dayTrades}
+          dayProposals={dayProposals}
+          activeTrade={activeTrade}
+          onSelectTrade={handleSetActiveTrade}
         />
       </div>
 

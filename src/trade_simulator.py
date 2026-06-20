@@ -2,6 +2,27 @@ from src import (Bar, ConsensusSignal, OpenTrade, ClosedTrade, PendingTrade,
                  NQ_TICK_SIZE, NQ_TICK_VALUE)
 from src.risk_manager import calculate_commissions
 
+def _compute_micro_poc(bars: list) -> float:
+    """Compute the POC (price of control) from a list of M1 bars.
+    Used for intra-trade dynamic trailing based on live volume profile."""
+    if not bars:
+        return 0.0
+    TICK = 0.25
+    price_vol: dict = {}
+    for bar in bars:
+        p_low  = round(bar.low  / TICK) * TICK
+        p_high = round(bar.high / TICK) * TICK
+        ticks  = max(1, round((p_high - p_low) / TICK) + 1)
+        vol_per_tick = bar.volume / ticks
+        price = p_low
+        while price <= p_high + 1e-9:
+            key = round(price / TICK) * TICK
+            price_vol[key] = price_vol.get(key, 0) + vol_per_tick
+            price += TICK
+    if not price_vol:
+        return 0.0
+    return max(price_vol, key=price_vol.get)
+
 # We use MNQ as the default instrument for granular position sizing
 INSTRUMENT = 'MNQ'
 TICK_VALUE = 0.50 # MNQ ($0.50 per tick)
@@ -28,7 +49,8 @@ def open_trade(consensus: ConsensusSignal, entry_bar: Bar, contracts: float = 1.
         consensus  = consensus,
         contracts  = contracts,
         entry_time = entry_time or entry_bar.timestamp,
-        last_eval_time = entry_time or entry_bar.timestamp
+        last_eval_time = entry_time or entry_bar.timestamp,
+        news_flag  = getattr(consensus, 'news_flag', 'none')
     )
 
 def check_pending_fill(pending: PendingTrade, bar: Bar) -> OpenTrade | None:
@@ -42,7 +64,8 @@ def check_pending_fill(pending: PendingTrade, bar: Bar) -> OpenTrade | None:
             entry_bar=bar,
             consensus=pending.consensus,
             contracts=pending.contracts,
-            entry_time=bar.timestamp
+            entry_time=bar.timestamp,
+            news_flag=getattr(pending.consensus, 'news_flag', 'none')
         )
     elif pending.direction == 'short' and bar.high >= pending.limit_price:
         return OpenTrade(
@@ -53,7 +76,8 @@ def check_pending_fill(pending: PendingTrade, bar: Bar) -> OpenTrade | None:
             entry_bar=bar,
             consensus=pending.consensus,
             contracts=pending.contracts,
-            entry_time=bar.timestamp
+            entry_time=bar.timestamp,
+            news_flag=getattr(pending.consensus, 'news_flag', 'none')
         )
     return None
 
@@ -69,7 +93,7 @@ def _close(trade: OpenTrade, exit_price: float,
     commissions = calculate_commissions(trade.contracts, instrument=INSTRUMENT)
     net_pnl_usd = gross_pnl_usd - commissions
     
-    return ClosedTrade(
+    closed_t = ClosedTrade(
         direction        = trade.direction,
         entry            = trade.entry,
         stop             = trade.stop,
@@ -86,8 +110,14 @@ def _close(trade: OpenTrade, exit_price: float,
         final_confidence = trade.consensus.final_confidence,
         r_ratio          = trade.consensus.r_ratio,
         contracts        = trade.contracts, # Log contracts used
+        news_flag        = getattr(trade, 'news_flag', 'none'),
         context_fingerprint = getattr(trade.consensus, 'context_fingerprint', '')
     )
+    closed_t.amt_day_profile = getattr(trade, 'amt_day_profile', None)
+    closed_t.macro_regime = getattr(trade, 'macro_regime', None)
+    closed_t.trapped_info = getattr(trade, 'trapped_info', None)
+    closed_t.trapped_follow_through = getattr(trade, 'trapped_follow_through', None)
+    return closed_t
 
 def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False, on_partial_close = None) -> 'ClosedTrade | None':
     """Walk forward through bars. Return ClosedTrade if exited, else None.
@@ -97,11 +127,25 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
     is only triggered if the close confirms the breach (price did not recover),
     preventing false stops when the bar's extreme occurred before our entry time.
     Target hits are still valid (price reaching target after entry is always good).
+    
+    POC Trailing (Expansive Phase Management):
+    Once the trade is in profit by >= 0.5 R:R, we start computing a live micro POC
+    from the bars since entry. We trail the stop behind this POC (buffer of 3 ticks).
+    If price stalls on the wrong side of the POC for 3+ consecutive M1 bars
+    (accumulation/momentum failure), we exit early.
     """
     risk_points = abs(trade.entry - trade.stop)
+    # Internal accumulators for POC trailing
+    trade_bars_so_far = []     # M1 bars seen since entry
+    bars_stalling_vs_poc = 0   # consecutive bars price hasn't re-crossed the POC
+    POC_TRAIL_BUFFER_TICKS = 3 # 3 ticks = 0.75pts below POC for long stop
+    MAX_STALL_BARS = 5         # exit after 5 consecutive M1 bars stalling under POC
+    MIN_RR_FOR_POC_TRAIL = 0.5 # only activate POC trailing once we're 0.5 R:R in profit
+    poc_trail_active = False
     
     for i, bar in enumerate(bars):
         is_first = first_bar_after_entry and (i == 0)
+        trade_bars_so_far.append(bar)
         
         if trade.direction == 'long':
             # --- 1. Check Partial TP (50% distance / 1.0 R:R) ---
@@ -140,8 +184,29 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
             # --- 3. Check Target Hit ---
             if bar.high >= trade.target:
                 return _close(trade, trade.target, 'target', bar)
+            
+            # --- 4. POC Trailing / Accumulation Detection (LONG) ---
+            if risk_points > 0:
+                profit_so_far = bar.close - trade.entry
+                if profit_so_far >= MIN_RR_FOR_POC_TRAIL * risk_points and len(trade_bars_so_far) >= 3:
+                    micro_poc = _compute_micro_poc(trade_bars_so_far)
+                    if micro_poc > 0:
+                        poc_trail_active = True
+                        poc_trail_stop = micro_poc - (POC_TRAIL_BUFFER_TICKS * 0.25)
+                        # Only move stop UP (never down for a long)
+                        if poc_trail_stop > trade.stop and poc_trail_stop < bar.close:
+                            print(f"  [POC TRAIL] Micro POC={micro_poc:.2f}. Trailing stop UP: {trade.stop:.2f} -> {poc_trail_stop:.2f}")
+                            trade.stop = poc_trail_stop
+                        # Stall detection: price closed below the micro POC
+                        if bar.close < micro_poc:
+                            bars_stalling_vs_poc += 1
+                            if bars_stalling_vs_poc >= MAX_STALL_BARS:
+                                print(f"  [ACCUMULATION EXIT] Price stalled below POC={micro_poc:.2f} for {MAX_STALL_BARS} bars. Exiting early.")
+                                return _close(trade, bar.close, 'poc_accumulation_exit', bar)
+                        else:
+                            bars_stalling_vs_poc = 0  # reset if price re-crosses above POC
                 
-            # --- 4. Check Stop Loss Hit ---
+            # --- 5. Check Stop Loss Hit ---
             if bar.low <= trade.stop:
                 if is_first:
                     if bar.close <= trade.stop:
@@ -187,8 +252,29 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
             # --- 3. Check Target Hit ---
             if bar.low <= trade.target:
                 return _close(trade, trade.target, 'target', bar)
+            
+            # --- 4. POC Trailing / Accumulation Detection (SHORT) ---
+            if risk_points > 0:
+                profit_so_far = trade.entry - bar.close
+                if profit_so_far >= MIN_RR_FOR_POC_TRAIL * risk_points and len(trade_bars_so_far) >= 3:
+                    micro_poc = _compute_micro_poc(trade_bars_so_far)
+                    if micro_poc > 0:
+                        poc_trail_active = True
+                        poc_trail_stop = micro_poc + (POC_TRAIL_BUFFER_TICKS * 0.25)
+                        # Only move stop DOWN (never up for a short)
+                        if poc_trail_stop < trade.stop and poc_trail_stop > bar.close:
+                            print(f"  [POC TRAIL] Micro POC={micro_poc:.2f}. Trailing stop DOWN: {trade.stop:.2f} -> {poc_trail_stop:.2f}")
+                            trade.stop = poc_trail_stop
+                        # Stall detection: price closed above micro POC
+                        if bar.close > micro_poc:
+                            bars_stalling_vs_poc += 1
+                            if bars_stalling_vs_poc >= MAX_STALL_BARS:
+                                print(f"  [ACCUMULATION EXIT] Price stalled above POC={micro_poc:.2f} for {MAX_STALL_BARS} bars. Exiting early.")
+                                return _close(trade, bar.close, 'poc_accumulation_exit', bar)
+                        else:
+                            bars_stalling_vs_poc = 0
                 
-            # --- 4. Check Stop Loss Hit ---
+            # --- 5. Check Stop Loss Hit ---
             if bar.high >= trade.stop:
                 if is_first:
                     if bar.close >= trade.stop:

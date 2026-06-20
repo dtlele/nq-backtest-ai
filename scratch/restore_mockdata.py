@@ -52,6 +52,8 @@ if reasoning_file.exists():
                         'no_trade_reason': r.get('no_trade_reason', ''),
                         'fabio_reasoning': r.get('fabio_reasoning', ''),
                         'setup_type': r.get('fabio_setup', ''),
+                        'fabio_imbalance_phase': r.get('fabio_imbalance_phase', 'none'),
+                        'session_bias': r.get('session_bias', 'none'),
                     })
                 
                 # Add to all reasonings
@@ -73,6 +75,7 @@ if reasoning_file.exists():
                     'ib_high': r.get('ib_high'),
                     'ib_low': r.get('ib_low'),
                     'day_type': r.get('day_type'),
+                    'market_state': r.get('market_state', '---'),
                     'prev_day_poc': r.get('prev_day_poc'),
                     'prev_day_vah': r.get('prev_day_vah'),
                     'prev_day_val': r.get('prev_day_val'),
@@ -83,7 +86,9 @@ if reasoning_file.exists():
                     'top_wick_ratio': r.get('top_wick_ratio'),
                     'bottom_wick_ratio': r.get('bottom_wick_ratio'),
                     'close_percentile': r.get('close_percentile'),
-                    'session_memory': r.get('session_memory', [])
+                    'session_memory': r.get('session_memory', []),
+                    'fabio_imbalance_phase': r.get('fabio_imbalance_phase', 'none'),
+                    'session_bias': r.get('session_bias', 'none'),
                 })
             except:
                 pass

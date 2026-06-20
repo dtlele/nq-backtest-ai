@@ -68,9 +68,10 @@ try {
       const stopPrice = Math.min(p1Price, p2Price)
       const tpPrice = Math.max(p1Price, p2Price)
 
-      const risk = Math.max(0.01, entryPrice - stopPrice)
+      const riskVal = entryPrice - stopPrice
+      const risk = Math.max(0.01, riskVal)
       const reward = Math.max(0.01, tpPrice - entryPrice)
-      const ratio = (reward / risk).toFixed(2)
+      const ratio = riskVal <= 0 ? '∞ (BE)' : (reward / risk).toFixed(2)
 
       const startX = start.x
       const endX = c1.x
@@ -165,9 +166,10 @@ try {
       const stopPrice = Math.max(p1Price, p2Price)
       const tpPrice = Math.min(p1Price, p2Price)
 
-      const risk = Math.max(0.01, stopPrice - entryPrice)
+      const riskVal = stopPrice - entryPrice
+      const risk = Math.max(0.01, riskVal)
       const reward = Math.max(0.01, entryPrice - tpPrice)
-      const ratio = (reward / risk).toFixed(2)
+      const ratio = riskVal <= 0 ? '∞ (BE)' : (reward / risk).toFixed(2)
 
       const startX = start.x
       const endX = c1.x
@@ -565,4 +567,42 @@ try {
   })
 } catch (e) {
   console.log('liveAnalysisMarker registration:', e.message)
+}
+
+// Register Phase Band Overlay
+try {
+  registerOverlay({
+    name: 'phaseBand',
+    needDefaultPointFigure: false,
+    totalStep: 1,
+    drawExtend: ({ ctx, chart, overlay }) => {
+      const points = overlay.points
+      if (!points || points.length === 0) return
+      
+      const timestamp = points[0].timestamp
+      const coord = chart.convertToPixel({ timestamp })
+      if (!coord) return
+      
+      const barSpace = chart.getBarSpace().bar
+      const width = barSpace * 5 // M5 width
+      const chartHeight = ctx.canvas.clientHeight
+      const phase = overlay.styles?.phase || 'none'
+      
+      let color = 'rgba(0,0,0,0)'
+      if (phase === 'accumulation') {
+        color = 'rgba(52, 152, 219, 0.08)' // faint blue
+      } else if (phase === 'expansive') {
+        color = 'rgba(230, 126, 34, 0.08)' // faint orange
+      }
+      
+      if (color === 'rgba(0,0,0,0)') return
+      
+      ctx.save()
+      ctx.fillStyle = color
+      ctx.fillRect(coord.x - width / 2, 0, width, chartHeight)
+      ctx.restore()
+    }
+  })
+} catch (e) {
+  console.log('phaseBand registration:', e.message)
 }

@@ -10,6 +10,24 @@ function ApmDecisionClass(d) {
   return 'hold'
 }
 
+const getAmtProfileStyle = (profile) => {
+  if (!profile) return { color: 'var(--text-secondary)', borderColor: 'var(--border)', background: 'var(--bg-glass)' };
+  const p = profile.toLowerCase();
+  if (p.includes('neutral')) {
+    return { color: 'var(--accent-purple)', borderColor: 'var(--accent-purple)', background: 'rgba(159,122,234,0.1)', border: '1px solid rgba(159,122,234,0.3)' };
+  }
+  if (p.includes('normal variation')) {
+    return { color: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', background: 'rgba(99,179,237,0.1)', border: '1px solid rgba(99,179,237,0.3)' };
+  }
+  if (p.includes('normal day')) {
+    return { color: '#00f0ff', borderColor: '#00f0ff', background: 'rgba(0,240,255,0.08)', border: '1px solid rgba(0,240,255,0.25)' };
+  }
+  if (p.includes('non-trend') || p.includes('balance')) {
+    return { color: 'var(--accent-orange)', borderColor: 'var(--accent-orange)', background: 'rgba(246,173,85,0.08)', border: '1px solid rgba(246,173,85,0.25)' };
+  }
+  return { color: 'var(--text-secondary)', borderColor: 'var(--border)', background: 'var(--bg-elevated)', border: '1px solid var(--border)' };
+};
+
 function TradeDetail({ trade, timeZone }) {
   const isWin = trade.pnl_usd > 0
   return (
@@ -73,6 +91,77 @@ function TradeDetail({ trade, timeZone }) {
             <span className="stat-label">Exit reason</span>
             <span className={`tag tag-${trade.exit_reason === 'target' ? 'win' : 'loss'}`}>{trade.exit_reason || 'unknown'}</span>
           </div>
+        </div>
+      </div>
+
+      {/* Context & Biases Checklist */}
+      <div className="detail-section">
+        <div className="detail-section-header">Context & Biases</div>
+        <div className="detail-section-body" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          
+          {/* Profiles and News row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '6px', padding: '8px' }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '4px' }}>AMT Day Profile</div>
+              <div style={{ 
+                fontSize: '9.5px', 
+                fontWeight: 'bold', 
+                padding: '3px 6px', 
+                borderRadius: '4px', 
+                display: 'inline-block',
+                ...getAmtProfileStyle(trade.amt_day_profile)
+              }}>
+                {trade.amt_day_profile || 'Price Discovery Phase'}
+              </div>
+            </div>
+            
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '6px', padding: '8px' }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '4px' }}>Macro News Block</div>
+              <span className="tag" style={{
+                fontSize: '9px', padding: '2px 6px',
+                color: trade.news_flag && trade.news_flag !== 'none' ? 'var(--accent-orange)' : 'var(--text-secondary)',
+                borderColor: trade.news_flag && trade.news_flag !== 'none' ? 'var(--accent-orange)' : 'var(--border)',
+                background: trade.news_flag && trade.news_flag !== 'none' ? 'rgba(246, 173, 85, 0.1)' : 'var(--bg-glass)'
+              }}>
+                {trade.news_flag && trade.news_flag !== 'none' ? `⚠️ NEWS: ${trade.news_flag.toUpperCase()}` : '✅ NO NEWS BLOCK'}
+              </span>
+            </div>
+          </div>
+
+          {/* Macro Regime Box */}
+          {(() => {
+            const macro = trade.macro_regime || { regime: 'CHOP/BALANCE', duration_mins: 0, trigger: 'Inside Range / Dynamic', bias: 'none' };
+            const regimeColor = macro.regime?.includes('EXPANSIVE') 
+              ? 'var(--accent-green)' 
+              : macro.regime?.includes('ACCUMULATION') 
+                ? 'var(--accent-blue)' 
+                : 'var(--accent-orange)';
+            return (
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '6px', padding: '8px', fontSize: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold' }}>Macro Regime State</span>
+                  {macro.duration_mins > 0 && <span style={{ fontSize: '8.5px', color: 'var(--text-secondary)', background: 'var(--bg-elevated)', padding: '1px 4px', borderRadius: '3px' }}>⏱️ {macro.duration_mins}m</span>}
+                </div>
+                <div style={{ fontWeight: 'bold', color: regimeColor }}>{macro.regime || 'CHOP/BALANCE'}</div>
+                <div style={{ fontSize: '9px', color: 'var(--text-secondary)', marginTop: '4px' }}><span style={{ color: 'var(--text-muted)' }}>Trigger:</span> {macro.trigger || 'N/A'}</div>
+                <div style={{ fontSize: '9px', color: 'var(--text-secondary)', marginTop: '2px' }}><span style={{ color: 'var(--text-muted)' }}>Bias:</span> <span style={{ fontWeight: 'bold', color: macro.bias === 'long' ? 'var(--accent-green)' : macro.bias === 'short' ? 'var(--accent-red)' : 'var(--text-secondary)' }}>{macro.bias?.toUpperCase() || 'NEUTRAL'}</span></div>
+              </div>
+            );
+          })()}
+
+          {/* Wick Trapped Order Flow Checklist */}
+          {((trade.trapped_info && trade.trapped_info !== 'none') || (trade.trapped_follow_through && !trade.trapped_follow_through.includes('No significant trapped'))) && (
+            <div style={{ background: 'var(--bg-void)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', padding: '8px', fontSize: '9.5px', fontFamily: 'var(--font-mono)' }}>
+              <div style={{ color: 'var(--accent-green)', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '9px', fontFamily: 'var(--font-sans)', marginBottom: '4px' }}>Trapped Wick & Order Flow Confirmation</div>
+              {trade.trapped_info && <div style={{ color: 'var(--accent-blue)', marginBottom: '3px' }}>⚡ {trade.trapped_info}</div>}
+              {trade.trapped_follow_through && (
+                <div style={{ color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
+                  {trade.trapped_follow_through}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -158,6 +247,77 @@ function ProposalDetail({ proposal, timeZone }) {
               {proposal.no_trade_reason || 'Sconosciuto'}
             </span>
           </div>
+        </div>
+      </div>
+
+      {/* Context & Biases Checklist */}
+      <div className="detail-section">
+        <div className="detail-section-header">Context & Biases</div>
+        <div className="detail-section-body" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          
+          {/* Profiles and News row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '6px', padding: '8px' }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '4px' }}>AMT Day Profile</div>
+              <div style={{ 
+                fontSize: '9.5px', 
+                fontWeight: 'bold', 
+                padding: '3px 6px', 
+                borderRadius: '4px', 
+                display: 'inline-block',
+                ...getAmtProfileStyle(proposal.amt_day_profile)
+              }}>
+                {proposal.amt_day_profile || 'Price Discovery Phase'}
+              </div>
+            </div>
+            
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '6px', padding: '8px' }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '4px' }}>Macro News Block</div>
+              <span className="tag" style={{
+                fontSize: '9px', padding: '2px 6px',
+                color: proposal.news_flag && proposal.news_flag !== 'none' ? 'var(--accent-orange)' : 'var(--text-secondary)',
+                borderColor: proposal.news_flag && proposal.news_flag !== 'none' ? 'var(--accent-orange)' : 'var(--border)',
+                background: proposal.news_flag && proposal.news_flag !== 'none' ? 'rgba(246, 173, 85, 0.1)' : 'var(--bg-glass)'
+              }}>
+                {proposal.news_flag && proposal.news_flag !== 'none' ? `⚠️ NEWS: ${proposal.news_flag.toUpperCase()}` : '✅ NO NEWS BLOCK'}
+              </span>
+            </div>
+          </div>
+
+          {/* Macro Regime Box */}
+          {(() => {
+            const macro = proposal.macro_regime || { regime: 'CHOP/BALANCE', duration_mins: 0, trigger: 'Inside Range / Dynamic', bias: 'none' };
+            const regimeColor = macro.regime?.includes('EXPANSIVE') 
+              ? 'var(--accent-green)' 
+              : macro.regime?.includes('ACCUMULATION') 
+                ? 'var(--accent-blue)' 
+                : 'var(--accent-orange)';
+            return (
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '6px', padding: '8px', fontSize: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold' }}>Macro Regime State</span>
+                  {macro.duration_mins > 0 && <span style={{ fontSize: '8.5px', color: 'var(--text-secondary)', background: 'var(--bg-elevated)', padding: '1px 4px', borderRadius: '3px' }}>⏱️ {macro.duration_mins}m</span>}
+                </div>
+                <div style={{ fontWeight: 'bold', color: regimeColor }}>{macro.regime || 'CHOP/BALANCE'}</div>
+                <div style={{ fontSize: '9px', color: 'var(--text-secondary)', marginTop: '4px' }}><span style={{ color: 'var(--text-muted)' }}>Trigger:</span> {macro.trigger || 'N/A'}</div>
+                <div style={{ fontSize: '9px', color: 'var(--text-secondary)', marginTop: '2px' }}><span style={{ color: 'var(--text-muted)' }}>Bias:</span> <span style={{ fontWeight: 'bold', color: macro.bias === 'long' ? 'var(--accent-green)' : macro.bias === 'short' ? 'var(--accent-red)' : 'var(--text-secondary)' }}>{macro.bias?.toUpperCase() || 'NEUTRAL'}</span></div>
+              </div>
+            );
+          })()}
+
+          {/* Wick Trapped Order Flow Checklist */}
+          {((proposal.trapped_info && proposal.trapped_info !== 'none') || (proposal.trapped_follow_through && !proposal.trapped_follow_through.includes('No significant trapped'))) && (
+            <div style={{ background: 'var(--bg-void)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '6px', padding: '8px', fontSize: '9.5px', fontFamily: 'var(--font-mono)' }}>
+              <div style={{ color: 'var(--accent-green)', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '9px', fontFamily: 'var(--font-sans)', marginBottom: '4px' }}>Trapped Wick & Order Flow Confirmation</div>
+              {proposal.trapped_info && <div style={{ color: 'var(--accent-blue)', marginBottom: '3px' }}>⚡ {proposal.trapped_info}</div>}
+              {proposal.trapped_follow_through && (
+                <div style={{ color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
+                  {proposal.trapped_follow_through}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
 

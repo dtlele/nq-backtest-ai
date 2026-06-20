@@ -65,6 +65,7 @@ def bar_to_ohlcv(bar):
         "delta":  bar.delta,
         "buy_vol": bar.buy_volume,
         "sell_vol": bar.sell_volume,
+        "footprint": getattr(bar, "footprint", {}),
     }
 
 def extract_big_trades(bars):

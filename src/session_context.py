@@ -7,6 +7,7 @@ from src import (
     NY_WINDOW_END_H, NY_WINDOW_END_M,
     FABIO_ACTIVE_H, FABIO_ACTIVE_M, IB_DURATION_MIN,
 )
+from src.volume_profile import classify_profile_shape
 
 ET = pytz.timezone('America/New_York')
 
@@ -73,8 +74,8 @@ def compute_ib(bars: list) -> tuple:
 
 def is_fabio_active(bar: Bar, ctx: SessionContext = None) -> bool:
     t = _to_et(bar)
-    # Fabio's Core Window: 09:31 ET to 11:00 ET (Catching the open)
-    start_time = t.replace(hour=9, minute=31, second=0, microsecond=0)
+    # Fabio's Core Window dynamic start from config (e.g. 09:55 ET)
+    start_time = t.replace(hour=FABIO_ACTIVE_H, minute=FABIO_ACTIVE_M, second=0, microsecond=0)
     end_time   = t.replace(hour=11, minute=0, second=0, microsecond=0)
     
     if ctx:
@@ -107,8 +108,10 @@ def classify_day_type(bars: list) -> str:
 def update_day_type(ctx: SessionContext, bars: list) -> str:
     """Recompute day type based on bars processed so far and store history.
     Keeps a limited history of the last 200 updates to avoid unbounded growth.
+    Also tracks ib_breakouts_count and ib_first_breakout_dir for expansive phase detection.
     """
     new_type = classify_day_type(bars)
+    prev_type = ctx.day_type
     ctx.day_type = new_type
     if not hasattr(ctx, 'day_type_history') or ctx.day_type_history is None:
         ctx.day_type_history = []  # type: List[str]
@@ -117,6 +120,20 @@ def update_day_type(ctx: SessionContext, bars: list) -> str:
     MAX_HISTORY = 200
     if len(ctx.day_type_history) > MAX_HISTORY:
         ctx.day_type_history = ctx.day_type_history[-MAX_HISTORY:]
+    
+    # --- Expansive Breakout Tracking ---
+    # If we just transitioned INTO a trend type from a non-trend, this is a new breakout
+    was_trend = prev_type in ('trend_up', 'trend_down')
+    is_trend = new_type in ('trend_up', 'trend_down')
+    if is_trend and not was_trend:
+        if not hasattr(ctx, 'ib_breakouts_count'):
+            ctx.ib_breakouts_count = 0
+        if not hasattr(ctx, 'ib_first_breakout_dir'):
+            ctx.ib_first_breakout_dir = 'none'
+        ctx.ib_breakouts_count += 1
+        if ctx.ib_first_breakout_dir == 'none':
+            ctx.ib_first_breakout_dir = 'long' if new_type == 'trend_up' else 'short'
+    
     return new_type
 
 def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None, historical_days=None) -> SessionContext:
@@ -132,6 +149,13 @@ def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None, histo
         if latest_t >= ib_end:
             is_complete = True
 
+    # Calculate initial profile shape if we have vp and bars
+    profile_shape = 'unknown'
+    if vp and bars:
+        high = max(b.high for b in bars)
+        low = min(b.low for b in bars)
+        profile_shape = classify_profile_shape(vp, high, low)
+
     ctx = SessionContext(
         date=date_str,
         ib_high=ib_high,
@@ -145,12 +169,85 @@ def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None, histo
         # initialize history list
         day_type_history=[initial_day_type],
         session_memory=[],
+        profile_shape=profile_shape,
     )
     # Internal trackers for session memory filters
     ctx._last_level_test = {}
     ctx._last_wall_logged = {}
     ctx._logged_ib_comp = False
     return ctx
+
+def update_market_structure(ctx: SessionContext, current_bar: Bar) -> None:
+    """Update dynamic market structure state (swings, pullbacks, hyperextension)."""
+    PULLBACK_THRESHOLD = 20.0
+    HYPEREXTENDED_THRESHOLD = 70.0
+    
+    if ctx.session_low == float('inf'):
+        ctx.session_low = current_bar.low
+        ctx.last_swing_low = current_bar.low
+        ctx.session_high = current_bar.high
+        ctx.last_swing_high = current_bar.high
+
+    # Track local extremes during pullbacks
+    if 'pullback_down' in ctx.market_structure_state:
+        if current_bar.low < ctx.last_swing_low:
+            ctx.last_swing_low = current_bar.low
+            
+    if 'pullback_up' in ctx.market_structure_state:
+        if current_bar.high > ctx.last_swing_high:
+            ctx.last_swing_high = current_bar.high
+
+    # Update global extremes
+    if current_bar.high > ctx.session_high:
+        ctx.session_high = current_bar.high
+        if 'pullback_down' in ctx.market_structure_state:
+            ctx.market_structure_state = 'breakout_up_confirmed'
+            ctx.session_memory.append({
+                'timestamp': current_bar.timestamp,
+                'text': f"[{_to_et(current_bar).strftime('%H:%M')} ET] Market Structure: BREAKOUT UP CONFIRMED (New session high)."
+            })
+        ctx.last_swing_high = current_bar.high  # Reset swing high start
+
+    if current_bar.low < ctx.session_low:
+        ctx.session_low = current_bar.low
+        if 'pullback_up' in ctx.market_structure_state:
+            ctx.market_structure_state = 'breakout_down_confirmed'
+            ctx.session_memory.append({
+                'timestamp': current_bar.timestamp,
+                'text': f"[{_to_et(current_bar).strftime('%H:%M')} ET] Market Structure: BREAKOUT DOWN CONFIRMED (New session low)."
+            })
+        ctx.last_swing_low = current_bar.low  # Reset swing low start
+
+    # Pullback Detection
+    if current_bar.high < ctx.session_high - PULLBACK_THRESHOLD and current_bar.low > ctx.session_low:
+        if 'pullback_down' not in ctx.market_structure_state and 'breakout_down' not in ctx.market_structure_state:
+            ctx.market_structure_state = 'pullback_down'
+            ctx.last_swing_low = current_bar.low # Start tracking the low of this pullback
+            ctx.last_pullback_dist = ctx.session_high - current_bar.low
+            
+    if current_bar.low > ctx.session_low + PULLBACK_THRESHOLD and current_bar.high < ctx.session_high:
+        if 'pullback_up' not in ctx.market_structure_state and 'breakout_up' not in ctx.market_structure_state:
+            ctx.market_structure_state = 'pullback_up'
+            ctx.last_swing_high = current_bar.high # Start tracking the high of this pullback
+            ctx.last_pullback_dist = current_bar.high - ctx.session_low
+
+    # Hyperextension Detection
+    if ctx.session_high - ctx.last_swing_low > HYPEREXTENDED_THRESHOLD and current_bar.high == ctx.session_high:
+        if ctx.market_structure_state != 'hyperextended_up':
+            ctx.market_structure_state = 'hyperextended_up'
+            ctx.session_memory.append({
+                'timestamp': current_bar.timestamp,
+                'text': f"[{_to_et(current_bar).strftime('%H:%M')} ET] Market Structure: HYPEREXTENDED UP (> {HYPEREXTENDED_THRESHOLD} pts without pullback)."
+            })
+            
+    if ctx.last_swing_high - ctx.session_low > HYPEREXTENDED_THRESHOLD and current_bar.low == ctx.session_low:
+        if ctx.market_structure_state != 'hyperextended_down':
+            ctx.market_structure_state = 'hyperextended_down'
+            ctx.session_memory.append({
+                'timestamp': current_bar.timestamp,
+                'text': f"[{_to_et(current_bar).strftime('%H:%M')} ET] Market Structure: HYPEREXTENDED DOWN (> {HYPEREXTENDED_THRESHOLD} pts without pullback)."
+            })
+
 
 def get_session_memory_up_to(ctx: SessionContext, timestamp: datetime) -> List[str]:
     """Return all session memory event strings up to the given UTC timestamp."""
@@ -164,6 +261,8 @@ def update_session_memory(ctx: SessionContext, current_bar: Bar, bars_processed:
     """
     t_et = _to_et(current_bar)
     time_str = t_et.strftime("%H:%M")
+    
+    update_market_structure(ctx, current_bar)
     
     # 1. Day Type transition
     if len(ctx.day_type_history) >= 2:

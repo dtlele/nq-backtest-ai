@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import TradePanel from './TradePanel'
+import NarrativePanel from './NarrativePanel'
 
 // ── Typing animation hook ──────────────────────────────────────────────────
 function useTypingText(text, active) {
@@ -96,16 +98,16 @@ function AgentCard({ icon, title, subtitle, accent = '#63b3ed', isActive = false
 function ContextAgentCard({ latestReasoning }) {
   const hasData = latestReasoning && latestReasoning.date
 
-  const bias = latestReasoning?.bias || latestReasoning?.fabio_direction || null
+  const bias = latestReasoning?.bias || latestReasoning?.fabio_direction || latestReasoning?.direction || null
+  const trueBias = latestReasoning?.session_bias || 'none'
   const dayType = latestReasoning?.day_type || '---'
-  const marketState = latestReasoning?.market_state || '---'
-  const narrative = latestReasoning?.session_narrative || latestReasoning?.fabio_reasoning || ''
   const isThinking = !hasData
-
-  const { displayed } = useTypingText(narrative, !!narrative)
 
   const biasColor = bias === 'long' ? 'var(--accent-green)' : bias === 'short' ? 'var(--accent-red)' : 'var(--text-muted)'
   const biasLabel = bias ? bias.toUpperCase() : 'NEUTRAL'
+
+  const trueBiasColor = trueBias === 'long' ? 'var(--accent-green)' : trueBias === 'short' ? 'var(--accent-red)' : 'var(--text-muted)'
+  const trueBiasLabel = trueBias ? trueBias.toUpperCase() : 'NEUTRAL'
 
   return (
     <AgentCard
@@ -122,26 +124,46 @@ function ContextAgentCard({ latestReasoning }) {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {/* Bias + State row */}
-          <div style={{ display: 'flex', gap: 6 }}>
+          {/* Bias + State + Phase row */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <div style={{
-              flex: 1, background: 'rgba(0,0,0,0.2)', borderRadius: 7, padding: '6px 10px',
+              flex: 1, minWidth: '28%', background: 'rgba(0,0,0,0.2)', borderRadius: 7, padding: '6px 10px',
               border: `1px solid ${biasColor}25`,
             }}>
-              <div style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 2 }}>BIAS</div>
+              <div style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 2 }}>BIAS (FABIO)</div>
               <div style={{ fontSize: 13, fontWeight: 800, color: biasColor, fontFamily: 'var(--font-mono)' }}>{biasLabel}</div>
             </div>
+            {trueBias && trueBias !== 'none' && (
+              <div style={{
+                flex: 1, minWidth: '28%', background: 'rgba(0,0,0,0.2)', borderRadius: 7, padding: '6px 10px',
+                border: `1px solid ${trueBiasColor}40`,
+              }}>
+                <div style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 2 }}>TRUE BIAS (AMT)</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: trueBiasColor, fontFamily: 'var(--font-mono)' }}>{trueBiasLabel}</div>
+              </div>
+            )}
+            {latestReasoning?.fabio_imbalance_phase && latestReasoning.fabio_imbalance_phase !== 'none' && (
+              <div style={{
+                flex: 1, minWidth: '30%', background: 'rgba(0,0,0,0.2)', borderRadius: 7, padding: '6px 10px',
+                border: latestReasoning.fabio_imbalance_phase === 'accumulation' ? '1px solid var(--accent-blue)' : '1px solid var(--accent-orange)'
+              }}>
+                <div style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 2 }}>PHASE</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: latestReasoning.fabio_imbalance_phase === 'accumulation' ? 'var(--accent-blue)' : 'var(--accent-orange)', textTransform: 'uppercase' }}>
+                  {latestReasoning.fabio_imbalance_phase}
+                </div>
+              </div>
+            )}
             <div style={{
-              flex: 1, background: 'rgba(0,0,0,0.2)', borderRadius: 7, padding: '6px 10px',
+              flex: 1, minWidth: '30%', background: 'rgba(0,0,0,0.2)', borderRadius: 7, padding: '6px 10px',
             }}>
               <div style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 2 }}>DAY TYPE</div>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase' }}>{dayType}</div>
             </div>
             <div style={{
-              flex: 1, background: 'rgba(0,0,0,0.2)', borderRadius: 7, padding: '6px 10px',
+              flex: 1, minWidth: '30%', background: 'rgba(0,0,0,0.2)', borderRadius: 7, padding: '6px 10px',
             }}>
-              <div style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 2 }}>MARKET</div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{marketState}</div>
+              <div style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 2 }}>STRUCTURE</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{latestReasoning?.market_structure || '---'}</div>
             </div>
           </div>
 
@@ -162,17 +184,75 @@ function ContextAgentCard({ latestReasoning }) {
               )}
             </div>
           )}
+        </div>
+      )}
+    </AgentCard>
+  )
+}
 
-          {/* Narrative */}
+// ── Parsing Audit Scores ───────────────────────────────────────────────────
+function parseAuditScores(reasoningText) {
+  if (!reasoningText) return null;
+  const match = reasoningText.match(/- Audit Fase Temporale:\s*([\s\S]*?)(?:- Note Classificazione Giornata:|-|$)/);
+  if (!match) return null;
+  const lines = match[1].trim().split('\n');
+  const scores = lines.map(line => {
+    const parts = line.split(':');
+    if (parts.length === 2) {
+       return { key: parts[0].trim(), value: parts[1].trim() };
+    }
+    return null;
+  }).filter(Boolean);
+  return scores.length ? scores : null;
+}
+
+// ── Audit & Full Reasoning Card ─────────────────────────────────────────────
+function AuditAndReasoningCard({ latestReasoning }) {
+  const reasoning = latestReasoning?.fabio_reasoning || '';
+  const { displayed } = useTypingText(reasoning, !!reasoning);
+  const scores = parseAuditScores(reasoning);
+  const hasData = !!latestReasoning?.date;
+
+  return (
+    <AgentCard
+      icon="🎯"
+      title="AUDIT & FULL REASONING"
+      subtitle="Flusso logico dell'agente e validazioni temporali"
+      accent="#f6ad55"
+      isActive={hasData}
+    >
+      {!hasData ? (
+        <div style={{ color: 'var(--text-muted)', fontSize: 11, textAlign: 'center', padding: '8px 0' }}>
+          Nessun ragionamento disponibile
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {scores && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, background: 'rgba(0,0,0,0.2)', padding: 8, borderRadius: 8 }}>
+              {scores.map(s => {
+                const valNum = parseInt(s.value);
+                const color = valNum >= 80 ? 'var(--accent-green)' : valNum >= 50 ? 'var(--accent-orange)' : 'var(--accent-red)';
+                const cleanKey = s.key.replace(/_score$/, '').replace(/^q\d+_/, '').replace(/_/g, ' ').toUpperCase();
+                return (
+                  <div key={s.key} style={{ display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.03)', padding: '4px 6px', borderRadius: 4, borderLeft: `2px solid ${color}` }}>
+                     <div style={{ fontSize: 8, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cleanKey}</div>
+                     <div style={{ fontSize: 12, fontWeight: 800, color, fontFamily: 'var(--font-mono)' }}>{s.value}</div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           {displayed && (
             <div style={{
-              background: 'rgba(0,0,0,0.2)', borderRadius: 7, padding: '8px 10px',
-              fontSize: 10, lineHeight: 1.65, color: 'var(--text-secondary)',
-              borderLeft: '2px solid #9f7aea40',
-              maxHeight: 100, overflowY: 'auto',
+              background: 'rgba(0,0,0,0.25)', borderRadius: 8, padding: '10px 12px',
+              fontSize: 11, lineHeight: 1.6, color: 'var(--text-primary)',
+              borderLeft: `2px solid #f6ad55`,
+              maxHeight: 250, overflowY: 'auto',
+              whiteSpace: 'pre-wrap',
             }}>
               {displayed}
-              <span style={{ animation: 'cursor-blink 1s infinite', color: '#9f7aea' }}>|</span>
+              <span style={{ animation: 'cursor-blink 1s infinite', color: '#f6ad55' }}>|</span>
             </div>
           )}
         </div>
@@ -188,8 +268,6 @@ function ExecutionAgentCard({ latestReasoning }) {
   const direction = latestReasoning?.direction?.toLowerCase()
   const confidence = latestReasoning?.fabio_confidence || 0
   const entry = latestReasoning?.bar_close || null
-  const reasoning = latestReasoning?.fabio_reasoning || ''
-  const { displayed } = useTypingText(reasoning, isTrade && !!reasoning)
 
   const dirColor = direction === 'long' ? 'var(--accent-green)' : direction === 'short' ? 'var(--accent-red)' : 'var(--text-muted)'
   const accent = direction === 'long' ? '#48bb78' : direction === 'short' ? '#fc8181' : '#63b3ed'
@@ -243,19 +321,6 @@ function ExecutionAgentCard({ latestReasoning }) {
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: item.color }}>{item.value}</div>
                 </div>
               ))}
-            </div>
-          )}
-
-          {/* Reasoning snippet */}
-          {displayed && (
-            <div style={{
-              background: 'rgba(0,0,0,0.2)', borderRadius: 7, padding: '7px 9px',
-              fontSize: 10, lineHeight: 1.6, color: 'var(--text-secondary)',
-              borderLeft: `2px solid ${accent}60`,
-              maxHeight: 90, overflowY: 'auto',
-            }}>
-              {displayed}
-              <span style={{ animation: 'cursor-blink 1s infinite', color: accent }}>|</span>
             </div>
           )}
         </div>
@@ -342,6 +407,28 @@ function ActiveTradeCard({ openTrade, liveReasoning }) {
             </div>
           ))}
         </div>
+
+        {/* Active Trade Management reasoning */}
+        {liveReasoning?.fabio_setup === 'apm' && liveReasoning?.fabio_reasoning && (
+          <div style={{
+            fontSize: 10, lineHeight: 1.5, padding: '8px 10px',
+            background: 'rgba(255,255,255,0.03)', borderRadius: 6,
+            borderLeft: '2px solid var(--accent-yellow)', marginTop: 4,
+            textAlign: 'left'
+          }}>
+            <div style={{ fontWeight: 800, fontSize: 8, color: 'var(--text-muted)', marginBottom: 2, letterSpacing: '0.04em' }}>
+              AGGIORNAMENTO GESTIONE (APM):
+            </div>
+            <div style={{ color: 'var(--text-primary)', fontStyle: 'italic' }}>
+              "{liveReasoning.fabio_reasoning}"
+            </div>
+            {liveReasoning.decision && (
+              <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent-yellow)', marginTop: 4, textTransform: 'uppercase' }}>
+                Azione: {liveReasoning.decision.replace('apm_', '')}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </AgentCard>
   )
@@ -391,13 +478,17 @@ function ReasoningTimeline({ reasonings, onJump, timeZone }) {
   )
 }
 
-// ── Main AgentSidebar ──────────────────────────────────────────────────────
-export default function AgentSidebar({ latestReasoning, openTrade, reasonings, onJump, timeZone }) {
+export default function AgentSidebar({ latestReasoning, openTrade, reasonings, onJump, timeZone, dayTrades = [], dayProposals = [] }) {
   const [tab, setTab] = useState('agents') // 'agents' | 'log' | 'trade'
+  const [selectedTrade, setSelectedTrade] = useState(null)
+
+  useEffect(() => {
+    setSelectedTrade(null)
+  }, [reasonings])
 
   return (
     <div style={{
-      width: 320,
+      width: 380,
       flexShrink: 0,
       background: 'var(--bg-base)',
       borderLeft: '1px solid var(--border)',
@@ -417,17 +508,17 @@ export default function AgentSidebar({ latestReasoning, openTrade, reasonings, o
           { id: 'agents', label: '🤖 Agenti' },
           { id: 'trade', label: '📊 Trade' },
           { id: 'log', label: '📋 Log' },
+          { id: 'narrative', label: '📖 Narrazione' },
         ].map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             style={{
-              flex: 1, padding: '9px 4px', fontSize: 10, fontWeight: 600,
+              flex: 1, padding: '9px 2px', fontSize: 9.5, fontWeight: 600,
               borderBottom: tab === t.id ? '2px solid var(--accent-blue)' : '2px solid transparent',
               color: tab === t.id ? 'var(--text-primary)' : 'var(--text-muted)',
               transition: 'all 0.15s',
               background: 'none', border: 'none',
-              borderBottom: tab === t.id ? '2px solid var(--accent-blue)' : '2px solid transparent',
               cursor: 'pointer',
             }}
           >
@@ -479,14 +570,26 @@ export default function AgentSidebar({ latestReasoning, openTrade, reasonings, o
             )}
             <ContextAgentCard latestReasoning={latestReasoning} />
             <ExecutionAgentCard latestReasoning={latestReasoning} />
-            <ActiveTradeCard openTrade={openTrade} liveReasoning={latestReasoning} />
+            <AuditAndReasoningCard latestReasoning={latestReasoning} />
           </>
         )}
         {tab === 'trade' && (
-          <ActiveTradeCard openTrade={openTrade} liveReasoning={latestReasoning} />
+          selectedTrade ? (
+            <TradePanel trade={selectedTrade} allTrades={dayTrades} proposals={dayProposals} onSelect={setSelectedTrade} timeZone={timeZone} />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', overflow: 'hidden' }}>
+              <ActiveTradeCard openTrade={openTrade} liveReasoning={latestReasoning} />
+              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                <TradePanel trade={null} allTrades={dayTrades} proposals={dayProposals} onSelect={setSelectedTrade} timeZone={timeZone} />
+              </div>
+            </div>
+          )
         )}
         {tab === 'log' && (
           <ReasoningTimeline reasonings={reasonings} onJump={onJump} timeZone={timeZone} />
+        )}
+        {tab === 'narrative' && (
+          <NarrativePanel reasonings={reasonings} onJump={onJump} timeZone={timeZone} />
         )}
       </div>
 

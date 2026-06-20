@@ -42,19 +42,39 @@ def compute_volume_profile(bars: list):
     va_high = sorted_prices[hi_idx]
     va_low  = sorted_prices[lo_idx]
 
-    hvn, lvn = [], []
-    for i in range(len(volumes)):
-        lo_v = volumes[i - 1] if i > 0 else float('-inf')
-        hi_v = volumes[i + 1] if i < len(volumes) - 1 else float('-inf')
-        if volumes[i] > lo_v and volumes[i] > hi_v:
-            hvn.append(sorted_prices[i])
-        lo_v = volumes[i - 1] if i > 0 else float('inf')
-        hi_v = volumes[i + 1] if i < len(volumes) - 1 else float('inf')
-        if volumes[i] < lo_v and volumes[i] < hi_v:
-            lvn.append(sorted_prices[i])
+    hvn_candidates = []
+    lvn_candidates = []
+    
+    n = len(volumes)
+    i = 1
+    while i < n - 1:
+        start_i = i
+        while i < n - 1 and volumes[i] == volumes[i+1]:
+            i += 1
+        end_i = i
+        
+        if end_i + 1 < n:
+            left_val = volumes[start_i - 1]
+            right_val = volumes[end_i + 1]
+            mid_idx = (start_i + end_i) // 2
+            v = volumes[mid_idx]
+            price = sorted_prices[mid_idx]
+            
+            if v > left_val and v > right_val:
+                prominence = v - max(left_val, right_val)
+                hvn_candidates.append((price, prominence))
+            elif v < left_val and v < right_val:
+                depth = min(left_val, right_val) - v
+                lvn_candidates.append((price, depth))
+                
+        i += 1
 
-    hvn = sorted(hvn, key=lambda p: -price_vol[p])[:5]
-    lvn = sorted(lvn, key=lambda p: price_vol[p])[:5]
+    # Sort by prominence (deepest gaps for LVN, highest peaks for HVN)
+    hvn_candidates.sort(key=lambda x: x[1], reverse=True)
+    lvn_candidates.sort(key=lambda x: x[1], reverse=True)
+    
+    hvn = [x[0] for x in hvn_candidates[:5]]
+    lvn = [x[0] for x in lvn_candidates[:5]]
 
     return VolumeProfile(poc=poc, va_high=va_high, va_low=va_low,
                          hvn_levels=hvn, lvn_levels=lvn)
@@ -86,3 +106,23 @@ def compute_vwap(bars: list) -> tuple[float, float]:
     std_dev = np.sqrt(cum_var / cum_vol)
     
     return vwap, std_dev
+
+def classify_profile_shape(vp: VolumeProfile, high: float, low: float) -> str:
+    """
+    Classify the daily volume profile shape into P, B, or D based on MiniMax knowledge.
+    - P-Shape: POC in the upper 35% of the range
+    - B-Shape: POC in the lower 35% of the range
+    - D-Shape: POC in the middle 30% of the range
+    """
+    if not vp or high <= low:
+        return 'unknown'
+    
+    range_total = high - low
+    poc_pct = (vp.poc - low) / range_total
+    
+    if poc_pct >= 0.65:
+        return 'P'
+    elif poc_pct <= 0.35:
+        return 'B'
+    else:
+        return 'D'

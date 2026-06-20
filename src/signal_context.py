@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from datetime import timezone
 import pytz
-from src import CandidateBar, FabioSignal, Bar, NQ_TICK_SIZE
+from src import CandidateBar, FabioSignal, Bar, NQ_TICK_SIZE, SessionContext
 
 ET = pytz.timezone('America/New_York')
 STRATEGY_FILE = Path(__file__).parent.parent / 'strategies' / 'fabio_andrea_hybrid.json'
@@ -84,15 +84,176 @@ def _format_m1_sequence(bars: list[Bar], hide_historical_delta: bool = False) ->
         else:
             rvol_str = " rvol=1.00x"
             
+        trapped_str = analyze_trapped_participants(b)
+        trapped_info = f" | {trapped_str}" if trapped_str else ""
         lines.append(
             f"  {t_et.strftime('%H:%M:%S')} O={b.open:.2f} H={b.high:.2f} "
             f"L={b.low:.2f} C={b.close:.2f} V={b.volume}{rvol_str}"
-            f"{delta_str}{big_info}"
+            f"{delta_str}{big_info}{trapped_info}"
         )
         if is_last:
             lines.append(f"\n---> CURRENT CANDIDATE BAR DELTA: {b.delta:+d} <---")
             
     return "\n".join(lines)
+
+def build_amt_narrative(ctx: SessionContext, candidate: CandidateBar, ignition_info: dict = None, m1_bars: list = None) -> str:
+    narrative = []
+
+    # ── DETECT RECENT INSTITUTIONAL ABSORPTION WALLS (M1 Flow) ──
+    if m1_bars:
+        recent_m1 = m1_bars[-30:]
+        bigs = [t for b in recent_m1 for t in b.big_trades]
+        if bigs:
+            from collections import defaultdict
+            levels_group = defaultdict(list)
+            for t in bigs:
+                rounded_p = round(t.price * 4) / 4.0
+                levels_group[rounded_p].append(t)
+            
+            significant_walls = []
+            for lvl, ts in levels_group.items():
+                total_size = sum(x.size for x in ts)
+                if total_size >= 100:
+                    significant_walls.append((lvl, total_size))
+            
+            if significant_walls:
+                narrative.append("\n═══════════════════════════════════════")
+                narrative.append("[ACTIVE INSTITUTIONAL ABSORPTION WALLS (Last 30 mins)]")
+                significant_walls.sort()
+                m1_high = max(b.high for b in recent_m1)
+                m1_low = min(b.low for b in recent_m1)
+                for lvl, size in significant_walls:
+                    is_near_high = abs(lvl - m1_high) <= 5.0
+                    is_near_low = abs(lvl - m1_low) <= 5.0
+                    
+                    wall_type = "Seller Wall (Resistance/Absorption)" if is_near_high else \
+                                "Buyer Wall (Support/Absorption)" if is_near_low else "Order Flow Ledge"
+                    
+                    dist_to_cand = candidate.bar.close - lvl
+                    if dist_to_cand < 0:
+                        dist_str = f"{abs(dist_to_cand):.2f} points BELOW"
+                    else:
+                        dist_str = f"{abs(dist_to_cand):.2f} points ABOVE"
+                    
+                    narrative.append(
+                        f"• {wall_type} at {lvl:.2f} | Size: {size} contracts | Price is {dist_str} this wall."
+                    )
+                narrative.append("═══════════════════════════════════════")
+
+    # 0. IGNITION STATUS — injected first so LLM reads it immediately
+    if ignition_info:
+        label = ignition_info.get('label', '')
+        if label:
+            narrative.append("\n═══════════════════════════════════════")
+            narrative.append("[IGNITION / ACCUMULATION STATUS (Python-computed, NO LLM)]")
+            narrative.append(label)
+            if ignition_info.get('in_accumulation') and not ignition_info.get('is_ignition'):
+                narrative.append(
+                    "⛔ REGOLA: Sei in MID-ACCUMULATION. NON ENTRARE. "
+                    "Aspetta che il prezzo rompa la zona sopra indicata con delta confermato."
+                )
+            elif ignition_info.get('is_ignition'):
+                narrative.append(
+                    "✅ REGOLA: Questo È il momento di entrare. "
+                    "La rottura è appena avvenuta su questa barra."
+                )
+            elif 0 <= ignition_info.get('bars_since_ignition', -1) <= 20:
+                narrative.append(
+                    "✅ REGOLA: Siamo in EARLY EXPANSION. "
+                    "Entrata ancora valida se la struttura lo supporta."
+                )
+            narrative.append("═══════════════════════════════════════")
+
+    # 1. Profile Shape & POC Migration
+    if ctx.profile_shape == 'P':
+        narrative.append("Profile Shape is 'P' (Short Covering / Value building higher).")
+    elif ctx.profile_shape == 'B' or ctx.profile_shape == 'b':
+        narrative.append("Profile Shape is 'b' (Long Liquidation / Value building lower).")
+    elif ctx.profile_shape == 'D':
+        narrative.append("Profile Shape is 'D' (Pure Balance / Ranging).")
+        
+    if ctx.prev_day_vp and ctx.vp:
+        if ctx.vp.poc > ctx.prev_day_vp.poc:
+            narrative.append("Value Migration is UP.")
+        elif ctx.vp.poc < ctx.prev_day_vp.poc:
+            narrative.append("Value Migration is DOWN.")
+        else:
+            narrative.append("Value is UNCHANGED.")
+
+    # 2. AMT Market State & Phase Definitions (Minimax)
+    is_outside_ib = False
+    if ctx.ib_complete and ctx.ib_range > 0:
+        is_outside_ib = candidate.bar.close > ctx.ib_high or candidate.bar.close < ctx.ib_low
+    elif ctx.vp:
+        is_outside_ib = candidate.bar.close > ctx.vp.va_high or candidate.bar.close < ctx.vp.va_low
+
+    if is_outside_ib:
+        ib_breakouts_count = getattr(ctx, 'ib_breakouts_count', 0)
+        ib_first_breakout_dir = getattr(ctx, 'ib_first_breakout_dir', 'none')
+        
+        narrative.append("\n[CONTESTO MINIMAX AMT]")
+        narrative.append("Il mercato è in stato di IMBALANCE (fuori dall'Initial Balance o Overnight VA).")
+        
+        if ib_breakouts_count == 1:
+            narrative.append(f"⭐ PRIMO BREAKOUT ESPANSIVO della sessione! Direzione: {ib_first_breakout_dir.upper()}. "
+                           "Questo è il setup A+ — la prima rottura dell'IB è statisticamente la più forte. "
+                           "ENTRA sul segnale di Fabio/Andrea SENZA ESITARE se c'è assorbimento e follow-through.")
+        elif ib_breakouts_count == 2:
+            narrative.append(f"⚠️ SECONDO breakout espansivo della sessione. La prima rottura era {ib_first_breakout_dir.upper()}. "
+                           "Rischio di estensione/esaurimento aumentato. Richiedi confluenza più alta prima di entrare.")
+        elif ib_breakouts_count >= 3:
+            narrative.append(f"🔴 TERZO o successivo breakout espansivo. Alta probabilità di ESAURIMENTO. "
+                           "Evita di inseguire. Attendi solo setup di reversal o con micro-accumulo confermato dal footprint.")
+        
+        narrative.append("In Imbalance, esistono due fasi:")
+        narrative.append("1) Fase Espansiva (Initiative): Il mercato stampa nuovi massimi/minimi con aggressività e alta volatilità.")
+        narrative.append("2) Fase di Accumulo/Consolidamento (Response): Il prezzo si ferma, ritraccia dai massimi/minimi, i range si comprimono e gli istituzionali assorbono. L'OBIETTIVO È RILEVARE L'ASSORBIMENTO E POSIZIONARSI PER LA SUCCESSIVA ESPANSIONE.")
+    else:
+        narrative.append("\n[CONTESTO MINIMAX AMT]")
+        narrative.append("Il mercato è in stato di BILANCIAMENTO (all'interno dell'IB o VA).")
+        narrative.append("Asta a due vie. La priorità è attendere la rottura (Imbalance) o operare mean-reversion agli estremi.")
+
+    # 3. Structural Facts Calculation
+    narrative.append("\n[FATTI STRUTTURALI (Calcolati dal sistema)]")
+    if hasattr(candidate, 'recent_bars') and candidate.recent_bars:
+        recent_bars = candidate.recent_bars
+        local_high = max(b.high for b in recent_bars)
+        local_low = min(b.low for b in recent_bars)
+        dist_high = local_high - candidate.bar.close
+        dist_low = candidate.bar.close - local_low
+        
+        narrative.append(f"- Il prezzo dista {dist_high:.2f} punti dal massimo locale recente ({local_high:.2f}).")
+        narrative.append(f"- Il prezzo dista {dist_low:.2f} punti dal minimo locale recente ({local_low:.2f}).")
+        
+        if len(recent_bars) >= 4:
+            # Range compression check
+            last_bar = recent_bars[-1]
+            prev_bars = recent_bars[-4:-1]
+            avg_prev_range = sum((b.high - b.low) for b in prev_bars) / 3.0
+            last_range = last_bar.high - last_bar.low
+            
+            if avg_prev_range > 0:
+                compression = (last_range / avg_prev_range) * 100
+                if compression < 75:
+                    narrative.append(f"- Compressione del Range: Il range dell'ultima barra M5 è sceso al {compression:.0f}% rispetto alla media delle 3 precedenti (Volatilità in contrazione / Possibile Accumulo).")
+                elif compression > 150:
+                    narrative.append(f"- Espansione del Range: Il range dell'ultima barra M5 è il {compression:.0f}% rispetto alla media delle 3 precedenti (Forte spinta / Momentum).")
+                else:
+                    narrative.append(f"- Range Stabile: Il range dell'ultima barra M5 è il {compression:.0f}% rispetto alla media recente.")
+        
+        if hasattr(candidate, 'effort_no_result') and candidate.effort_no_result:
+            narrative.append("- SFORZO SENZA RISULTATO: Rilevata possibile divergenza tra lo sforzo volumetrico/delta e il movimento del prezzo (Possibile Assorbimento/Accumulo).")
+    else:
+        narrative.append("- Dati recenti insufficienti per estrarre fatti strutturali.")
+
+    narrative.append("\n[COMPITO FASE]")
+    narrative.append("Basandoti sui Fatti Strutturali e sull'Order Flow, stabilisci se siamo in Fase 'expansive' o 'accumulation'. Se il mercato è in Bilanciamento, usa 'none'.")
+    narrative.append("CRITICO: Se il prezzo HA GIA' rotto l'IB (sopra IB High o sotto IB Low) e ora sta pullback SUL livello IB (IB High come supporto per long, IB Low come resistenza per short):")
+    narrative.append("  -> Classificare come imbalance_phase='accumulation'. Il ritracciamento è normale assorbimento istituzionale, NON un ritorno al balance.")
+    narrative.append("  -> I wick negativi e il delta debole SUL livello IB sono SFORZO SENZA RISULTATO dei venditori retail contro ordini passivi istituzionali: questo è il setup A+ per entrare LONG (o SHORT se sotto IB Low).")
+    narrative.append("  -> imbalance_phase='expansive' si usa SOLO quando il prezzo sta aggressivamente stampando NUOVI massimi/minimi ben LONTANO dal livello IB (chasing attivo).")
+
+    return "\n".join(narrative)
 
 def build_fabio_question(candidate: CandidateBar, session_context: list = None, m1_bars: list[Bar] = None, market_narrative: str = "", bars_since_last: list[Bar] = None) -> str:
     templates = _load_templates()
@@ -100,8 +261,26 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
     ctx = candidate.session_ctx
     t_et = bar.timestamp.astimezone(ET)
     bar_et_time = t_et
-    ib_end_time = bar_et_time.replace(hour=10, minute=30, second=0, microsecond=0)
+    ib_end_time = bar_et_time.replace(hour=10, minute=0, second=0, microsecond=0)
+
+    # Compute ignition status from M1 bars (pure Python, no LLM)
+    m1_bars_ignition = detect_accumulation_breakout(m1_bars or [], candidate.bar, session_ctx=ctx) if m1_bars else None
+
+    amt_narrative = build_amt_narrative(ctx, candidate, ignition_info=m1_bars_ignition, m1_bars=m1_bars)
     
+    # Calculate Temporal Phase (IVB = 09:30 - 10:00, trade attivi da 09:55)
+    time_val = bar_et_time.hour + bar_et_time.minute / 60.0
+    if time_val < 10.0:
+        temporal_phase = "The Open / IVB Phase (09:30 - 10:00 ET) — IVB forming, wait for edges"
+    elif 10.0 <= time_val < 10.5:
+        temporal_phase = "Transition / Post-IVB (10:00 - 10:30 ET) — first breakout confirmation window"
+    elif 10.5 <= time_val < 12.0:
+        temporal_phase = "Mid-Morning (10:30 - 12:00 ET) — trend continuation or chop detection"
+    elif 12.0 <= time_val < 13.5:
+        temporal_phase = "The Lunch Lull (12:00 - 13:30 ET) — low conviction zone, toxic flow risk"
+    else:
+        temporal_phase = "Power Hour / PM Session (13:30 - 16:00 ET) — retest sensitive levels, second drive"
+
     if bar_et_time >= ib_end_time:
         ib_pos = 'above IVB' if bar.close > ctx.ib_high else \
                  'below IVB' if bar.close < ctx.ib_low  else 'inside IVB'
@@ -111,16 +290,24 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
                      'below Overnight VA' if bar.close < ctx.vp.va_low else 'inside Overnight VA'
         else:
             ib_pos = 'Price Discovery (First Hour)'
-    suggested = 'long' if candidate.wall_side == 'ask' else 'short'
-    # FIX: When price is OUTSIDE the IB, suggested_direction must follow the IB breakout trend,
-    # NOT the wall_side of the single bar (which can point in any direction).
-    # Exception: 'reversal' setups are deliberately counter-trend — keep wall_side for those.
-    if candidate.setup_category != 'reversal':
-        if 'above' in ib_pos:
-            suggested = 'long'   # above IB → uptrend → long continuation bias
-        elif 'below' in ib_pos:
-            suggested = 'short'  # below IB → downtrend → short continuation bias
-        # inside IB: wall_side is the correct hint (no IB directional bias)
+    if ctx.day_type == 'trend_up':
+        suggested = 'long'
+    elif ctx.day_type == 'trend_down':
+        suggested = 'short'
+    else:
+        suggested = 'long' if candidate.wall_side == 'ask' else 'short'
+        # FIX: When price is OUTSIDE the IB, suggested_direction must follow the IB breakout trend,
+        # NOT the wall_side of the single bar (which can point in any direction).
+        # Exception: 'reversal' setups are deliberately counter-trend — keep wall_side for those.
+        if candidate.setup_category != 'reversal':
+            if 'above' in ib_pos:
+                suggested = 'long'   # above IB → uptrend → long continuation bias
+            elif 'below' in ib_pos:
+                suggested = 'short'  # below IB → downtrend → short continuation bias
+            # inside IB: wall_side is the correct hint (no IB directional bias)
+    
+    candidate.session_bias = suggested
+    
     m5_sequence = _format_m5_sequence(candidate.recent_bars) if candidate.recent_bars else ""
     m1_sequence = _format_m1_sequence(m1_bars) if m1_bars else ""
     
@@ -132,10 +319,11 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
     question = tpl.format(
         date            = bar.timestamp.strftime('%Y-%m-%d'),
         bar_time_et     = t_et.strftime('%H:%M'),
+        amt_narrative   = amt_narrative,
         close           = bar.close,
-        ib_high         = ctx.ib_high,
-        ib_low          = ctx.ib_low,
-        ib_range        = ctx.ib_range,
+        ib_high         = f"{ctx.ib_high} (Forming)" if not ctx.ib_complete else ctx.ib_high,
+        ib_low          = f"{ctx.ib_low} (Forming)" if not ctx.ib_complete else ctx.ib_low,
+        ib_range        = f"{ctx.ib_range} (Forming)" if not ctx.ib_complete else ctx.ib_range,
         poc             = ctx.vp.poc if ctx.vp else 'N/A',
         va_high         = ctx.vp.va_high if ctx.vp else 'N/A',
         va_low          = ctx.vp.va_low if ctx.vp else 'N/A',
@@ -152,6 +340,8 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
         day_type        = "developing_trend" if ctx.day_type == "unknown" else ctx.day_type,
         market_state    = getattr(candidate, 'market_state', 'unknown'),
         auction_type    = getattr(candidate, 'auction_type', 'unknown'),
+        market_structure= ctx.market_structure_state,
+        temporal_phase  = temporal_phase,
         suggested_direction = suggested,
     )
     # Add previous day VP context for reference levels
@@ -273,14 +463,30 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
     if feedback:
         question += feedback
         
-    # Inject Masterclass Metrics
-    question += f"\n\n## MASTERCLASS CANDLE METRICS\n"
-    question += f"Delta Divergence: {getattr(candidate, 'delta_divergence', False)}\n"
-    question += f"Effort vs No Result: {getattr(candidate, 'effort_no_result', False)}\n"
-    question += f"Rejection Wick Ratios: Top Wick={getattr(candidate, 'top_wick_ratio', 0.0):.2%} | Bottom Wick={getattr(candidate, 'bottom_wick_ratio', 0.0):.2%}\n"
-    question += f"Close Percentile of Range: {getattr(candidate, 'close_percentile', 0.5):.2%} (100% = closed at absolute high, 0% = closed at absolute low)\n"
-    question += "Interpret wicks > 40% OR Close Percentile > 75% (for long reversals off lows) / < 25% (for short reversals off highs) as a strong sign of rejection/liquidity sweeps. Effort vs No Result = passive institutional defense/absorption.\n"
+    # Inject Level Matrix
+    question += f"\n\n{build_level_matrix(ctx, bar)}"
+    
+    # Inject AMT Session Profile
+    question += f"\n\n## AMT SESSION STRUCTURAL PROFILE\n{get_amt_structural_profile(ctx)}"
+    
+    # Inject Macro Regime Status
+    macro_info = analyze_macro_regime(ctx, candidate.recent_bars)
+    question += (
+        f"\n\n## LIVE MACRO REGIME STATUS\n"
+        f"Current Regime: {macro_info['regime']}\n"
+        f"Regime Duration: {macro_info['duration_mins']} minutes\n"
+        f"Regime Trigger: {macro_info['trigger']}\n"
+        f"Suggested Trend Bias: {macro_info['bias'].upper()}\n"
+    )
+    
+    # Inject Trapped Participants & Follow-Through
+    if m1_bars:
+        question += f"\n\n## TRAPPED PARTICIPANTS & FOLLOW-THROUGH (M1 Order Flow)\n{analyze_trap_follow_through(m1_bars)}"
         
+    # Inject Macroeconomic News
+    if getattr(candidate, 'upcoming_news', None):
+        question += f"\n\n## UPCOMING MACROECONOMIC NEWS CALENDAR\n{candidate.upcoming_news}\n"
+
     return question
 
 def build_andrea_question(candidate: CandidateBar,
@@ -315,8 +521,9 @@ def build_andrea_question(candidate: CandidateBar,
         open            = bar.open,
         high            = bar.high,
         low             = bar.low,
-        ib_high         = ctx.ib_high,
-        ib_low          = ctx.ib_low,
+        ib_high         = f"{ctx.ib_high} (Forming)" if not ctx.ib_complete else ctx.ib_high,
+        ib_low          = f"{ctx.ib_low} (Forming)" if not ctx.ib_complete else ctx.ib_low,
+        ib_range        = f"{ctx.ib_range} (Forming)" if not ctx.ib_complete else ctx.ib_range,
         fabio_setup     = fabio_signal.setup_type,
         fabio_direction = fabio_signal.direction,
         fabio_confidence= fabio_signal.confidence,
@@ -370,11 +577,499 @@ def build_andrea_question(candidate: CandidateBar,
         question += "You must check how levels reacted earlier today to avoid traps:\n"
         question += "\n".join(f"- {line}" for line in struc_mem)
 
-    # Inject Masterclass Metrics
-    question += f"\n\n## MASTERCLASS CANDLE METRICS\n"
-    question += f"Delta Divergence: {getattr(candidate, 'delta_divergence', False)}\n"
-    question += f"Effort vs No Result: {getattr(candidate, 'effort_no_result', False)}\n"
-    question += f"Rejection Wick Ratios: Top Wick={getattr(candidate, 'top_wick_ratio', 0.0):.2%} | Bottom Wick={getattr(candidate, 'bottom_wick_ratio', 0.0):.2%}\n"
-    question += "Interpret wicks > 40% as a strong sign of rejection/liquidity sweeps. Effort vs No Result = passive institutional defense/absorption.\n"
+    # Inject Level Matrix
+    question += f"\n\n{build_level_matrix(ctx, bar)}"
+    
+    # Inject AMT Session Profile
+    question += f"\n\n## AMT SESSION STRUCTURAL PROFILE\n{get_amt_structural_profile(ctx)}"
+    
+    # Inject Macro Regime Status
+    macro_info = analyze_macro_regime(ctx, candidate.recent_bars)
+    question += (
+        f"\n\n## LIVE MACRO REGIME STATUS\n"
+        f"Current Regime: {macro_info['regime']}\n"
+        f"Regime Duration: {macro_info['duration_mins']} minutes\n"
+        f"Regime Trigger: {macro_info['trigger']}\n"
+        f"Suggested Trend Bias: {macro_info['bias'].upper()}\n"
+    )
+    
+    # Inject Trapped Participants & Follow-Through
+    if m1_bars:
+        question += f"\n\n## TRAPPED PARTICIPANTS & FOLLOW-THROUGH (M1 Order Flow)\n{analyze_trap_follow_through(m1_bars)}"
         
+    # Inject Macroeconomic News
+    if getattr(candidate, 'upcoming_news', None):
+        question += f"\n\n## UPCOMING MACROECONOMIC NEWS CALENDAR\n{candidate.upcoming_news}\n"
+
     return question
+
+def analyze_trapped_participants(bar: Bar) -> str:
+    """Analyze the price-by-price footprint map of a bar to find trapped participants in the wicks."""
+    if not getattr(bar, 'footprint', None):
+        return ""
+        
+    open_p = bar.open
+    close_p = bar.close
+    
+    # Wick boundaries
+    body_high = max(open_p, close_p)
+    body_low = min(open_p, close_p)
+    
+    top_wick_vol_ask = 0
+    top_wick_vol_bid = 0
+    bot_wick_vol_ask = 0
+    bot_wick_vol_bid = 0
+    
+    # Iterate over price levels in footprint
+    for price, bids_asks in bar.footprint.items():
+        bid_vol = bids_asks.get('bid', 0)
+        ask_vol = bids_asks.get('ask', 0)
+        
+        # Is price in the top wick?
+        if price > body_high:
+            top_wick_vol_ask += ask_vol  # Buyers hitting Ask (aggressive buyers)
+            top_wick_vol_bid += bid_vol  # Sellers hitting Bid
+            
+        # Is price in the bottom wick?
+        elif price < body_low:
+            bot_wick_vol_ask += ask_vol
+            bot_wick_vol_bid += bid_vol  # Sellers hitting Bid (aggressive sellers)
+            
+    trapped_info = []
+    
+    if top_wick_vol_ask >= 40 and top_wick_vol_ask > top_wick_vol_bid:
+        trapped_info.append(
+            f"TRAPPED BUYERS: {top_wick_vol_ask} Ask contracts vs Bid {top_wick_vol_bid} "
+            f"above {body_high:.2f} (close {close_p:.2f})"
+        )
+        
+    if bot_wick_vol_bid >= 40 and bot_wick_vol_bid > bot_wick_vol_ask:
+        trapped_info.append(
+            f"TRAPPED SELLERS: {bot_wick_vol_bid} Bid contracts vs Ask {bot_wick_vol_ask} "
+            f"below {body_low:.2f} (close {close_p:.2f})"
+        )
+        
+    return " | ".join(trapped_info)
+
+def analyze_trap_follow_through(bars: list[Bar]) -> str:
+    """Scans the M1 bars to find where trapped participants occurred and describes the follow-through in the subsequent candle.
+    
+    IMPORTANT: We only analyze up to bars[-2] as 'current bar'. The follow-through is
+    bars[i+1], which must be a fully-closed M1 bar at the time of the decision.
+    The last bar in the list (bars[-1]) is the CURRENT bar being evaluated — we cannot
+    know its follow-through yet, so it is excluded as a 'trap origin'.
+    """
+    if not bars or len(bars) < 2:
+        return "No significant trapped events in the recent M1 window."
+        
+    analysis_lines = []
+    # Stop at len(bars) - 1 so bars[i+1] is always the last bar (already closed historical)
+    # and bars[i] never uses the current/candidate bar as the trap origin.
+    for i in range(len(bars) - 1):
+        b_curr = bars[i]
+        b_next = bars[i+1]
+        
+        open_p = b_curr.open
+        close_p = b_curr.close
+        body_high = max(open_p, close_p)
+        body_low = min(open_p, close_p)
+        
+        top_wick_ask = sum(val.get('ask', 0) for pr, val in getattr(b_curr, 'footprint', {}).items() if pr > body_high)
+        top_wick_bid = sum(val.get('bid', 0) for pr, val in getattr(b_curr, 'footprint', {}).items() if pr > body_high)
+        bot_wick_ask = sum(val.get('ask', 0) for pr, val in getattr(b_curr, 'footprint', {}).items() if pr < body_low)
+        bot_wick_bid = sum(val.get('bid', 0) for pr, val in getattr(b_curr, 'footprint', {}).items() if pr < body_low)
+        
+        t_curr = b_curr.timestamp.astimezone(ET).strftime('%H:%M:%S')
+        t_next = b_next.timestamp.astimezone(ET).strftime('%H:%M:%S')
+        
+        # 1. Trapped Buyers check
+        if top_wick_ask >= 40 and top_wick_ask > top_wick_bid:
+            next_close_vs_curr = b_next.close - b_curr.close
+            next_delta = b_next.delta
+            
+            if next_close_vs_curr < 0 and next_delta < 0:
+                outcome = f"CONFIRMED (Next bar at {t_next} closed lower by {abs(next_close_vs_curr):.2f} pts with negative delta of {next_delta:+d})"
+            elif next_close_vs_curr < 0:
+                outcome = f"CONFIRMED (Next bar closed lower by {abs(next_close_vs_curr):.2f} pts, delta {next_delta:+d})"
+            elif next_close_vs_curr > 0 and b_next.close > b_curr.high:
+                outcome = f"FAILED / RELEASED (Next bar closed above the trap high at {b_next.close:.2f}, negating short bias)"
+            else:
+                outcome = f"MIXED (Next bar closed slightly higher by {next_close_vs_curr:.2f} pts, delta {next_delta:+d})"
+                
+            analysis_lines.append(
+                f"- [{t_curr}] Trapped Buyers ({top_wick_ask} Ask contracts above {body_high:.2f}) -> {outcome}"
+            )
+            
+        # 2. Trapped Sellers check
+        if bot_wick_bid >= 40 and bot_wick_bid > bot_wick_ask:
+            next_close_vs_curr = b_next.close - b_curr.close
+            next_delta = b_next.delta
+            
+            if next_close_vs_curr > 0 and next_delta > 0:
+                outcome = f"CONFIRMED (Next bar at {t_next} closed higher by {next_close_vs_curr:.2f} pts with positive delta of {next_delta:+d})"
+            elif next_close_vs_curr > 0:
+                outcome = f"CONFIRMED (Next bar closed higher by {next_close_vs_curr:.2f} pts, delta {next_delta:+d})"
+            elif next_close_vs_curr < 0 and b_next.close < b_curr.low:
+                outcome = f"FAILED / RELEASED (Next bar closed below the trap low at {b_next.close:.2f}, negating long bias)"
+            else:
+                outcome = f"MIXED (Next bar closed slightly lower by {abs(next_close_vs_curr):.2f} pts, delta {next_delta:+d})"
+                
+            analysis_lines.append(
+                f"- [{t_curr}] Trapped Sellers ({bot_wick_bid} Bid contracts below {body_low:.2f}) -> {outcome}"
+            )
+            
+    if not analysis_lines:
+        return "No significant trapped events in the recent M1 window."
+    return "\n".join(analysis_lines)
+
+def get_amt_structural_profile(ctx) -> str:
+    """Classifies the session structure using Dalton's Auction Market Theory concepts."""
+    if not getattr(ctx, 'ib_complete', False):
+        return "Price Discovery Phase (First 30 minutes of session)"
+        
+    ib_high = getattr(ctx, 'ib_high', 0.0)
+    ib_low = getattr(ctx, 'ib_low', 0.0)
+    ib_range = getattr(ctx, 'ib_range', 0.0)
+    high = getattr(ctx, 'session_high', 0.0)
+    low = getattr(ctx, 'session_low', 0.0)
+    
+    if ib_high <= 0 or ib_low <= 0:
+        return "Initial Balance not completed or invalid."
+        
+    broken_above = high > ib_high
+    broken_below = low < ib_low
+    
+    if broken_above and broken_below:
+        return "Neutral Day (IB broken on BOTH sides - high volatility, two-way auction, balance day)"
+    elif broken_above:
+        return "Normal Variation Day (IB broken to the upside - buyers control the extension)"
+    elif broken_below:
+        return "Normal Variation Day (IB broken to the downside - sellers control the extension)"
+    else:
+        # IB never broken
+        if ib_range > 60:
+            return "Normal Day (Wide IB, never broken - responsive trading at extremes expected)"
+        else:
+            return "Non-Trend Day / Balance Day (Narrow IB, never broken - low volume, high chop risk)"
+
+def build_level_matrix(ctx, current_bar: Bar) -> str:
+    """Builds a structured text grid of all key levels, their distance, and their test status today."""
+    levels = []
+    if getattr(ctx, 'prev_day_vp', None):
+        levels.append(("Yesterday VAH", ctx.prev_day_vp.va_high))
+        levels.append(("Yesterday VAL", ctx.prev_day_vp.va_low))
+        levels.append(("Yesterday POC", ctx.prev_day_vp.poc))
+    if getattr(ctx, 'ib_high', 0.0) > 0:
+        levels.append(("IB High", ctx.ib_high))
+        levels.append(("IB Low", ctx.ib_low))
+    if getattr(ctx, 'vp', None):
+        levels.append(("Overnight VAH", ctx.vp.va_high))
+        levels.append(("Overnight VAL", ctx.vp.va_low))
+        levels.append(("Overnight POC", ctx.vp.poc))
+        
+    lines = ["## SESSION STRUCTURAL LEVEL MATRIX"]
+    lines.append(f"Current Price: {current_bar.close:.2f}")
+    lines.append(f"{'Level Name':<20} | {'Price':<10} | {'Dist (Pts)':<10} | {'Status today'}")
+    lines.append("-" * 70)
+    
+    for name, val in levels:
+        if val is None or val <= 0:
+            continue
+        dist = current_bar.close - val
+        dist_str = f"{dist:+.2f}"
+        
+        status = "Untested"
+        for item in reversed(getattr(ctx, 'session_memory', [])):
+            if f"Tested {name}" in item.get('text', ''):
+                parts = item['text'].split("Result: ")
+                if len(parts) > 1:
+                    outcome = parts[1].split(".")[0]
+                    status = f"Tested ({outcome})"
+                break
+                
+        lines.append(f"{name:<20} | {val:<10.2f} | {dist_str:<10} | {status}")
+        
+    return "\n".join(lines)
+
+def analyze_macro_regime(ctx, bars: list) -> dict:
+    """Detects if the market is in an EXPANSIVE or ACCUMULATION/BALANCE regime, since when, and the bias."""
+    if not bars:
+        return {"regime": "CHOP/BALANCE", "duration_mins": 0, "trigger": "No bar data", "bias": "none"}
+        
+    ib_high = getattr(ctx, 'ib_high', 0.0)
+    ib_low = getattr(ctx, 'ib_low', 0.0)
+    ib_complete = getattr(ctx, 'ib_complete', False)
+    
+    current_regime = "CHOP/BALANCE"
+    current_trigger = "Price trading inside Initial Balance / Value Area"
+    current_bias = "none"
+    duration_bars = 0
+    
+    for i in range(len(bars) - 1, -1, -1):
+        b = bars[i]
+        
+        is_outside = False
+        if ib_complete and ib_high > 0 and ib_low > 0:
+            is_outside = (b.close > ib_high or b.close < ib_low)
+            
+        if is_outside:
+            # Imbalance outside IB
+            prev_ranges = []
+            for j in range(max(0, i-4), i):
+                prev_ranges.append(bars[j].high - bars[j].low)
+            avg_range = sum(prev_ranges) / len(prev_ranges) if prev_ranges else 10.0
+            
+            curr_range = b.high - b.low
+            
+            if curr_range < 0.80 * avg_range:
+                regime = "ACCUMULATION (Pullback/Absorption)"
+                trigger = f"Range compression ({curr_range/avg_range:.0%}) outside IB"
+                bias = "long" if b.close > ib_high else "short"
+            else:
+                regime = "EXPANSIVE (Initiative Momentum)"
+                trigger = f"Breakout outside IB ({'above IB High' if b.close > ib_high else 'below IB Low'})"
+                bias = "long" if b.close > ib_high else "short"
+        else:
+            regime = "CHOP/BALANCE"
+            trigger = "Price trading inside Initial Balance / Value Area"
+            bias = "none"
+            
+        if i == len(bars) - 1:
+            current_regime = regime
+            current_trigger = trigger
+            current_bias = bias
+            
+        if regime != current_regime:
+            break
+            
+        duration_bars += 1
+        
+    return {
+        "regime": current_regime,
+        "duration_mins": duration_bars * 5,
+        "trigger": current_trigger,
+        "bias": current_bias
+    }
+
+def detect_accumulation_breakout(m1_bars: list, current_bar, session_ctx=None) -> dict:
+    """Accumulation zone detector using IB (Initial Balance) as primary reference.
+
+    The IB [ib_low, ib_high] IS the accumulation zone for the opening session strategy.
+    - INSIDE IB → accumulation/balance → do not enter
+    - CLOSE OUTSIDE IB with delta confirmation → IGNITION (first breakout)
+    - Within 3 bars of breakout → EARLY EXPANSION → still valid entry
+
+    Falls back to dynamic range-compression detection when IB is not yet complete.
+
+    Args:
+        m1_bars     : list of Bar objects (all M1 bars before current)
+        current_bar : the Bar being evaluated
+        session_ctx : optional SessionContext for IB data
+
+    Returns dict with:
+      in_accumulation    : bool
+      is_ignition        : bool
+      ignition_direction : 'long' | 'short' | 'none'
+      bars_since_ignition: int  (0=this IS ignition, -1=not found)
+      accumulation_high  : float  (IB high or dynamic zone high)
+      accumulation_low   : float  (IB low or dynamic zone low)
+      accumulation_mins  : int
+      avg_range          : float
+      atr                : float
+      label              : str
+    """
+    MAX_BARS_AFTER = 20  # 20 M1 bars (~20min) entry window after ignition
+    DELTA_MIN      = 30  # minimum |delta| for ignition confirmation
+
+    result = {
+        "in_accumulation":    False,
+        "is_ignition":        False,
+        "ignition_direction": "none",
+        "bars_since_ignition": -1,
+        "accumulation_high":   0.0,
+        "accumulation_low":    0.0,
+        "accumulation_mins":   0,
+        "avg_range":           0.0,
+        "atr":                 0.0,
+        "label": "Insufficient data for accumulation analysis."
+    }
+
+    curr       = current_bar
+    curr_delta = getattr(curr, 'delta', 0) or 0
+
+    # ── ATR for reference ────────────────────────────────────────────────────
+    atr_bars = m1_bars[-20:] if len(m1_bars) >= 20 else m1_bars
+    atr = (sum(b.high - b.low for b in atr_bars) / len(atr_bars)) if atr_bars else 0.0
+    result["atr"] = round(atr, 2)
+
+    # ── PRIMARY: Use IB as accumulation zone if available ────────────────────
+    ib_high = getattr(session_ctx, 'ib_high', 0.0) if session_ctx else 0.0
+    ib_low  = getattr(session_ctx, 'ib_low', 0.0) if session_ctx else 0.0
+    ib_complete = getattr(session_ctx, 'ib_complete', False) if session_ctx else False
+
+    if ib_complete and ib_high > 0 and ib_low > 0:
+        acc_high = ib_high
+        acc_low  = ib_low
+        result["accumulation_high"] = acc_high
+        result["accumulation_low"]  = acc_low
+
+        # ── CVD over the last N M1 bars (expansive volume confirmation) ──
+        # CVD = cumulative sum of bar delta — rising CVD = net buying pressure
+        CVD_WINDOW = 20  # look at last 20 M1 bars to measure CVD trend
+        cvd_bars = m1_bars[-CVD_WINDOW:] if len(m1_bars) >= CVD_WINDOW else m1_bars
+        cvd_total = sum(getattr(b, 'delta', 0) or 0 for b in cvd_bars)
+        # CVD first-half vs second-half to detect trend direction
+        mid = max(1, len(cvd_bars) // 2)
+        cvd_first_half  = sum(getattr(b, 'delta', 0) or 0 for b in cvd_bars[:mid])
+        cvd_second_half = sum(getattr(b, 'delta', 0) or 0 for b in cvd_bars[mid:])
+        cvd_rising  = cvd_second_half > cvd_first_half  # accelerating buying
+        cvd_falling = cvd_second_half < cvd_first_half  # accelerating selling
+        result["cvd_total"]   = cvd_total
+        result["cvd_rising"]  = cvd_rising
+        result["cvd_falling"] = cvd_falling
+
+        inside_ib = acc_low <= curr.close <= acc_high
+        if inside_ib:
+            result["in_accumulation"] = True
+            cvd_note = f"CVD({CVD_WINDOW}bars)={cvd_total:+d} {'rising' if cvd_rising else 'falling' if cvd_falling else 'flat'}"
+            result["label"] = (
+                f"INSIDE IB ({acc_low:.2f}-{acc_high:.2f}): accumulation/balance phase. "
+                f"{cvd_note}. "
+                f"WAIT for a close outside IB with |delta| >= {DELTA_MIN} before entering."
+            )
+            return result
+
+        # Price is outside IB — find first bar outside IB with delta confirmation after 10:00 ET
+        ign_bar_idx  = -1
+        ign_dir      = "none"
+        for k, b in enumerate(m1_bars):
+            t_et = b.timestamp.astimezone(ET)
+            if t_et.hour < 10:
+                continue
+            
+            b_delta = getattr(b, 'delta', 0) or 0
+            if b.close > acc_high and b_delta >= DELTA_MIN:
+                ign_bar_idx = k
+                ign_dir = "long"
+                break
+            elif b.close < acc_low and b_delta <= -DELTA_MIN:
+                ign_bar_idx = k
+                ign_dir = "short"
+                break
+
+        # Calculate bars_since if found
+        bars_since = -1
+        if ign_bar_idx >= 0:
+            curr_idx = -1
+            for idx, b in enumerate(m1_bars):
+                if b.timestamp == curr.timestamp:
+                    curr_idx = idx
+                    break
+            if curr_idx >= 0:
+                bars_since = curr_idx - ign_bar_idx
+            else:
+                bars_since = len(m1_bars) - 1 - ign_bar_idx
+
+        if ign_bar_idx >= 0 and 0 <= bars_since <= MAX_BARS_AFTER:
+            result["is_ignition"] = (bars_since == 0)
+            result["ignition_direction"] = ign_dir
+            result["bars_since_ignition"] = bars_since
+            
+            post_ign_bars = m1_bars[ign_bar_idx:]
+            cvd_since_ign = sum(getattr(b, 'delta', 0) or 0 for b in post_ign_bars)
+            cvd_confirms  = (ign_dir == "long" and cvd_since_ign > 0) or \
+                            (ign_dir == "short" and cvd_since_ign < 0)
+            result["cvd_since_ign"] = cvd_since_ign
+            
+            cvd_note = f"CVD since ignition={cvd_since_ign:+d} {'OK' if cvd_confirms else 'WEAK'}"
+            if bars_since == 0:
+                result["label"] = (
+                    f"IGNITION BAR {ign_dir.upper()} -- broke IB [{acc_low:.2f}-{acc_high:.2f}], "
+                    f"close={curr.close:.2f}, delta={curr_delta:+d}, CVD={cvd_total:+d}. IDEAL ENTRY."
+                )
+            else:
+                result["label"] = (
+                    f"EARLY EXPANSION ({ign_dir.upper()}, {bars_since} bars ago) -- "
+                    f"IB [{acc_low:.2f}-{acc_high:.2f}] broke. {cvd_note}. "
+                    f"Still valid entry window ({bars_since}/{MAX_BARS_AFTER} bars used)."
+                )
+        elif ign_bar_idx >= 0:
+            result["ignition_direction"] = ign_dir
+            result["bars_since_ignition"] = bars_since
+            result["label"] = (
+                f"MID/LATE EXPANSION -- IB [{acc_low:.2f}-{acc_high:.2f}] "
+                f"broke more than {MAX_BARS_AFTER} bars ago ({bars_since} bars ago). Higher chasing risk."
+            )
+        else:
+            result["label"] = (
+                f"OUTSIDE IB but NO confirmed ignition bar found (no bar had delta >= {DELTA_MIN}). Vetoed."
+            )
+        return result
+
+    # ── FALLBACK: Dynamic range-compression detection (no IB yet) ────────────
+    # Used during IB formation (first 30 minutes)
+    EXPANSION_THRESH   = 1.2
+    COMPRESSION_THRESH = 0.55
+    MAX_ACC_BARS       = 300
+    MIN_ACC_BARS       = 5
+
+    if not m1_bars or len(m1_bars) < 20 + MIN_ACC_BARS:
+        result["label"] = "IB not yet complete and insufficient M1 history for dynamic detection."
+        return result
+
+    atr_sample = m1_bars[-20:]
+    atr_val = sum(b.high - b.low for b in atr_sample) / 20
+    result["atr"] = round(atr_val, 2)
+    exp_thresh = EXPANSION_THRESH * atr_val
+
+    acc_start_idx = None
+    for i in range(len(m1_bars) - 1, max(0, len(m1_bars) - 1 - MAX_ACC_BARS) - 1, -1):
+        if m1_bars[i].high - m1_bars[i].low >= exp_thresh:
+            acc_start_idx = i + 1
+            break
+    if acc_start_idx is None:
+        acc_start_idx = max(0, len(m1_bars) - MAX_ACC_BARS)
+
+    acc_bars = m1_bars[acc_start_idx:]
+    if len(acc_bars) < MIN_ACC_BARS:
+        result["label"] = f"Pre-IB accumulation zone too short ({len(acc_bars)} bars)."
+        return result
+
+    acc_high = max(b.high for b in acc_bars)
+    acc_low  = min(b.low  for b in acc_bars)
+    avg_range = sum(b.high - b.low for b in acc_bars) / len(acc_bars)
+    result["accumulation_high"] = acc_high
+    result["accumulation_low"]  = acc_low
+    result["avg_range"]         = round(avg_range, 2)
+    result["accumulation_mins"] = len(acc_bars)
+
+    is_compressed = avg_range < COMPRESSION_THRESH * atr_val
+    result["in_accumulation"] = is_compressed
+
+    if is_compressed:
+        if curr.close > acc_high and curr_delta >= DELTA_MIN:
+            result["is_ignition"]        = True
+            result["ignition_direction"] = "long"
+            result["bars_since_ignition"] = 0
+            result["label"] = (
+                f"IGNITION LONG (pre-IB) -- broke [{acc_low:.2f}-{acc_high:.2f}], "
+                f"close={curr.close:.2f}, delta={curr_delta:+d}."
+            )
+        elif curr.close < acc_low and curr_delta <= -DELTA_MIN:
+            result["is_ignition"]        = True
+            result["ignition_direction"] = "short"
+            result["bars_since_ignition"] = 0
+            result["label"] = (
+                f"IGNITION SHORT (pre-IB) -- broke [{acc_low:.2f}-{acc_high:.2f}], "
+                f"close={curr.close:.2f}, delta={curr_delta:+d}."
+            )
+        else:
+            result["label"] = (
+                f"PRE-IB MID-ACCUMULATION ({len(acc_bars)}min) -- "
+                f"zone [{acc_low:.2f}-{acc_high:.2f}]. WAIT for breakout."
+            )
+    else:
+        result["label"] = (
+            f"PRE-IB EXPANSION -- zone [{acc_low:.2f}-{acc_high:.2f}] not compressed."
+        )
+    return result

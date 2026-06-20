@@ -9,7 +9,7 @@ def _and(confirm, conf):
     return AndreaSignal(confirm, conf, 'ibob' if confirm else 'none', 'r', 'nlm')
 
 def test_fabio_below_threshold_no_trade():
-    c = build_consensus(_fab(75), _and(True, 70))
+    c = build_consensus(_fab(74), _and(True, 70))
     assert c.decision == 'no_trade'
     assert 'fabio' in c.no_trade_reason
 

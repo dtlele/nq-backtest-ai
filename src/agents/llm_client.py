@@ -430,6 +430,7 @@ def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None, m
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content}
                 ],
+                max_tokens=1000,
                 extra_headers={
                     "HTTP-Referer": "http://localhost:8000",
                     "X-Title": "AgentForge Backtester",

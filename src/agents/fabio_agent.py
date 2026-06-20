@@ -70,31 +70,48 @@ def _get_system_prompt() -> str:
 
     # Statistical calibration hints (derived from 549 backtested trades)
     prompt += """BACKTESTED CONFIDENCE CALIBRATION (549 trades analyzed):
-Use these empirical signals to calibrate your confidence score ÔÇö they are NOT hard rules, but statistical priors:
+Use these empirical signals to calibrate your confidence score — they are NOT hard rules, but statistical priors:
 
 1. STRUCTURE CONVERGENCE: IBL + VAL converging at the same level = strongest setup historically (59% WR).
    VAH or VAL alone WITHOUT IB confirmation = weak signal (22-31% WR). Subtract 10-15 from confidence.
 
-2. INSTITUTIONAL FOOTPRINT: Big Trade >= 400 contracts at the breakout point = strong confirmation (+10 confidence).
+2. INSTITUTIONAL FOOTPRINT: Big Trade >= 1000 contracts at the breakout point = strong confirmation (+10 confidence).
    High total bar volume (>3000 contracts) BUT small Big Trade = likely retail fakeout (-10 confidence).
    The SIZE of the single institutional order matters more than total volume.
 
-3. DELTA CONVICTION: |Delta| >= 400 at entry bar = real directional commitment, confirmed.
-   |Delta| < 200 = market in chop/equilibrium, subtract 10 from confidence.
+3. DELTA CONVICTION: |Delta| >= 600 at entry bar = real directional commitment, confirmed.
+   |Delta| < 300 = market in chop/equilibrium, subtract 10 from confidence.
 
-"""
+4. TEMPORAL PHASES & HIGH SELECTIVITY QUESTIONS:
+   For every candidate setup, you must run a strict self-audit by scoring your confidence (0-100%) for each of the following 5 questions:
+   - q1_time_window_validity_score: Is the current time outside the Lunch Lull (12:00-13:30 ET), before the 13:00 ET standard cutoff (unless PM Power Hour Model B exception is met), and before 15:00 ET? (100% = high validity, <50% = dangerous/avoid).
+   - q2_kill_zone_caution_score: Are we outside the 10:15 - 10:30 ET Kill Zone? If inside, is there extreme institutional absorption or breakout confirmation to override the caution? (100% = outside or exceptionally confirmed).
+   - q3_rni_initiative_score: Is the market showing Initiative characteristics (directional delta, expanding range, strong volume, clean body close outside IB range) rather than Response/Chop (divergent/flat delta, tight range)? (100% = clear initiative).
+   - q4_trend_alignment_score: Is this setup strictly trend-following in the direction of the session trend (imbalance phase), and NOT a counter-trend or fading setup? (Trend-following = 100%, Counter-trend = 0%. Fading is strictly forbidden; if counter-trend, score must be 0% and direction must be 'none').
+   - q5_entry_precision_score: Does the entry wait for a pullback/retracement test (Second Drive) to a key boundary (VAL/VAH, POC, VWAP) followed by an M1 candle close validation, instead of chasing breakouts that are already >100 ticks from the edge? (100% = safe pullback/second drive setup).
 
-    # JSON Schema definition
-    prompt += """Respond ONLY with valid JSON matching this schema:
+Respond ONLY with valid JSON matching this schema:
 {
-  "reasoning": "<MAX 100 WORDS. Provide a detailed Order Flow narrative. Explain exactly which side is trapped (Effort vs No Result), how the delta confirms the absorption or initiative, and justify the exact structural placement of the stop loss behind a verified volume node or Big Trade wall. ALWAYS ADD AN EXTRA 10 TICKS BUFFER BEHIND THE STRUCTURAL LEVEL TO PREVENT STOP RUNS.>",
-  "market_narrative_update": "<Provide an evolving narrative of the trading session. CRITICAL: Review your previous reasonings (Session Context) against what the market actually did afterwards (Bars Since Last). If you were wrong or missed a move, explicitly acknowledge the mistake and adjust your current bias/logic. How has the macro context shifted?>",
-  "setup_type": "squeeze" | "reversal" | "ivb_breakout" | "exhaustion" | "imbalance_hunting" | "none",
   "direction": "long" | "short" | "none",
   "confidence": <int 0-100>,
-  "entry": <float or null — If entering at Market, output the exact CURRENT CLOSE price of the M1 bar. If waiting for a pullback, output the specific Limit Order price (e.g., VWAP or an Institutional Wall). Do NOT chase breakouts if the R/R is poor.>,
+  "entry": <float or null>,
   "stop": <float or null>,
-  "target": <float or null>
+  "target": <float or null>,
+  "setup_type": "squeeze" | "ivb_breakout" | "none",
+  "imbalance_phase": "expansive" | "accumulation" | "none",
+  "reasoning": "<MAX 100 WORDS. Provide a detailed Order Flow narrative. Explain exactly which side is trapped (Effort vs No Result), how the delta confirms the absorption or initiative, and justify the exact structural placement of the stop loss behind a verified volume node or Big Trade wall.>",
+  "market_narrative_update": "<Provide an evolving narrative of the trading session. CRITICAL: Review your previous reasonings (Session Context) against what the market actually did afterwards (Bars Since Last). If you were wrong or missed a move, explicitly acknowledge the mistake and adjust your current bias/logic. How has the macro context shifted?>",
+  "amt_profile_classification": "<Optional: e.g. Initiative Breakout, Responsive Rotation>",
+  "macro_regime_classification": "<Optional: e.g. Trend Day, Range Day>",
+  "trapped_participants_analysis": "<Optional: analysis of wicks, imbalance, and trapped size>",
+  "day_classification_notes": "<Optional: classification notes for future daily cataloging>",
+  "temporal_phase_audit": {
+    "q1_time_window_validity_score": <int 0-100>,
+    "q2_kill_zone_caution_score": <int 0-100>,
+    "q3_rni_initiative_score": <int 0-100>,
+    "q4_trend_alignment_score": <int 0-100>,
+    "q5_entry_precision_score": <int 0-100>
+  }
 }"""
     return prompt
 
@@ -161,7 +178,7 @@ def light_analyze(candidate: CandidateBar, session_context: list = None, m1_bars
         _ET = _lp.timezone('America/New_York')
         _bar_et = candidate.bar.timestamp.astimezone(_ET)
         if _bar_et.hour == 10 and 15 <= _bar_et.minute < 30:
-            score -= 25  # Kill zone: post-opening-range fakeout window
+            score -= 10  # Reduced penalty (was 25), caution only!
     except Exception:
         pass
 
@@ -210,6 +227,33 @@ def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list
                     continue
                     
             # If we get here, it's valid
+            imbalance_phase = data.get('imbalance_phase', 'none')
+            
+            base_reasoning = data.get('reasoning', '')
+            amt_class = data.get('amt_profile_classification', '')
+            macro_class = data.get('macro_regime_classification', '')
+            trap_analysis = data.get('trapped_participants_analysis', '')
+            temporal_audit = data.get('temporal_phase_audit', '')
+            day_notes = data.get('day_classification_notes', '')
+            
+            full_reasoning = base_reasoning
+            if amt_class or macro_class or trap_analysis or temporal_audit or day_notes:
+                full_reasoning += "\n\n[Analisi Aggiuntiva]"
+                if amt_class:
+                    full_reasoning += f"\n- Profilo AMT: {amt_class}"
+                if macro_class:
+                    full_reasoning += f"\n- Macro Regime: {macro_class}"
+                if trap_analysis:
+                    full_reasoning += f"\n- Footprint (Trapped): {trap_analysis}"
+                if temporal_audit:
+                    if isinstance(temporal_audit, dict):
+                        audit_lines = "\n  ".join([f"{k}: {v}%" if isinstance(v, int) or (isinstance(v, str) and not v.endswith('%') and v.isdigit()) else f"{k}: {v}" for k, v in temporal_audit.items()])
+                        full_reasoning += f"\n- Audit Fase Temporale:\n  {audit_lines}"
+                    else:
+                        full_reasoning += f"\n- Audit Fase Temporale: {temporal_audit}"
+                if day_notes:
+                    full_reasoning += f"\n- Note Classificazione Giornata: {day_notes}"
+
             return FabioSignal(
                 direction   = direction,
                 confidence  = int(data.get('confidence', 0)),
@@ -217,7 +261,8 @@ def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list
                 stop        = stop,
                 target      = data.get('target'),
                 setup_type  = data.get('setup_type', 'none'),
-                reasoning   = data.get('reasoning', ''),
+                imbalance_phase = imbalance_phase,
+                reasoning   = full_reasoning,
                 market_narrative_update = data.get('market_narrative_update', ''),
                 nlm_answer  = "Bypassed",
             )

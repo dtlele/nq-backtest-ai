@@ -71,4 +71,8 @@ def validate_dynamic_rule(rule: Dict) -> bool:
     return True
 
 def get_active_rules(limit: int = 10, day_type: str = None, step: int = None) -> List[Dict]:
-    return []
+    """Load active and probation rules from dynamic_rules.json."""
+    data = load_dynamic_rules()
+    rules = data.get("dynamic_rules", [])
+    active = [r for r in rules if r.get("status") in ("active", "probation")]
+    return active[:limit]

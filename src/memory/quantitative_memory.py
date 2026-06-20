@@ -38,7 +38,6 @@ def build_fingerprint(candidate) -> str:
     return f"{day_type}|{setup}|{wall_bucket}"
 
 def get_fingerprint_stats(candidate) -> str:
-    return ""
     """Returns a formatted warning string if historical stats exist for this context."""
     fp = build_fingerprint(candidate)
     db = _load_db()

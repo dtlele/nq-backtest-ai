@@ -175,6 +175,18 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
             setup_cat = 'imbalance_hunting'
         else:
             setup_cat = 'pullback' if is_pullback else ('momentum' if is_momentum else 'reversal')
+            
+        # --- SQUEEZE DETECTION ---
+        upper_lvls = [lvl for lvl, name in levels if lvl > price]
+        lower_lvls = [lvl for lvl, name in levels if lvl < price]
+        if upper_lvls and lower_lvls:
+            nearest_upper = min(upper_lvls)
+            nearest_lower = max(lower_lvls)
+            gap = nearest_upper - nearest_lower
+            
+            # Dynamic Squeeze: Gap is < 30% of IB Range or < 25 pts (if early)
+            if (active_ctx.ib_range > 0 and gap < active_ctx.ib_range * 0.3) or (gap < 25.0):
+                setup_cat = 'squeeze'
         
         # --- SECOND DRIVE DETECTION ---
         orig_is_second_test = False

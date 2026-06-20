@@ -4,7 +4,23 @@ from src import (FabioSignal, AndreaSignal, ConsensusSignal,
 # Global configuration toggle to switch between yesterday's strict prod validation and new auto-adjustments
 STRICT_PROD_MODE = False
 
-def build_consensus(fabio: FabioSignal, andrea: AndreaSignal) -> ConsensusSignal:
+def build_consensus(fabio: FabioSignal, andrea: AndreaSignal, candidate = None) -> ConsensusSignal:
+    news_flag = "none"
+    if candidate and getattr(candidate, 'upcoming_news', None):
+        upcoming = candidate.upcoming_news
+        if upcoming and "No high-impact news" not in upcoming:
+            val_lower = upcoming.lower()
+            if "fomc" in val_lower:
+                news_flag = "fomc"
+            elif "cpi" in val_lower:
+                news_flag = "cpi"
+            elif "nfp" in val_lower or "nonfarm" in val_lower:
+                news_flag = "nfp"
+            elif "election" in val_lower:
+                news_flag = "election"
+            else:
+                news_flag = upcoming
+
     # Gate 1: Fabio confidence
     if fabio.confidence < FABIO_MIN_CONFIDENCE or fabio.direction == 'none':
         if fabio.confidence < FABIO_MIN_CONFIDENCE:
@@ -18,15 +34,15 @@ def build_consensus(fabio: FabioSignal, andrea: AndreaSignal) -> ConsensusSignal
             decision='no_trade',
             no_trade_reason=reason,
         )
-    # Gate 2: Andrea veto (Disabled!)
-    # if andrea.confidence < ANDREA_VETO_THRESHOLD or not andrea.confirmation:
-    #     return ConsensusSignal(
-    #         direction='none', entry=0, stop=0, target=0,
-    #         r_ratio=0, final_confidence=andrea.confidence,
-    #         fabio=fabio, andrea=andrea,
-    #         decision='no_trade',
-    #         no_trade_reason=f'andrea_veto (confirmation={andrea.confirmation}, conf={andrea.confidence})',
-    #     )
+    # Gate 2: Andrea veto
+    if andrea.confidence < ANDREA_VETO_THRESHOLD or not andrea.confirmation:
+        return ConsensusSignal(
+            direction='none', entry=0, stop=0, target=0,
+            r_ratio=0, final_confidence=andrea.confidence,
+            fabio=fabio, andrea=andrea,
+            decision='no_trade',
+            no_trade_reason=f'andrea_veto (confirmation={andrea.confirmation}, conf={andrea.confidence})',
+        )
 
     # Trade approved
     boost = 1.1 if andrea.confirmation else 1.0
@@ -168,4 +184,5 @@ def build_consensus(fabio: FabioSignal, andrea: AndreaSignal) -> ConsensusSignal
         andrea           = andrea,
         decision         = 'trade',
         no_trade_reason  = '',
+        news_flag        = news_flag,
     )

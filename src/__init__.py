@@ -18,8 +18,8 @@ NY_WINDOW_START_M       = 25
 NY_WINDOW_END_H         = 12
 NY_WINDOW_END_M         = 30
 FABIO_ACTIVE_H          = 9
-FABIO_ACTIVE_M          = 35
-IB_DURATION_MIN         = 60       # Fabio's/Yush's Initial Balance = first 60 min (RTH)
+FABIO_ACTIVE_M          = 55       # Trade attivi da 09:55 ET (pochi minuti prima che IVB sia completa)
+IB_DURATION_MIN         = 30       # IVB = prima mezz'ora RTH (09:30 - 10:00 ET)
 
 
 # ── Candidate detection ───────────────────────────────────────────────────────
@@ -62,6 +62,7 @@ class Bar:
     cvd: int             # cumulative session delta (analytics only)
     vwap: float
     big_trades: list = field(default_factory=list)  # list[Trade] size >= threshold
+    footprint: dict = field(default_factory=dict)  # Mapping from price level to {'bid': vol, 'ask': vol}
 
 @dataclass
 class VolumeProfile:
@@ -92,7 +93,17 @@ class SessionContext:
     day_type: str = 'unknown'  # 'trend_up'|'trend_down'|'balance'|'unknown'
     day_type_history: List[str] = field(default_factory=list)  # history of day_type over session
     session_memory: List[dict] = field(default_factory=list)  # chronological timeline of key session events (list of {'timestamp': datetime, 'text': str})
-
+    profile_shape: str = 'unknown'  # 'P'|'B'|'D'|'unknown'
+    # Market Structure Tracking
+    session_high: float = 0.0
+    session_low: float = float('inf')
+    last_swing_high: float = 0.0
+    last_swing_low: float = float('inf')
+    market_structure_state: str = 'Price Discovery (First Hour)' # e.g. 'pullback_down', 'hyperextended_up', etc.
+    last_pullback_dist: float = 0.0
+    # Expansive phase tracking
+    ib_breakouts_count: int = 0          # How many times IB has been broken this session
+    ib_first_breakout_dir: str = 'none'  # 'long'|'short'|'none' — direction of the FIRST IB breakout
 @dataclass
 class CandidateBar:
     bar: Bar
@@ -110,6 +121,7 @@ class CandidateBar:
     market_state: str = 'balance'  # 'balance'|'imbalance'
     poc_migration: str = 'flat'    # 'up'|'down'|'flat'
     auction_type: str = 'responsive' # 'responsive'|'initiative'
+    session_bias: str = 'none'     # 'long'|'short'|'none'
     upcoming_news: str = "No high-impact news in the vicinity."
     vwap: float = 0.0          # Current Intraday VWAP at this bar
     vwap_std_dev: float = 0.0  # VWAP Standard Deviation
@@ -132,6 +144,7 @@ class FabioSignal:
     target: Optional[float]
     setup_type: str            # 'squeeze'|'ivb_breakout'|'none'
     reasoning: str             # Claude's reasoning text
+    imbalance_phase: str = "none" # NEW: 'expansive'|'accumulation'|'none'
     market_narrative_update: str = "" # NEW: Continuous story update
     nlm_answer: str = ""            # raw NLM response
 

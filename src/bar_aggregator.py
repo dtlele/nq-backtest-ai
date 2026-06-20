@@ -64,6 +64,29 @@ def aggregate_to_bars(trades: list, freq: str = '1min') -> list:
             size=int(row['size'])
         )
         big_map.setdefault(ts_parent, []).append(bubble_trade)
+        
+    # --- FOOTPRINT AGGREGATION ---
+    # We also group all volume per price per bar to build the full footprint mapping
+    df['parent_floor'] = df.index.floor(freq)
+    # Ignore 'N' side for bid/ask split, but we can capture it. Usually 'B' is hit (bid), 'A' is lift (ask)
+    fp_grouped = df[df['side'] != 'N'].groupby(['parent_floor', 'price', 'side'])['size'].sum().reset_index()
+    footprint_map: dict = {}
+    for _, row in fp_grouped.iterrows():
+        ts_parent = row['parent_floor']
+        price = float(row['price'])
+        side = row['side']
+        size = int(row['size'])
+        
+        if ts_parent not in footprint_map:
+            footprint_map[ts_parent] = {}
+            
+        if price not in footprint_map[ts_parent]:
+            footprint_map[ts_parent][price] = {'bid': 0, 'ask': 0}
+            
+        if side == 'B':
+            footprint_map[ts_parent][price]['bid'] += size
+        elif side == 'A':
+            footprint_map[ts_parent][price]['ask'] += size
 
     bars = []
     for ts, row in agg.iterrows():
@@ -81,5 +104,6 @@ def aggregate_to_bars(trades: list, freq: str = '1min') -> list:
             cvd         = int(row['cvd']),
             vwap        = float(row['vwap']),
             big_trades  = big_map.get(ts, []),
+            footprint   = footprint_map.get(ts, {}),
         ))
     return bars
