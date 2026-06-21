@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Ivb Breakout Vs False Balance May01 (fabio)",
+    "trigger_conditions": [
+        "On a **balance day**, Fabio Valentini\u2019s model treats the Initial Volume",
+        "Breakout (IVB) edge as a critical decision point where the market either",
+        "transitions into **price discovery** or undergoes an **auction failure**. The",
+        "maximum confidence of **65** for the trade taken on May 1st indicates that the",
+        "setup reached his minimum threshold for execution by meeting specific"
+    ],
+    "outcome": "mechanical and order flow filters [1, 2]. ### **1. Valid IVB Breakout vs. False Attempt** The primary filter for a valid breakout on a balance day is **acceptance** outside the range established in the first 15\u201330 minutes of the New York session [3, 4]. *   **The Acceptance Rule (Body vs. Wick):** A valid breakout requires a **full-body candle close** decisively outside the IVB High or Low [5]. If the price pierces the level but produces a **wick (shadow)** and returns inside the range, it is cl...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_ivb_breakout_vs_false_balance_may01"
+}

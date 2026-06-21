@@ -67,13 +67,13 @@ def get_fingerprint_stats(candidate) -> str:
     avg_loss = (gross_loss / loss_count) if loss_count > 0 else 0.0
     
     alert = (
-        f"\\n\\n> [!WARNING]\\n"
-        f"> **STATISTICAL MEMORY ALERT**\\n"
-        f"> You have evaluated this exact market context ({fp}) {seen} times before.\\n"
+        f"\\n\\n> [!NOTE]\\n"
+        f"> **QUANTITATIVE MEMORY (HISTORICAL DATA)**\\n"
+        f"> You have evaluated this exact structural context ({fp}) {seen} times before.\\n"
         f"> Historical Results: {wins} Wins, {losses} Losses (Win Rate: {wr:.1f}%).\\n"
         f"> Profit Factor: {pf:.2f} | Total Net PnL: {total_pnl:.2f} USD (Avg PnL: {avg_pnl:.2f} USD).\\n"
         f"> Average Win: +{avg_win:.2f} USD | Average Loss: -{avg_loss:.2f} USD.\\n"
-        f"> -> USE THIS DATA to calibrate risk. A high Profit Factor means this setup generates outsized asymmetric returns."
+        f"> -> USE THIS DATA NEUTRALLY: Do NOT reject a trade just because it lost money in the past or has WR < 50%. This is purely for calibration."
     )
     return alert
 

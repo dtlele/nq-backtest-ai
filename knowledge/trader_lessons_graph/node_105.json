@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Andrea Balance Day Confirmation (andrea)",
+    "trigger_conditions": [
+        "On a \"balance\" day (D-shaped distribution), when the market is ranging and",
+        "Fabio identifies a squeeze at the edge, Andrea shifts from his standard IBOB",
+        "breakout rules to the **\"Break-In\" or \"Failed Auction\" model**. Because the day",
+        "is characterized by mean-reversion rather than price discovery, he does not",
+        "require a close outside the range; instead, he looks for a specific sequence of"
+    ],
+    "outcome": "**absorption followed by initiative back into the range** [1-3]. To confirm a failed auction on a balance day, Andrea looks for the following criteria: ### 1. The \"Poke\" and Volume Exhaustion Andrea first identifies an attempt to break out of the Initial Balance or Value Area edge [4, 5]. For the auction to \"fail,\" the volume must behave in a specific way: *   **Initial Effort:** There is often high participation during the initial move toward or slightly past the edge [4, 6]. *   **Exhaustion:*...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_andrea_balance_day_confirmation"
+}

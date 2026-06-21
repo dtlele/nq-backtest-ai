@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Max Daily Loss (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini utilizes several specific rules regarding maximum daily losses",
+        "and profit targets, which vary depending on market conditions (consolidation",
+        "vs. trending) and his current account performance.",
+        "### **Maximum Daily Loss (Daily Stop)**",
+        "Fabio mentions multiple figures and quantitative rules for stopping his trading"
+    ],
+    "outcome": "for the day to protect his capital: *   **Monetary Daily Stop:** In specific documented sessions, he sets a fixed maximum stop loss for the day of **$8,000** [1]. In other contexts, he mentions a maximum acceptable drawdown for the day of **$10,000** [2, 3]. *   **Percentage-Based Stop:** He states that his maximum daily loss in terms of percentage is **2%** of his account [4, 5]. *   **Trade-Count Rule:** Fabio often stops trading after **three to five consecutive losing trades** [5, 6]. His st...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_max_daily_loss"
+}

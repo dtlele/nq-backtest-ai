@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Andrea Minimum Rr (andrea)",
+    "trigger_conditions": [
+        "The minimum risk-to-reward (R:R) ratio required depends on the specific",
+        "strategy and the trader\u2019s expected win rate, but Andrea Cimi generally",
+        "considers a ratio of **1:1 to 1:1.5 to be \"completely fine\"** and a \"fine way",
+        "to trade\" [1, 2].",
+        "### **Minimum R:R Requirements**"
+    ],
+    "outcome": "While higher R:R ratios are preferred for professional setups, Cimi emphasizes that the target depends on the trade model: *   **High Win-Rate Strategies:** For traders with high accuracy (above 50%), a lower R:R of **1:1 to 1:1.5** is acceptable [2, 3]. *   **Mechanical IBOB Model:** The standard mechanical entry model typically targets a **1:2 R:R** [4, 5]. *   **Refined Orderflow Timing:** By using the 1-minute footprint to time entries and place tighter stops, traders can aim for **1:2 to 1:...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_andrea_minimum_rr"
+}

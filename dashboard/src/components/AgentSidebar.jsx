@@ -478,13 +478,31 @@ function ReasoningTimeline({ reasonings, onJump, timeZone }) {
   )
 }
 
-export default function AgentSidebar({ latestReasoning, openTrade, reasonings, onJump, timeZone, dayTrades = [], dayProposals = [] }) {
+export default function AgentSidebar({ latestReasoning, openTrade, reasonings, onJump, timeZone, dayTrades = [], dayProposals = [], activeTrade, onSelectTrade, activeDate }) {
   const [tab, setTab] = useState('agents') // 'agents' | 'log' | 'trade'
   const [selectedTrade, setSelectedTrade] = useState(null)
 
+  const prevOpenTradeTime = useRef(null)
+
+  useEffect(() => {
+    if (activeTrade) {
+      setTab('trade');
+      setSelectedTrade(activeTrade);
+    }
+  }, [activeTrade])
+
+  useEffect(() => {
+    if (openTrade && openTrade.entry_time && openTrade.entry_time !== prevOpenTradeTime.current) {
+      setTab('trade');
+      prevOpenTradeTime.current = openTrade.entry_time;
+    } else if (!openTrade && prevOpenTradeTime.current) {
+      prevOpenTradeTime.current = null;
+    }
+  }, [openTrade])
+
   useEffect(() => {
     setSelectedTrade(null)
-  }, [reasonings])
+  }, [activeDate])
 
   return (
     <div style={{

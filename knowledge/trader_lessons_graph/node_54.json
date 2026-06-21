@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Pre Market Levels Usage (fabio)",
+    "trigger_conditions": [
+        "Based on the sources, Fabio Valentini defines and utilizes the pre-market range",
+        "with specific mechanical rules that prioritize institutional context over",
+        "standalone execution.",
+        "### **Definition of the Pre-Market Range**",
+        "The pre-market range is generally defined as the **Extended Trading Hours"
+    ],
+    "outcome": "(ETH)**, which encompasses the price action occurring during the Asian and London sessions before the **09:30 AM EST New York cash open** [1, 2]. *   **The Window:** While he acknowledges specific sub-ranges like the \"Asian range\" (characterized as a low-probability \"gray box\"), he focuses on the total excursion (high and low) created during the overnight hours to identify where liquidity has been \"engineered\" before the New York battle begins [3, 4]. *   **Separation of Data:** He explicitly ke...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_pre_market_levels_usage"
+}

@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Pbd Shapes (andrea)",
+    "trigger_conditions": [
+        "Answer:",
+        "Andrea Cimi\u2019s **PBD method** is a trading framework rooted in **Auction Market",
+        "Theory (AMT)**. It categorizes market behavior into three distinct shapes\u2014P, B,",
+        "and D\u2014based on the relationship between **price discovery** (imbalance) and",
+        "**price acceptance** (balance) [1, 2]."
+    ],
+    "outcome": "### **1. The P-Shape (Bullish Context)** *   **Price Action:** A P-shape occurs when the market undergoes a **strong upward impulse** (price discovery) followed by a period of sideways consolidation at the higher levels [2, 3]. This consolidation signifies that both buyers and sellers have agreed that these new, higher prices represent **\"fair value\"** or **acceptance** [3, 4]. *   **Volume Profile:** It resembles a capital **\"P.\"** The vertical **\"stem\"** is a **low-volume area** because price ...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_pbd_shapes"
+}

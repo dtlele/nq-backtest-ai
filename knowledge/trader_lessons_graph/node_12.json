@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Effort Vs Result (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini\u2019s \"effort vs. result\" concept is rooted in **Volume Spread",
+        "Analysis (VSA)** and **Auction Market Theory**. It identifies market turning",
+        "points by analyzing the relationship between the volume entering the market",
+        "(effort) and the actual displacement of price (result) [1, 2].",
+        "### High Effort: Quantitative Thresholds"
+    ],
+    "outcome": "In Fabio\u2019s methodology, \"effort\" is quantified through institutional execution data filtered to remove retail noise. *   **The 'Big Trades' Filter:** On the NASDAQ (NQ), Fabio defines significant institutional effort using a specific contract size threshold: **30 contracts** per individual execution during the New York session and **20 contracts** during the London session [3, 4]. *   **Aggregated Clusters:** A \"wall\" or high-effort area is often identified when a cluster of these institutional ...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_effort_vs_result"
+}

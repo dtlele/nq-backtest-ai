@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Rr Ratio (andrea)",
+    "trigger_conditions": [
+        "Andrea does not define a single, rigid minimum risk-to-reward (R:R) ratio for",
+        "every trade; instead, the required ratio depends on the specific strategy and",
+        "the desired balance between win rate and profitability [1].",
+        "### **Standard R:R Thresholds**",
+        "*   **Mechanical Baselines:** For basic mechanical entry models, such as simple"
+    ],
+    "outcome": "range breakouts, Andrea often uses a **1:1 risk-to-reward ratio** as a baseline for statistical testing [2], [3]. *   **Standard Intraday Targets:** He frequently defines successful trade outcomes as reaching a **1:2 to 1:3 R:R ratio** [4], [5]. He notes that once a trade reaches these levels, there is often \"no need to force it\" further [5]. *   **Scalping Icebergs:** When trading very tight institutional levels like icebergs, he aims for higher ratios of **1:3 to 1:4** because the stop-loss is...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_rr_ratio"
+}

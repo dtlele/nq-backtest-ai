@@ -1,0 +1,13 @@
+{
+    "pattern_name": "World Cup Performance (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini discussed several specific statistics and outcomes from his",
+        "participation in the **Robbins World Cup trading championship**, highlighting",
+        "both his returns and the aggressive risk parameters required for the",
+        "competition.",
+        "### **Robbins World Cup Statistics and Returns**"
+    ],
+    "outcome": "*   **Performance Returns:** Fabio has ranked as a top trader in the championship **four times out of four** [1]. His documented quarterly returns include **69%**, almost **90%**, and more than **160%** [2]. *   **The 218% Peak:** In a notable 2024 performance, Fabio hit a peak of **218%** [3]. He was in first place on the final day, but was ultimately surpassed by a friend (Don Nadrian) in the final audit, finishing in second place with 218% against Nadrian\u2019s 223% [3, 4]. *   **Total Performanc...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_world_cup_performance"
+}

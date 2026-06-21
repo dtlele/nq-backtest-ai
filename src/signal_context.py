@@ -439,12 +439,12 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
         question += "You must check how levels reacted earlier today to avoid traps (e.g. do not short a level that was strongly rejected twice already):\n"
         question += "\n".join(f"- {line}" for line in struc_mem)
 
-    if session_context:
-        question += "\n\n## Session Context (your prior analyses today)\n"
-        question += "\n".join(session_context)
-        
-    if market_narrative:
-        question += f"\n\n## Current Market Narrative (Your continuous story of the day)\n{market_narrative}\n"
+    # if session_context:
+    #     question += "\n\n## Session Context (your prior analyses today)\n"
+    #     question += "\n".join(session_context)
+    #     
+    # if market_narrative:
+    #     question += f"\n\n## Current Market Narrative (Your continuous story of the day)\n{market_narrative}\n"
         
     if bars_since_last:
         question += f"\n\n## What happened since your last evaluation:\n"
@@ -486,6 +486,62 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
     # Inject Macroeconomic News
     if getattr(candidate, 'upcoming_news', None):
         question += f"\n\n## UPCOMING MACROECONOMIC NEWS CALENDAR\n{candidate.upcoming_news}\n"
+
+    # --- TRINITY TRIGGER CONTEXT ---
+    def get_bar_poc(b: Bar) -> float:
+        if not b.footprint:
+            return (b.high + b.low) / 2.0
+        best_p = 0.0
+        max_v = -1
+        for p_str, vols in b.footprint.items():
+            try:
+                v = vols.get('bid', 0) + vols.get('ask', 0)
+                if v > max_v:
+                    max_v = v
+                    best_p = float(p_str)
+            except Exception:
+                pass
+        return best_p if best_p > 0 else (b.high + b.low) / 2.0
+
+    if m1_bars and len(m1_bars) >= 3:
+        b0 = m1_bars[-1]
+        b1 = m1_bars[-2]
+        b2 = m1_bars[-3]
+        poc0 = get_bar_poc(b0)
+        poc1 = get_bar_poc(b1)
+        poc2 = get_bar_poc(b2)
+        
+        trinity_context = (
+            "## TRINITY TRIGGER CONTEXT (M1 Micro-structure)\n"
+            "Evaluate if the current M1 bar provides a valid Trinity Trigger entry confirmation:\n"
+            f"- Current M1 Body: Open={b0.open}, Close={b0.close} -> {'Bearish' if b0.close < b0.open else 'Bullish' if b0.close > b0.open else 'Doji'}\n"
+            f"- Current M1 Delta: {b0.delta}\n"
+            f"- POC sequence (Current vs Prev 2): {poc0} vs {poc1}, {poc2} -> "
+            f"({'Engulfing DOWN' if poc0 < poc1 and poc0 < poc2 else 'Engulfing UP' if poc0 > poc1 and poc0 > poc2 else 'Mixed/Choppy'})\n"
+            "REQUIREMENT: For a precision entry, the M1 candle must ideally have the body aligned with the trade, an expansive delta, and an engulfing POC. If the micro-structure is completely misaligned, it may be a fakeout. You must reason about this before entering.\n"
+        )
+        question += f"\n\n{trinity_context}"
+
+    # --- POST-LOSS WARNING ---
+    if ctx.session_memory:
+        for mem in reversed(ctx.session_memory):
+            text = mem.get('text', '')
+            if 'Closed' in text and '(Loss:' in text:
+                mem_time = mem.get('timestamp')
+                if mem_time:
+                    time_since = (bar.timestamp - mem_time).total_seconds() / 60.0
+                    if time_since < 15:
+                        post_loss_warning = (
+                            f"### 🚨 CRITICAL POST-LOSS WARNING 🚨\n"
+                            f"You recently suffered a STOP LOSS ({time_since:.1f} minutes ago): {text}\n"
+                            f"BEFORE YOU OPEN A NEW TRADE, YOU MUST EXPLICITLY REASON ABOUT WHY IT FAILED in your logic.\n"
+                            f"- Did you enter too late (chasing an extended move)?\n"
+                            f"- Was it a fakeout or lack of institutional follow-through?\n"
+                            f"DO NOT take a new trade in the same direction unless you have a completely fresh, high-conviction structural confirmation. "
+                            f"Do NOT revenge trade inside the same candle zone!\n"
+                        )
+                        question += f"\n\n{post_loss_warning}"
+                break  # Only care about the most recent closed trade
 
     return question
 

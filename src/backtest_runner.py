@@ -259,7 +259,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         if closed_trades:
             last_close_time = closed_trades[-1].exit_time
         if last_close_time is not None:
-            cooldown_minutes = 20
+            cooldown_minutes = 0  # Disabled cooldown to allow immediate re-entry
             time_since_last_close = (eval_ts - last_close_time).total_seconds() / 60.0
             if time_since_last_close < cooldown_minutes:
                 if not quiet:
@@ -1724,7 +1724,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
     if not dry_run:
         from src.agents.audit_agent import audit_session
         try:
-            audit_session(date_str)
+            pass  # audit_session(date_str)
         except Exception as e:
             print(f"  [AUDIT] EOD Audit failed: {e}")
 

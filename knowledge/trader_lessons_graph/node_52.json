@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Cvd In Simplified Model (fabio)",
+    "trigger_conditions": [
+        "Answer:",
+        "In Fabio Valentini\u2019s methodology, the **Simplified Model** is designed to avoid",
+        "the \"information overload\" that often paralyzes beginners when looking at",
+        "multiple order flow data points [1, 2]. While CVD is a powerful component of",
+        "his personal \"alpha,\" it is treated differently depending on the complexity of"
+    ],
+    "outcome": "the setup. ### **CVD: Simplified vs. Advanced** The **Simplified Model** (specifically the IVB Model 1 and Model 2) does **not** strictly require CVD [3-6]. Instead, it focuses on the **Initial Volume Breakout (IVB)**, **Volume Profile framing**, and the **\"Big Trades\" (bubbles)** indicator [6, 7]. *   **Simplified Application:** Beginners are encouraged to ignore CVD and focus on the **Location** (Value Area edges/LVNs) and the **Trigger** (Big Trade bubbles in the candle body or on wicks) [1, ...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_cvd_in_simplified_model"
+}

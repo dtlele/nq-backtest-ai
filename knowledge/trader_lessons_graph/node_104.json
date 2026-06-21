@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Andrea Overnight Gap Va (andrea)",
+    "trigger_conditions": [
+        "For the overnight gap strategy, Andrea Cimi uses the following parameters based",
+        "on the sources:",
+        "### **1. Previous Day Value Area (VA) Computation**",
+        "The \"previous day VA\" is computed from **(a) only the NY cash session",
+        "(09:30\u201316:00)**, which is also referred to as **(c) the RTH (Regular Trading"
+    ],
+    "outcome": "Hours)** [1, 2]. *   **Rationale:** Cimi explicitly separates the volume profile of the cash session from the extended trading hours (Asian and London sessions) [1, 3]. *   **Specific Rule:** He states that you should \"consider the value areas of the volume profile of the cash session instead of the entirety of the session\" because those are the areas that respond best for price action and breakout ideas [3, 4]. ### **2. Close Price for Gap Calculation** The close price used to determine the gap...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_andrea_overnight_gap_va"
+}

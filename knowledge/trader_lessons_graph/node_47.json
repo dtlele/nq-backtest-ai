@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Composite Vs Session Vp (fabio)",
+    "trigger_conditions": [
+        "In Fabio Valentini\u2019s model, the **90-day composite profile** serves primarily",
+        "as the **macro framework** for determining bias and identifying where the most",
+        "significant long-term capital is stationed, but it interacts dynamically with",
+        "intraday levels for setting targets [1, 2].",
+        "### **Which Level Matters for a Squeeze Target?**"
+    ],
+    "outcome": "If today\u2019s developing Point of Control (POC) is at 20100 and the 90-day composite POC is at 19950, the **developing POC typically matters most for an immediate intraday squeeze target** [3]. *   **Intraday Magnet:** Fabio explicitly states that in a range-bound or mean-reverting environment, the **POC of the current session** is the \"ultimate magnet\" and the best level to exit a trade [3, 4]. *   **Previous Session Hierarchy:** After the current session's POC, he looks to the **previous day\u2019s PO...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_composite_vs_session_vp"
+}

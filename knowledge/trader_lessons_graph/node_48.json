@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Vp Includes Overnight (fabio)",
+    "trigger_conditions": [
+        "In Fabio Valentini\u2019s model, the session Volume Profile (VP) and the Initial",
+        "Volume Breakout (IVB) are computed using specific session parameters designed",
+        "to capture institutional intent.",
+        "### **Session VP Computation: Cash Session Only**",
+        "Fabio explicitly uses only the **New York cash session data (09:30\u201316:00 EST)**"
+    ],
+    "outcome": "when computing his session volume profile for US indices like the NASDAQ [1, 2]. *   **Reasoning:** He notes that the cash session holds the maximum amount of volume for the day, representing the \"peak of interest\" where the strongest battle between institutional buyers and sellers occurs [3, 4]. *   **Statistical Validation:** His research suggests that for US indices, adding data from the Asian or London sessions (Extended Trading Hours/ETH) is \"not so valuable\" for the profile because the vol...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_vp_includes_overnight"
+}

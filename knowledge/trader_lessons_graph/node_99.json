@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Losing Trade Characteristics (andrea)",
+    "trigger_conditions": [
+        "In Andrea Cimi\u2019s system, a losing trade is viewed not as a failure, but as a",
+        "statistical necessity or a \"gold mine\" for learning, provided the trader",
+        "followed their plan [1]. He distinguishes between \"good\" stop losses (where the",
+        "setup was valid but the market didn't follow through) and \"bad\" stop losses",
+        "caused by lack of focus or mechanical errors [1, 2]."
+    ],
+    "outcome": "Based on the sources, here is what a losing trade looks like, what typically goes wrong in retrospect, and the real-time signals that indicate a trade is failing. ### **What a Losing Trade Looks Like** A losing trade occurs when the market invalidates the \"business zone\" or fair value thesis. *   **Failed Break-in:** In a PBD setup, if price closes back inside a range (the \"break-in\") but immediately reverses and breaks the opposite side of the range, the trade is dead [3, 4]. *   **Reference Po...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_losing_trade_characteristics"
+}

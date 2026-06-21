@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Failed Auction Is The Setup (fabio)",
+    "trigger_conditions": [
+        "In Fabio Valentini\u2019s simplified approach, a **failed auction at the IVB edge**",
+        "is indeed a valid standalone entry that does **not** require waiting for a",
+        "\"second drive,\" because it belongs to a different operational logic: the **Mean",
+        "Reversion (Inversion) Model** [1, 2].",
+        "While the **Trend Following Model** requires a second drive to confirm"
+    ],
+    "outcome": "\"acceptance\" of new prices, the **Mean Reversion Model** capitalizes on the market's **rejection** of those prices and its subsequent return to \"Fair Value\" (the Point of Control or POC) [1, 3]. The exact conditions for this standalone entry are: ### **1. Location: The Range Periphery** The setup is only valid at the absolute extremes of the session's balance. This means the price must be interacting with the **Initial Volume Breakout (IVB) High/Low** or the **Value Area High/Low (VAH/VAL)** [4,...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_failed_auction_is_the_setup"
+}

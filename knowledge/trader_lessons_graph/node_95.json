@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Institutional Activity (andrea)",
+    "trigger_conditions": [
+        "Andrea identifies institutional activity (Smart Money) by looking for the",
+        "\"anatomy and physiology\" of price movements through Market By Order (MBO) data,",
+        "which allows him to distinguish between one large institutional order and many",
+        "small retail orders [1-3]. He characterizes retail activity as \"noise\" because",
+        "it accounts for only about 5% of total daily volume, whereas the remaining 95%"
+    ],
+    "outcome": "is driven by a small number of large participants like banks, hedge funds, and pension funds [4, 5]. ### **Institutional Contract Sizes and Filters** To isolate \"Smart Money\" from retail noise, Andrea uses specific volume and contract size filters: *   **NQ (Nasdaq) Filter:** While Andrea primarily trades the ES, he mentions that institutional signatures on the NQ are often isolated by focusing on \"big trades\" rather than standard footprints [6]. (Note: Although specific NQ filter sizes were dis...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_institutional_activity"
+}

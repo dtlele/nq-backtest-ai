@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Squeeze Setup Andrea (andrea)",
+    "trigger_conditions": [
+        "Andrea Cimi does trade setups involving \"trapped\" participants, though he",
+        "typically refers to these dynamics as **\"stop runs,\" \"book sweeping,\"** or",
+        "**\"failed auctions\"** rather than just \"squeezes\" [1, 2]. He views these events",
+        "as moments where aggressive stop orders (which act as market orders) \"sweep\"",
+        "the resting liquidity in the order book, creating a fast, vertical move [1, 3]."
+    ],
+    "outcome": "### **Andrea\u2019s \"Squeeze\" Logic (Failed Auction/Stop Run)** In Andrea's methodology, a squeeze or stop run is identified by specific order flow signatures: *   **The Signature:** A candle that \"sweeps\" the book often shows **zeros (0)** on one side of the footprint (e.g., the right side during a sell-stop run) because the price moves too fast for the auction to match orders [4, 5]. *   **Delta and Volume:** These moves are characterized by **extreme Delta (often >50%)** and high volume, represent...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_squeeze_setup_andrea"
+}

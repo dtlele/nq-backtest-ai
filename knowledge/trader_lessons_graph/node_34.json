@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Win Rate By Setup (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini provides specific win rate statistics and performance data for",
+        "his trading setups, categorizing them by \"grade\" based on their statistical",
+        "probability.",
+        "### **Win Rates and Setup Grades**",
+        "Fabio classifies his setups from A to C using **dynamic risk management**,"
+    ],
+    "outcome": "assigning different statistical expectations to each: *   **A Setup (Triple A):** This represents the **highest statistical edge** Fabio can find in the NASDAQ market [1]. While he does not give a specific percentage for the \"A\" grade in every transcript, he notes it is the most consistent [1, 2]. *   **B Setup:** Fabio identifies these as having a win rate of approximately **50%** [3]. *   **C Setup:** These setups are often taken outside core trading hours or are counter-trend. He assigns them...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_win_rate_by_setup"
+}

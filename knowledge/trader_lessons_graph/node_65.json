@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Value Area Definition (andrea)",
+    "trigger_conditions": [
+        "The Value Area (VA) is defined by exactly **70%** (rounded from the statistical",
+        "first standard deviation of 68%) of the total volume traded within a specific",
+        "sample of data [1], [2]. Andrea Cimi uses this statistical concept to",
+        "distinguish between \"fair price\" and \"statistical anomalies\" [3], [1].",
+        "### Definitions of Key Concepts"
+    ],
+    "outcome": "*   **Value Area High (VAH) and Value Area Low (VAL):** These represent the **upper and lower boundaries of the first standard deviation** [4], [5]. Prices inside this range are considered \"fair value\" where the market is in balance [6], [7]. *   Prices **above the VAH** are considered \"premium prices\" where smart money prefers to sell [8]. *   Prices **below the VAL** are considered \"cheap prices\" where smart money prefers to buy [8]. *   **Point of Control (POC):** This is the specific price l...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_value_area_definition"
+}

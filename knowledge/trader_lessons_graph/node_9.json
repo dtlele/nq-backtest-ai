@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Trapped Sellers (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini identifies **trapped sellers** through a combination of",
+        "**Auction Market Theory (AMT)** and the **Law of Effort vs. Results** (derived",
+        "from Volume Spread Analysis). He specifically looks for instances where",
+        "aggressive participants attempt to push the market lower but fail to find price",
+        "acceptance at those new levels [1-3]."
+    ],
+    "outcome": "### How Fabio Identifies Trapped Sellers The identification process relies on spotting **absorption** at significant price levels, such as the low of a range or a historical volume node [1, 4, 5]. *   **Failed Aggression (The \"Punch to the Wall\"):** Sellers \"strike\" a level with high volume, but the price fails to break through a wall of passive limit orders [1, 6, 7]. *   **Divergent Narratives:** Using his **\"Deep Trades\"** filter (typically set to 30 contracts on NQ), Fabio looks for clusters...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_trapped_sellers"
+}

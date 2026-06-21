@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Entry Pbd B (andrea)",
+    "trigger_conditions": [
+        "A **B-shape setup** in Andrea Cimi\u2019s methodology represents a bearish context",
+        "where a sharp downward impulse (price discovery) is followed by a period of",
+        "sideways consolidation (acceptance/fair value) at the lower levels [1, 2].",
+        "The following are the exact step-by-step rules for executing this setup:",
+        "### **Step 1: Market Context and Formation**"
+    ],
+    "outcome": "Before considering an entry, you must identify a completed B-shape structure. This consists of a vertical **\"stem\"**\u2014a fast move down that creates a **low volume node**\u2014followed by a **\"belly\"** or a high-volume node where price consolidates [1, 3]. In this \"belly,\" the market agrees on a new fair valuation, with approximately **70% of the volume** traded within this range [4, 5]. ### **Step 2: The Deviation (Failed Auction)** You look for a **statistical anomaly** where price attempts to auctio...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_entry_pbd_b"
+}

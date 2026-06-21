@@ -143,6 +143,7 @@ export default function App() {
           dayProposals={dayProposals}
           activeTrade={activeTrade}
           onSelectTrade={handleSetActiveTrade}
+          activeDate={activeDate}
         />
       </div>
 

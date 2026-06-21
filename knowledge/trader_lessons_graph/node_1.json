@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Squeeze Entry Trigger (fabio)",
+    "trigger_conditions": [
+        "For Fabio Valentini, the **squeeze** is the explosive phase of a trade that",
+        "occurs when trapped participants are forced to liquidate their positions. The",
+        "exact entry trigger is not a single event but a sequence that requires",
+        "**positioning**, **aggressive momentum**, and **auction completion**.",
+        "While he occasionally uses aggressive stop orders at the break of a level, his"
+    ],
+    "outcome": "\"premium\" trigger for a confirmed squeeze trade requires a **full-body candle close** outside of a predefined range to ensure the market has accepted the new price levels. ### Step-by-Step Entry Rules for a Squeeze Trade #### 1. Identify the Trap (Preparation) Before the trigger, Valentini identifies an area where aggressive participants are hitting a \"wall\" (absorption). For a long squeeze, he looks for sellers striking a level with high volume but failing to push the price lower [1-3]. *   **S...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_squeeze_entry_trigger"
+}

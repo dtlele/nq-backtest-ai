@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Toxic Flow (andrea)",
+    "trigger_conditions": [
+        "In Andrea Cimi\u2019s vocabulary, **toxic flow** refers to a market condition",
+        "characterized by a surge of aggressive, unpredictable orders that cause",
+        "**market makers to withdraw liquidity** from the order book [1, 2]. Because",
+        "market makers are less willing to provide inventory during these periods, the",
+        "order books become **\"way thinner than usual,\"** leading to extreme volatility"
+    ],
+    "outcome": "and erratic price movements [2]. ### Characteristics of Toxic Flow *   **CVD and Price Behavior:** Toxic flow is identified by **\"very fast moves\"** that lack sustained participation and are almost immediately **reabsorbed or rejected** [3, 4]. Cimi notes that in these environments, you will see \"low down ticks\" and \"fast moves up\" that quickly snap back, as the thin liquidity allows price to be pushed easily but without real institutional follow-through [3, 5]. *   **Volume Levels:** This condi...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_toxic_flow"
+}

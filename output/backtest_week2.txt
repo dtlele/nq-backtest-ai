@@ -1,0 +1,70 @@
+[NEWS MANAGER] Loaded 33 high-impact events.
+  [STRATEGY] Active strategy file set to: C:\Users\Mauro\Documents\nq-backtest\strategies\fabio_andrea_hybrid.json
+  [INIT] Clearing previous active session state...
+  [INIT] Listing data from: C:\Users\Mauro\Documents\databento-data
+  [INIT] Total files found in directory: 284
+  [FILTER] Range 20250129 to None: Kept 260 files.
+  [LIMIT] Applied max_days=5: Processing 5 files.
+  [MARKER] run_start_marker.json aggiornato: 2025-01-29 → 2025-02-03
+  [INIT] Preserved existing trades, selectively cleared entries for dates: ['2025-01-29', '2025-01-30', '2025-01-31', '2025-02-02', '2025-02-03']
+  [INIT] Preserved existing reasonings, selectively cleared entries for dates: ['2025-01-29', '2025-01-30', '2025-01-31', '2025-02-02', '2025-02-03']
+Processing (C:\Users\Mauro\Documents\databento-data\glbx-mdp3-20250129.trades.csv)...
+  [SKIPPED] 2025-01-29 is a Blackout Day due to: FOMC Statement & Fed Interest Rate Decision. No trading allowed.
+  -> 0 trades
+Processing (C:\Users\Mauro\Documents\databento-data\glbx-mdp3-20250130.trades.csv)...
+  [SKIPPED] 2025-01-30 is Thursday (WR 29.2%, net -$165.70 historically). Saving API calls.
+  -> 0 trades
+Processing (C:\Users\Mauro\Documents\databento-data\glbx-mdp3-20250131.trades.csv)...
+  Aggregating 1-minute bars...
+
+  [CANDIDATE] 14:55 UTC | IMBALANCE_HUNTING | wall=21857.25 (bid) | near=imbalance_zone_m1 @ 21861.00
+  [FABIO V3] predatory analysis...   [IGNITION VETO] -> SKIP | INSIDE IB (21765.00-21872.25): accumulation/balance phase. C
+
+  [CANDIDATE] 14:56 UTC | IMBALANCE_HUNTING | wall=21857.25 (ask) | near=imbalance_zone_m1 @ 21851.00
+  [FABIO V3] predatory analysis...   [IGNITION VETO] -> SKIP | INSIDE IB (21765.00-21872.25): accumulation/balance phase. C
+
+  [CANDIDATE] 14:57 UTC | IMBALANCE_HUNTING | wall=21865.00 (ask) | near=imbalance_zone_m1 @ 21838.75
+  [FABIO V3] predatory analysis...   [IGNITION VETO] -> SKIP | INSIDE IB (21765.00-21872.25): accumulation/balance phase. C
+
+  [CANDIDATE] 14:58 UTC | IMBALANCE_HUNTING | wall=21830.00 (ask) | near=imbalance_zone_m1 @ 21845.50
+  [FABIO V3] predatory analysis...   [IGNITION VETO] -> SKIP | INSIDE IB (21765.00-21872.25): accumulation/balance phase. C
+
+  [CANDIDATE] 14:59 UTC | IMBALANCE_HUNTING | wall=21857.50 (ask) | near=imbalance_zone_m1 @ 21868.25
+  [FABIO V3] predatory analysis...   [IGNITION VETO] -> SKIP | INSIDE IB (21765.00-21872.25): accumulation/balance phase. C
+
+  [CANDIDATE] 15:00 UTC | IMBALANCE_HUNTING | wall=21900.00 (bid) | near=imbalance_zone @ 21899.75
+  [FABIO V3] predatory analysis...   [IGNITION VETO] -> SKIP | OUTSIDE IB but NO confirmed ignition bar found (no bar had d
+
+  [CANDIDATE] 15:01 UTC | IMBALANCE_HUNTING | wall=21876.75 (bid) | near=imbalance_zone_m1 @ 21893.00
+  [FABIO V3] predatory analysis...   [IGNITION VETO] -> SKIP | OUTSIDE IB but NO confirmed ignition bar found (no bar had d
+
+  [CANDIDATE] 15:02 UTC | IMBALANCE_HUNTING | wall=21900.00 (bid) | near=imbalance_zone_m1 @ 21901.50
+  [FABIO V3] predatory analysis...   [IGNITION VETO] -> SKIP | OUTSIDE IB but NO confirmed ignition bar found (no bar had d
+
+  [CANDIDATE] 15:03 UTC | IMBALANCE_HUNTING | wall=21900.00 (bid) | near=imbalance_zone_m1 @ 21903.25
+  [FABIO V3] predatory analysis...   [IGNITION VETO] -> SKIP | OUTSIDE IB but NO confirmed ignition bar found (no bar had d
+
+  [CANDIDATE] 15:04 UTC | IMBALANCE_HUNTING | wall=21900.00 (bid) | near=imbalance_zone_m1 @ 21899.75
+  [FABIO V3] predatory analysis...   [IGNITION VETO] -> SKIP | OUTSIDE IB but NO confirmed ignition bar found (no bar had d
+
+  [CANDIDATE] 15:06 UTC | IMBALANCE_HUNTING | wall=21905.00 (ask) | near=imbalance_zone_m1 @ 21894.00
+  [FABIO V3] predatory analysis...   [DEBUG] llm_ask using provider: openrouter (model: None)
+dir=none conf=0 setup=none
+         entry=None stop=None target=None
+         reason: The current price action and order flow do not present a clear Triple A setup. The market is in an expansive phase following an IB breakout, but there is no confirmed institutional absorption or strong initiative Big Trades to justify an entry. The delta is mixed, and the price is not pulling back to a key level with clear absorption signals.
+
+[Analisi Aggiuntiva]
+- Profilo AMT: Initiative Breakout
+- Macro Regime: Trend Day
+- Footprint (Trapped): Trapped sellers from earlier in the session were released as price moved lower, negating any long bias from that trap. No new trapped participants are evident in the recent order flow.
+- Audit Fase Temporale:
+  q1_time_window_validity_score: 100%
+  q2_kill_zone_caution_score: 100%
+  q3_rni_initiative_score: 50%
+  q4_trend_alignment_score: 100%
+  q5_entry_precision_score: 0%
+- Note Classificazione Giornata: Trend Day with early expansion phase. Monitoring for potential continuation or consolidation.
+  [DECISION] NO_TRADE - fabio_confidence=0 < 75
+
+  [CANDIDATE] 15:07 UTC | IMBALANCE_HUNTING | wall=21905.00 (ask) | near=imbalance_zone_m1 @ 21895.00
+  [FABIO V3] predatory analysis...   [DEBUG] llm_ask using provider: openrouter (model: None)

@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Initiative Vs Response (andrea)",
+    "trigger_conditions": [
+        "The **R&I (Response and Initiative) cycle** is a professional orderflow",
+        "framework used to identify high-probability reversals by tracking the",
+        "transition from **absorption** to **aggressive price discovery** [1, 2].",
+        "### **1. What is the R&I Cycle?**",
+        "The cycle consists of two distinct phases that represent a \"war between big"
+    ],
+    "outcome": "fishes\" (institutional participants) [2]: *   **Response Phase:** A period of **responsiveness and absorption** [2]. In a sell setup, for example, aggressive buyers attempt to push price higher but are met by a large institutional participant using passive limit orders to \"soak up\" all the buying pressure [2]. *   **Initiative Phase:** The follow-through where the dominant side takes control with **high aggression and imbalances**, driving the auction rapidly away from the balanced area [1, 2]. ...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_initiative_vs_response"
+}

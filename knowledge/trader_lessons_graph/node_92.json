@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Day Type Classification (andrea)",
+    "trigger_conditions": [
+        "Andrea Cimi classifies the market state based on **Auction Market Theory**,",
+        "categorizing days into three primary types: **balanced**, **trending",
+        "(imbalanced)**, and **volatile/toxic** [1-3]. He determines which mode to",
+        "operate in by analyzing early session signals such as the **Opening Auction**,",
+        "**participation volume**, and the formation of **P, B, or D shapes** on the"
+    ],
+    "outcome": "volume profile [4-6]. ### **1. Classification of Day Types** *   **Balanced (D-Shape):** This occurs when market participants agree on a **\"fair price\"** or fair value [2, 7, 8]. In this state, price spends significant time in a range, creating a **High Volume Node (HVN)** [9, 10]. Andrea views this as a \"business zone\" where aggressive buyers and sellers are in equilibrium [8, 11]. *   **Trending/Directional (P or B-Shape):** These days are characterized by **\"price discovery,\"** where the mark...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_day_type_classification"
+}

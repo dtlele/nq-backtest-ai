@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Avoid Times (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini follows strict protocols regarding when and under what",
+        "conditions he refuses to engage with the market, prioritizing statistical",
+        "probability and capital preservation.",
+        "### **Time-Based Avoidance**",
+        "*   **The Pre-Open and \"3:30 PM Shakeout\":** Fabio avoids trading 10 to 20"
+    ],
+    "outcome": "minutes before the New York cash open (3:30 PM European time/9:30 AM EST) [1]. He describes this period as \"trying to catch a falling knife\" because the market often liquidates the high and low of the range within the first 10 minutes without establishing a clear direction [1, 2]. *   **The Initial 30 Minutes:** He generally waits for the first **15 to 30 minutes** of the session to conclude to define the **Initial Volume Breakout (IVB)** range before looking for setups [3-5]. *   **Lunch Time:*...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_avoid_times"
+}

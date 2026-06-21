@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Vp Session Scope (fabio)",
+    "trigger_conditions": [
+        "Based on the provided sources, Fabio Valentini\u2019s trade decisions are driven by",
+        "**(d) a combination** of different Volume Profiles (VP). He utilizes a",
+        "multi-layered approach that integrates long-term context, the previous day's",
+        "structure, and the real-time development of the current session.",
+        "Here is the breakdown of which VP is used for each decision:"
+    ],
+    "outcome": "### **1. Determining Day Type (Balance/Trend)** This decision is primarily a comparison between the **Previous NY Cash Session VP** and the **Developing VP of the Current Session**. *   **The Comparison:** Fabio looks at whether the current price is building value within or outside the previous day\u2019s Value Area (VA) [1]. *   **Balance Signal:** If the developing VP shows significant **overlap** with the previous day\u2019s VA, the day is classified as stationary or a \"Balance Day\" [1]. *   **Trend Si...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_vp_session_scope"
+}

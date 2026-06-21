@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Targets High Volatility (fabio)",
+    "trigger_conditions": [
+        "In high-volatility sessions and strong trend days, Fabio Valentini shifts his",
+        "approach from securing \"base hits\" to seeking **asymmetric, high-multiplier",
+        "returns**. While he normally targets consistent R:R ratios of 1:2.5 to 1:3,",
+        "high-volatility environments allow him to utilize the market's momentum to",
+        "reach for targets that offer **1:10 to 1:20 R:R** [1-3]."
+    ],
+    "outcome": "Here is how Fabio\u2019s target selection and strategy change during these sessions: ### 1. Shift from \"Protection Levels\" to \"Extended Averages\" Normally, Fabio aims for the **\"Protection Level\" (TP1)**, which his algorithm identifies as having a 65\u201370% probability of being reached [4]. In high-volatility sessions, his focus shifts toward the **\"Extended Average\" or \"TP2\"** [4, 5]. *   **Volatile Discovery:** He notes that during sessions like post-NFP or CPI, the market exits equilibrium and enters...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_targets_high_volatility"
+}

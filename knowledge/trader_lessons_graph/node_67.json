@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Balance Vs Imbalance (andrea)",
+    "trigger_conditions": [
+        "Andrea Cimi defines **balance and imbalance** as the two fundamental phases of",
+        "an auction, representing either agreement or a search for new value [1], [2].",
+        "### **Balance (Fair Value)**",
+        "*   **Definition:** A balanced market occurs when buyers and sellers agree that",
+        "a specific price range represents **\"fair value\"** [1], [2]. In this phase,"
+    ],
+    "outcome": "neither aggressive buyers nor aggressive sellers are dominant enough to drive price away from this area [2]. *   **Price Behavior:** The market exhibits **sideways consolidation** or ranging behavior [3], [4]. Because the market participants are in agreement, price spends a significant amount of time in this range, which creates a **High Volume Node (HVN)** on the volume profile [4], [5]. *   **Statistical Shape:** Statistically, a balanced auction follows a **Gaussian (normal) distribution**, f...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_balance_vs_imbalance"
+}

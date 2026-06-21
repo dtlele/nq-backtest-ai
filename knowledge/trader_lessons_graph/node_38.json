@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Balance Vs Failed Auction (fabio)",
+    "trigger_conditions": [
+        "In Fabio Valentini\u2019s simplified model, a failed auction at the edge of the",
+        "**Initial Volume Breakout (IVB)** range does indeed \"override\" the general rule",
+        "that balance days have no edge. While his primary **Trend Following Model**",
+        "remains inactive during consolidation, a **Mean Reversion/Squeeze Model**",
+        "activates specifically when the market reaches the periphery of balance and"
+    ],
+    "outcome": "shows institutional failure [1, 2]. The following are the exact conditions that distinguish a non-tradeable balance day from a tradeable squeeze opportunity: ### **1. The Non-Tradeable Balance Day: Trading in the \"Middle\"** A balance day is strictly \"no-trade\" when it lacks the necessary location or institutional participation to provide an edge: *   **The \"Middle\" Trap:** Fabio explicitly forbids trading in the center of the range or between the IVB high and low, calling it a \"zone of chop\" whe...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_balance_vs_failed_auction"
+}

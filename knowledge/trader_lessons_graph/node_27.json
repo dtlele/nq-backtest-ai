@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Position Building (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini\u2019s **\"position building\"** technique is a core component of his",
+        "risk management, designed to minimize drawdowns and lower emotional pressure by",
+        "only increasing exposure once a \"buffer\" of profit is established [1, 2].",
+        "### Starting Small and Fragmenting Orders",
+        "Fabio typically begins a trading session \"low and chill,\" using smaller"
+    ],
+    "outcome": "position sizes than his maximum capacity [3, 4]. *   **Initial Size:** He often starts with a small number of contracts (e.g., two contracts) to \"warm up\" the session [5, 6]. *   **Order Fragmentation:** Instead of entering his entire intended size at a single price, he **fragments his orders** (entering \"one here, one here\") [5, 7, 8]. This allows him to achieve a better average entry price and adjust his risk dynamically as the market reacts to institutional levels [5, 9]. ### Increasing Size:...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_position_building"
+}

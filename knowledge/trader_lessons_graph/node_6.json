@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Ib Bias (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini uses the **Initial Volume Breakout (IVB)**\u2014his term for the",
+        "Initial Balance\u2014to determine the winner of the most important battle of the",
+        "day: the New York cash session opening [1, 2].",
+        "### Determining Daily Directional Bias",
+        "Fabio defines the IVB range using the first **30 minutes** of the New York"
+    ],
+    "outcome": "session (09:30 to 10:00 EST) [1, 3]. He uses a volume profile to identify the **Point of Control (POC)**\u2014the price level within that 30-minute range where the most volume was transated [3, 4]. *   **The Breakout Rule:** The direction of the bias is established by which side of the 30-minute range is broken first. A breakout above the IVB high suggests a bullish bias, while a breakout below the IVB low suggests a bearish bias [2, 3]. *   **Acceptance vs. Rejection:** A bias is only confirmed when...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_ib_bias"
+}

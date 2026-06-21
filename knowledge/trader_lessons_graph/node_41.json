@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Counter Trend On Trend Day (fabio)",
+    "trigger_conditions": [
+        "Answer:",
+        "In Fabio Valentini\u2019s simplified model, taking a counter-trend (short) trade on",
+        "a **trend-up day** is classified as his **least profitable and highest-risk",
+        "setup** [1]. He only considers it when the market provides a specific signature",
+        "of institutional exhaustion and auction failure at the absolute periphery of"
+    ],
+    "outcome": "the range. The exact rules and numerical conditions to override a bullish trend and justify a short entry are as follows: ### **1. Structural Pattern: The \"Look Above and Fail\"** A counter-trend trade is only valid at a \"sensitive level,\" such as the **Value Area High (VAH)**, **Initial Volume Breakout (IVB) High**, or the **Daily High** [2-4]. *   **The Signature:** Price must pierce the structural high but fail to achieve **acceptance**. This means the candle **cannot close with a full body** ...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_counter_trend_on_trend_day"
+}

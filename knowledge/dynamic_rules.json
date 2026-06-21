@@ -1,69 +1,25 @@
 {
   "dynamic_rules": [
     {
-      "rule_id": "AMT_NEW_50",
-      "topic": "Trade Entry in Developing Downtrend",
-      "description": "Avoid entering short trades in a developing downtrend without clear institutional absorption or initiative delta confirmation at the entry point to prevent entering at the bottom of a move.",
-      "action": "skip_trade",
-      "status": "active",
-      "successes": 6,
-      "failures": 0,
-      "probation_days": 30
-    },
-    {
-      "rule_id": "AMT_NEW_52",
-      "topic": "Trade Entry in High Delta near Key Levels",
-      "description": "Avoid entering trades when delta is excessively high (> 300) near key levels (POC, VAH, VAL, IB edges) without clear institutional absorption or divergence. High delta near key levels often leads to reversals.",
-      "action": "skip_trade",
-      "status": "active",
-      "successes": 7,
-      "failures": 0,
-      "probation_days": 26
-    },
-    {
-      "rule_id": "AMT_NEW_54",
-      "topic": "Trade Entry in Negative Delta Conditions",
-      "description": "Avoid entering trades when delta is excessively negative (< -300) without clear institutional absorption. Negative delta conditions often lead to reversals and stop runs.",
-      "action": "skip_trade",
-      "status": "active",
-      "successes": 4,
-      "failures": 0,
-      "probation_days": 22
-    },
-    {
-      "rule_id": "AMT_NEW_60",
-      "topic": "Trapped Participants Follow-Through",
-      "description": "When trapped participants are confirmed (e.g., trapped sellers followed by higher close and aggressive delta), wait for the follow-through confirmation before entering a trade to avoid early entries that might get stopped out.",
-      "action": "skip_trade",
-      "status": "probation",
-      "successes": 0,
-      "failures": 0,
-      "probation_days": 7
-    },
-    {
       "rule_id": "AMT_NEW_61",
       "topic": "Ignition Bar Confirmation",
       "description": "Wait for a confirmed ignition bar (close outside IB with |delta| >= 30) before entering a trade to avoid premature entries during accumulation/balance phases.",
       "action": "skip_trade",
-      "status": "probation",
-      "successes": 0,
+      "status": "active",
+      "successes": 5,
       "failures": 0,
-      "probation_days": 2
+      "probation_days": 18
     },
     {
       "rule_id": "AMT_NEW_62",
       "topic": "Accumulation/Balance Phase",
       "description": "Avoid entering trades during accumulation/balance phases inside the IB range. Wait for a clear breakout or breakdown with ignition bar confirmation.",
       "action": "skip_trade",
-      "status": "probation",
-      "successes": 0,
+      "status": "active",
+      "successes": 5,
       "failures": 0,
-      "probation_days": 1
+      "probation_days": 17
     }
   ],
-  "session_learnings": [
-    "No trades were executed today as the market remained in a balance phase inside the Initial Balance range, validating the 'Accumulation/Balance Phase' rule.",
-    "The 'Ignition Bar Confirmation' rule was correctly applied to skip trades inside the IB range without a clear breakout or breakdown.",
-    "The session reinforced the importance of waiting for clear ignition signals outside the IB range before entering trades."
-  ]
+  "session_learnings": []
 }

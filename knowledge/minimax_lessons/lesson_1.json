@@ -1,0 +1,13 @@
+{
+    "pattern_name": "#2: Failed Auction Sequencing",
+    "trigger_conditions": [
+        "Il video fornisce sequenza canonica che manca nel sistema:",
+        "[AMT_CORE_17] (Topic: Iceberg Failed Auction Sequence)",
+        "Un Failed Auction confermato richiede la sequenza:",
+        "PRIMA \u2192 Cluster di bolle ROSSE aggressive (sell-side liquidity sweep)",
+        "DOPO  \u2192 Cluster di bolle VERDI passive (iceberg absorption)"
+    ],
+    "outcome": "-> ACTION: require_sequence_timing",
+    "confidence": 0.95,
+    "graphify_node_link": "Node_#2:_Failed_Auct"
+}

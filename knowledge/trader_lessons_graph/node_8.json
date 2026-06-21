@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Trapped Buyers (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini identifies **trapped buyers** through the lens of **Auction",
+        "Market Theory (AMT)** and the **Law of Effort vs. Results** [1, 2]. This",
+        "process involves recognizing **absorption**, where aggressive market",
+        "participants attempt to push the price higher but meet a \"wall\" of passive",
+        "orders that prevents any meaningful price movement [3, 4]."
+    ],
+    "outcome": "### How Fabio Identifies Trapped Buyers Fabio uses specific order flow signatures to spot these participants: *   **The \"Punch to the Wall\":** He looks for a price level being \"struck\" with a high volume of buy orders (high effort) that yields no follow-through in price (no result) [4]. *   **Absorption at Extremes:** This behavior typically occurs at the high of a range or at a significant historical level [2, 4]. *   **Deeper Narratives:** By introducing order flow to price action patterns, he...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_trapped_buyers"
+}

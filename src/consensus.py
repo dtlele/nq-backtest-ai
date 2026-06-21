@@ -34,17 +34,10 @@ def build_consensus(fabio: FabioSignal, andrea: AndreaSignal, candidate = None) 
             decision='no_trade',
             no_trade_reason=reason,
         )
-    # Gate 2: Andrea veto
-    if andrea.confidence < ANDREA_VETO_THRESHOLD or not andrea.confirmation:
-        return ConsensusSignal(
-            direction='none', entry=0, stop=0, target=0,
-            r_ratio=0, final_confidence=andrea.confidence,
-            fabio=fabio, andrea=andrea,
-            decision='no_trade',
-            no_trade_reason=f'andrea_veto (confirmation={andrea.confirmation}, conf={andrea.confidence})',
-        )
-
-    # Trade approved
+    # Gate 2: Andrea veto (BYPASSED)
+    # The user requested to detach Andrea for now and let Fabio reason alone.
+    print(f" -> ANDREA BYPASSED. Approving Fabio's trade directly.")
+    
     boost = 1.1 if andrea.confirmation else 1.0
     final_conf = min(100, int(fabio.confidence * boost))
     

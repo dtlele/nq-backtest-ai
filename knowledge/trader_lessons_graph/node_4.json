@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Ib Definition (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini primarily defines his Initial Balance (often referred to in his",
+        "system as **IVB** or Initial Volume Breakout) as the **first 30 minutes** of",
+        "the New York cash session [1-5].",
+        "The timeframe is **variable depending on the trader's specific objective**,",
+        "though Fabio's primary methodology focuses on the 30-minute mark:"
+    ],
+    "outcome": "*   **Fixed vs. Variable:** He states that the range can be defined using the first **15, 30, or 60 minutes** [6]. The choice depends on whether the trader wants to use it for **scalping** (shorter timeframe like 15 minutes) or identifying a broader **intraday bias** (longer timeframes) [6, 7]. *   **The 30-Minute Rule:** For his proprietary statistical models and backtesting, Fabio waits for the **first 30 minutes to be completed** to clearly define the top and bottom of the range [1, 2]. This ...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_ib_definition"
+}

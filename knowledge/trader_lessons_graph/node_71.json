@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Failed Auction Variants (andrea)",
+    "trigger_conditions": [
+        "Andrea Cimi\u2019s system categorizes failed auctions as **statistical anomalies**",
+        "where the market attempts to find new value but fails to attract participation,",
+        "leading to a reversion to the previous area of balance [1-3]. While the",
+        "fundamental trigger\u2014a **candle closing back inside the range**\u2014remains",
+        "consistent, the context and specific rules vary depending on where the failure"
+    ],
+    "outcome": "occurs [2, 4, 5]. ### **1. Types of Failed Auctions by Location** *   **Value Area (VA) Edges:** This is the most common type, occurring when price moves outside the 70% first standard deviation (fair value) [2, 6]. Cimi views these as \"cheap\" or \"premium\" prices where smart money is likely to push the auction back toward the mean [2, 7]. *   **Prior Session/Daily Highs and Lows:** These are often referred to as **\"stop runs\"** or \"liquidity sweeps\" [3, 8]. Cimi identifies these by looking for a...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_failed_auction_variants"
+}

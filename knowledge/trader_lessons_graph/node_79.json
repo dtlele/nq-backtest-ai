@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Entry Pbd P (andrea)",
+    "trigger_conditions": [
+        "A **P-shape setup** is defined by a strong upward impulse (price discovery)",
+        "followed by a period of sideways consolidation (price acceptance) at the top",
+        "[1]. The vertical \"stem\" represents a low volume area, while the \"head\" forms a",
+        "high volume node or **Value Area** where approximately 70% of the session's",
+        "volume is traded [1-3]."
+    ],
+    "outcome": "### **1) The Exact Entry Rule** The primary entry for a P-shape is the **\"break-in\" setup** [4]. This occurs when price attempts to break out below the consolidated \"head\" of the P but fails to attract new sellers, resulting in a **statistical anomaly** [4, 5]. *   **Trigger:** You must wait for a candle to **close back inside the range** or Value Area [6]. *   **Execution:** After the candle closes inside, the actual entry is often taken on a **test of the range edge** or a specific **imbalance...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_entry_pbd_p"
+}

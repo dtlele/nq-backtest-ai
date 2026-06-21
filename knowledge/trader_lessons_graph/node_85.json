@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Target Rules (andrea)",
+    "trigger_conditions": [
+        "Andrea Cimi\u2019s profit targets are determined by market structure, statistical",
+        "probability, and the specific distribution shape of the volume profile. While",
+        "the **opposite Value Area (VA) edge** is a primary target, he utilizes several",
+        "other reference points depending on the setup and his desired risk profile.",
+        "### **Profit Targets by Setup Type**"
+    ],
+    "outcome": "*   **Failed Auction / Mean Reversion:** The standard target is the **opposite side of the Value Area** or distribution [1-4]. However, he notes that a **more conservative target** is the **Point of Control (POC)** or the highest volume node (HVN) inside the distribution [1, 5]. *   **P and B-Shape Reversals:** For these setups, where a consolidation fails to hold and reverts, the ultimate target is the **beginning of the initial impulse** that created the \"stem\" of the P or B [6-8]. *   **Trend...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_target_rules"
+}

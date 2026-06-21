@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Failed Auction Definition (andrea)",
+    "trigger_conditions": [
+        "In Andrea Cimi\u2019s methodology, a **Failed Auction** is a market phenomenon where",
+        "price attempts to move beyond a established range or \"fair value\" but fails to",
+        "attract the participation necessary to sustain a trend [1-3].",
+        "### **1. Definition**",
+        "A Failed Auction (also referred to as a \"statistical anomaly\") occurs when the"
+    ],
+    "outcome": "market enters a phase of price discovery outside of the **Value Area** (the range where 70% of volume is traded) but fails to find \"acceptance\" at those new prices [1, 4, 5]. Instead of forming a new range, the market rejects the extension and reverts to the previous area of balance [1, 6]. ### **2. How It Forms** The process typically follows these stages: *   **Deviation:** Price pokes above a previous high or below a previous low, moving into the outer percentiles of the statistical distribut...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_failed_auction_definition"
+}

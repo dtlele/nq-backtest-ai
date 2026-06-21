@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Hvn Big Wall Rules (fabio)",
+    "trigger_conditions": [
+        "In Fabio Valentini\u2019s model, a massive wall of contracts forming at a **High",
+        "Volume Node (HVN)** while the price is inside the **Initial Volume Breakout",
+        "(IVB)** range represents a state of **pure market equilibrium** or **balance**",
+        "[1, 2].",
+        "Below is the specific breakdown of what this signature means and why it"
+    ],
+    "outcome": "justifies a no-trade condition (Confidence 18) despite the high volume: ### **1. What it Means: The \"Magnet\" vs. The \"Wall\"** In this model, there is a fundamental distinction between volume at an HVN and volume at a Low Volume Node (LVN) or range edge: *   **HVNs are Magnets:** An HVN is the level where the price has stationed the most and where the highest density of transactions has already occurred [3, 4]. It is considered \"Fair Value\" [1, 5]. *   **Lack of Asymmetry:** A \"wall\" is only trad...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_hvn_big_wall_rules"
+}

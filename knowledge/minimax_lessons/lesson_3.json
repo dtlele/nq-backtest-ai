@@ -1,0 +1,13 @@
+{
+    "pattern_name": "1 \u2014 Iceberg Absorption su Ask (Spring Invertito)",
+    "trigger_conditions": [
+        "**Contesto visivo**: Una raffica di **bolle rosse** (vendite aggressive) viene completamente assorbita da **iceberg verdi** (acquisti passivi massivi) che si riformano continuamente allo stesso livello (~5359.25). Il prezzo tenta di scendere ma non ci riesce \u2014 classico **\"Effort vs No Result\"**.",
+        "**Valutazione AMT (regole attive)**:",
+        "| Regola | Verdetto | Note |",
+        "|--------|----------|------|",
+        "| **[AMT_CORE_01]** Market State | \u26a0\ufe0f **Da verificare** | Il setup sembra mostrare transizione da tentativo di estensione (imbalance) a fallimento (potenziale balance). Senza VP visibile non si pu\u00f2 confermare. |"
+    ],
+    "outcome": "**Direzione suggerita**: LONG, una volta che il prezzo inizia a reagire al rialzo dopo l'assorbimento.",
+    "confidence": 0.95,
+    "graphify_node_link": "Node_1_\u2014_Iceberg_Abs"
+}

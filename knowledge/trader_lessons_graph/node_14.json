@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Footprint Delta (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini reads the delta footprint bar-by-bar to identify the",
+        "**interaction between aggressive market participants and passive liquidity**,",
+        "focusing on the relationship between **effort (volume/delta) and result (price",
+        "movement)** [1-3].",
+        "### 1. Absorption at Bid/Ask (Trapped Participants)"
+    ],
+    "outcome": "Fabio identifies absorption when there is significant aggressive effort at the extremes of a candle with zero or opposite price results [4, 5]. *   **Pattern:** High **positive delta** (aggressive buying) at the top of a candle or upper wick, but the candle **closes bearish or back inside value** [6-9]. Conversely, high **negative delta** (aggressive selling) at the bottom but the candle **closes bullish** indicates trapped sellers [10, 11]. *   **Meaning:** This signals that aggressive particip...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_footprint_delta"
+}

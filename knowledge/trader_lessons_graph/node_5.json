@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Ib Breakout Rules (fabio)",
+    "trigger_conditions": [
+        "To trade an **Initial Balance (IB)** breakout\u2014referred to in this methodology",
+        "as the **Initial Volume Breakout (IVB)**\u2014you must follow these specific",
+        "quantitative and discretionary rules:",
+        "### 1. Exact Rules for the IB Breakout",
+        "*   **Timeframe Definition:** The IB range is defined by the **first 30"
+    ],
+    "outcome": "minutes** of the New York cash session [1, 2]. While some use 15 or 60 minutes, the 30-minute range is standard for identifying the intraday bias [1, 2]. *   **The \"Wait\" Rule:** The range is dynamic and continues to expand in real-time until the full 30 minutes are completed [2, 3]. You must wait for the **30-minute interval to close** before the high and low levels of the range are finalized [2, 3]. *   **The Trigger:** A valid entry requires a **full-body candle close** outside of the defined...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_ib_breakout_rules"
+}

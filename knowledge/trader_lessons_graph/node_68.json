@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Range Acceptance (andrea)",
+    "trigger_conditions": [
+        "In Andrea Cimi\u2019s methodology, **range acceptance** is the phase of the auction",
+        "where market participants (both aggressive buyers and sellers) agree that a new",
+        "price level represents **\"fair value\"** [1-3]. It is the critical transition",
+        "from **price discovery**\u2014a vertical, directional move or \"impulse\"\u2014into a state",
+        "of **balance** where a new range is established [3, 4]."
+    ],
+    "outcome": "### 1) Defining Range Acceptance Acceptance occurs when price stops moving rapidly and begins to spend time at a new level, allowing for a significant exchange of contracts (volume) [1, 5]. While price action traders focus on highs and lows, Cimi focuses on **\"price acceptance\"**, which he qualifies as a range being formed outside of the previous day's valuation [3]. This signifies that the market has moved from an imbalanced state (where one side is aggressive) back into a balanced state (where...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_range_acceptance"
+}

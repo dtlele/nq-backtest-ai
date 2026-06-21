@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Targets Standard (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini\u2019s profit targets and risk-to-reward (R:R) goals are defined by",
+        "a mix of proprietary statistical algorithms and structural levels derived from",
+        "Auction Market Theory.",
+        "### **Standard Profit Targets**",
+        "Fabio utilizes a proprietary model (the IVB Model) that automatically"
+    ],
+    "outcome": "identifies high-probability targets based on the breakout of the Initial Balance: *   **Protection Level (TP1):** This is his primary target. Fabio states there is a **65% to 70% statistical probability** that the market will reach this level once a 30-minute range breakout is confirmed [1, 2]. *   **Potential TP2 / Extended Average:** This secondary target represents a \"maximum extreme average\" [3]. While it offers a significantly higher payout, it carries a lower statistical probability of bei...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_targets_standard"
+}

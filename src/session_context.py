@@ -232,21 +232,22 @@ def update_market_structure(ctx: SessionContext, current_bar: Bar) -> None:
             ctx.last_pullback_dist = current_bar.high - ctx.session_low
 
     # Hyperextension Detection
-    if ctx.session_high - ctx.last_swing_low > HYPEREXTENDED_THRESHOLD and current_bar.high == ctx.session_high:
-        if ctx.market_structure_state != 'hyperextended_up':
-            ctx.market_structure_state = 'hyperextended_up'
-            ctx.session_memory.append({
-                'timestamp': current_bar.timestamp,
-                'text': f"[{_to_et(current_bar).strftime('%H:%M')} ET] Market Structure: HYPEREXTENDED UP (> {HYPEREXTENDED_THRESHOLD} pts without pullback)."
-            })
-            
-    if ctx.last_swing_high - ctx.session_low > HYPEREXTENDED_THRESHOLD and current_bar.low == ctx.session_low:
-        if ctx.market_structure_state != 'hyperextended_down':
-            ctx.market_structure_state = 'hyperextended_down'
-            ctx.session_memory.append({
-                'timestamp': current_bar.timestamp,
-                'text': f"[{_to_et(current_bar).strftime('%H:%M')} ET] Market Structure: HYPEREXTENDED DOWN (> {HYPEREXTENDED_THRESHOLD} pts without pullback)."
-            })
+    # Disable hardcoded hyperextended checks per user request
+    # if ctx.session_high - ctx.last_swing_low > HYPEREXTENDED_THRESHOLD and current_bar.high == ctx.session_high:
+    #     if ctx.market_structure_state != 'hyperextended_up':
+    #         ctx.market_structure_state = 'hyperextended_up'
+    #         ctx.structural_events.append({
+    #             'timestamp': current_bar.timestamp,
+    #             'text': f"[{_to_et(current_bar).strftime('%H:%M')} ET] Market Structure: HYPEREXTENDED UP (> {HYPEREXTENDED_THRESHOLD} pts without pullback)."
+    #         })
+    # 
+    # if ctx.last_swing_high - ctx.session_low > HYPEREXTENDED_THRESHOLD and current_bar.low == ctx.session_low:
+    #     if ctx.market_structure_state != 'hyperextended_down':
+    #         ctx.market_structure_state = 'hyperextended_down'
+    #         ctx.structural_events.append({
+    #             'timestamp': current_bar.timestamp,
+    #             'text': f"[{_to_et(current_bar).strftime('%H:%M')} ET] Market Structure: HYPEREXTENDED DOWN (> {HYPEREXTENDED_THRESHOLD} pts without pullback)."
+    #         })
 
 
 def get_session_memory_up_to(ctx: SessionContext, timestamp: datetime) -> List[str]:
