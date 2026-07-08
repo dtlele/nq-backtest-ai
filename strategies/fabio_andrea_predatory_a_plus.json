@@ -1,6 +1,7 @@
 {
   "strategy_id": "fabio_andrea_predatory_a_plus_v1",
   "a_plus_volume_threshold": 4500,
+  "cooldown_minutes": 15,
   "a_plus_size_multiplier": 3,
   "apm_trailing_stop_enabled": true,
   "balance_day_ib_veto": true,

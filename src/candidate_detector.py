@@ -162,14 +162,11 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
         nearby = [(lvl, name) for lvl, name in levels
                   if _near(price, lvl, VA_PROXIMITY_TICKS)]
         
-        if not nearby and not is_imbalance_hunter:
-            continue
-
         if nearby:
             nearby.sort(key=lambda x: abs(price - x[0]))
             prox_level, prox_name = nearby[0]
         else:
-            prox_level, prox_name = price, "imbalance_zone"
+            prox_level, prox_name = price, "inside_va_zone"
             
         if is_imbalance_hunter:
             setup_cat = 'imbalance_hunting'
@@ -375,31 +372,11 @@ def generate_m1_candidate(m1_bar: Bar, m5_recent: list, ctx: SessionContext, m1_
 
 def detect_m1_candidates(m1_bar, m5_recent: list, ctx: SessionContext, m1_history: list = None) -> list:
     """
-    Evaluates a single M1 bar as a candidate when the market is in IMBALANCE state.
+    Evaluates a single M1 bar as a candidate, even inside VA, if it contains big trades.
     """
     candidates = []
-    price = m1_bar.close
     
-    is_imbalance = False
-    # 1. Outside IB (if complete)
-    if ctx.ib_complete:
-        if price > ctx.ib_high or price < ctx.ib_low:
-            is_imbalance = True
-            
-    # 2. Outside Previous Day Value Area (crucial for first hour moves)
-    if ctx.prev_day_vp and not is_imbalance:
-        if price > ctx.prev_day_vp.va_high or price < ctx.prev_day_vp.va_low:
-            is_imbalance = True
-            
-    # 3. Outside Overnight Value Area (Fallback if prev day is missing, e.g. Monday)
-    if ctx.vp and not is_imbalance:
-        if price > ctx.vp.va_high or price < ctx.vp.va_low:
-            is_imbalance = True
-            
-    if not is_imbalance:
-        return candidates
-        
-    # We only pass M1 candidates that contain at least one Big Trade to avoid spam
+    # We only pass M1 candidates that contain at least one Big Trade to avoid spam and keep execution efficient
     if not m1_bar.big_trades:
         return candidates
 

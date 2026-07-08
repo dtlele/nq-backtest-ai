@@ -15,6 +15,7 @@ export default function App() {
     ALL_REASONINGS: [],
     ANALYZED_DATES: [],
     OPEN_TRADE: null,
+    PENDING_TRADE: null,
     LIVE_SESSION_STATE: {},
     LATEST_REASONING: {},
     MOCK_SESSIONS: [],
@@ -118,6 +119,7 @@ export default function App() {
             activeReasoning={activeReasoning}
             onTradeClick={handleSetActiveTrade}
             openTrade={dashboardData.OPEN_TRADE}
+            pendingTrade={dashboardData.PENDING_TRADE}
             latestReasoning={dashboardData.LATEST_REASONING}
             jumpTimestamp={jumpTimestamp}
             runFilter={runFilter}
@@ -133,6 +135,7 @@ export default function App() {
         <AgentSidebar
           latestReasoning={dashboardData.LATEST_REASONING}
           openTrade={dashboardData.OPEN_TRADE}
+          pendingTrade={dashboardData.PENDING_TRADE}
           reasonings={dayReasonings}
           onJump={(r) => {
             setActiveReasoning(r)

@@ -1,0 +1,120 @@
+{
+    "v2_case_a_coarse_sessions": {
+        "description": "Baseline + 3 sessioni coarse + min_trades=150",
+        "metrics": {
+            "N": 151,
+            "WR": 42.384105960264904,
+            "PF": 2.084505552617663,
+            "PnL": 15381.0,
+            "MaxDD": 1479.0
+        },
+        "rules": {
+            "trend_long": {
+                "days": [
+                    "Thursday",
+                    "Friday"
+                ],
+                "sessions": [
+                    "open"
+                ],
+                "exclude_10am": false
+            },
+            "absorb_long": {
+                "days": [
+                    "Wednesday"
+                ],
+                "sessions": [
+                    "mid",
+                    "open"
+                ],
+                "exclude_10am": true
+            },
+            "trend_short": {
+                "days": [
+                    "Friday",
+                    "Wednesday",
+                    "Monday"
+                ],
+                "sessions": [
+                    "close"
+                ],
+                "exclude_10am": false
+            },
+            "absorb_short": {
+                "days": [
+                    "Thursday",
+                    "Friday"
+                ],
+                "sessions": [
+                    "open"
+                ],
+                "exclude_10am": true
+            }
+        }
+    },
+    "v2_case_b_filtered_coarse": {
+        "description": "Filtri CVD+VA + 3 sessioni coarse + min_trades=150",
+        "metrics": {
+            "N": 100,
+            "WR": 31.0,
+            "PF": 1.6969652109548483,
+            "PnL": 7062.0,
+            "MaxDD": 1444.5
+        },
+        "rules": {
+            "trend_long": {
+                "days": [
+                    "Thursday",
+                    "Tuesday",
+                    "Monday",
+                    "Friday"
+                ],
+                "sessions": [
+                    "close",
+                    "mid",
+                    "open"
+                ],
+                "exclude_10am": false
+            },
+            "absorb_long": {
+                "days": [
+                    "Wednesday",
+                    "Tuesday",
+                    "Friday"
+                ],
+                "sessions": [
+                    "close",
+                    "mid",
+                    "open"
+                ],
+                "exclude_10am": true
+            },
+            "trend_short": {
+                "days": [
+                    "Wednesday",
+                    "Tuesday",
+                    "Monday",
+                    "Friday"
+                ],
+                "sessions": [
+                    "mid",
+                    "open"
+                ],
+                "exclude_10am": false
+            },
+            "absorb_short": {
+                "days": [
+                    "Monday",
+                    "Tuesday",
+                    "Friday",
+                    "Thursday",
+                    "Wednesday"
+                ],
+                "sessions": [
+                    "open"
+                ],
+                "exclude_10am": false
+            }
+        }
+    }
+}

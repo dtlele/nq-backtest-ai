@@ -180,11 +180,12 @@ class OpenTrade:
     target: float
     entry_bar: Bar
     consensus: ConsensusSignal
-    contracts: float = 1.0         # NEW: Dynamic position size
+    contracts: float = 1.0         # Dynamic position size
     news_flag: str = "none"
     partial_taken: bool = False
     entry_time: Optional[datetime] = None
     last_eval_time: Optional[datetime] = None
+    initial_stop: Optional[float] = None  # Original structural stop, before trailing moves
 
 @dataclass
 class PendingTrade:

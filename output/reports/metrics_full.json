@@ -1,17 +1,17 @@
 {
-  "total_trades": 8,
-  "wins": 6,
+  "total_trades": 4,
+  "wins": 2,
   "losses": 2,
-  "win_rate": 0.75,
-  "profit_factor": 162.64,
-  "total_pnl_usd": 186.38,
-  "avg_pnl_usd": 23.3,
-  "avg_r": 1.17,
+  "win_rate": 0.5,
+  "profit_factor": 0.46,
+  "total_pnl_usd": -56.05,
+  "avg_pnl_usd": -14.01,
+  "avg_r": 0.0,
   "by_setup": {
     "ivb_breakout": {
-      "count": 8,
-      "pnl_usd": 186.384825,
-      "wins": 6
+      "count": 4,
+      "pnl_usd": -56.04672,
+      "wins": 2
     }
   }
 }

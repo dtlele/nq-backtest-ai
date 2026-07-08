@@ -255,7 +255,8 @@ def build_amt_narrative(ctx: SessionContext, candidate: CandidateBar, ignition_i
 
     return "\n".join(narrative)
 
-def build_fabio_question(candidate: CandidateBar, session_context: list = None, m1_bars: list[Bar] = None, market_narrative: str = "", bars_since_last: list[Bar] = None) -> str:
+def build_fabio_question(candidate: CandidateBar, session_context: list = None, m1_bars: list[Bar] = None, market_narrative: str = "", bars_since_last: list[Bar] = None,
+                         equity: float = 50000.0, daily_pnl: float = 0.0, trade_count: int = 0, last_trade_pnl: float = 0.0, time_since_last_close: float = -1.0) -> str:
     templates = _load_templates()
     bar = candidate.bar
     ctx = candidate.session_ctx
@@ -439,12 +440,12 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
         question += "You must check how levels reacted earlier today to avoid traps (e.g. do not short a level that was strongly rejected twice already):\n"
         question += "\n".join(f"- {line}" for line in struc_mem)
 
-    # if session_context:
-    #     question += "\n\n## Session Context (your prior analyses today)\n"
-    #     question += "\n".join(session_context)
-    #     
-    # if market_narrative:
-    #     question += f"\n\n## Current Market Narrative (Your continuous story of the day)\n{market_narrative}\n"
+    if session_context:
+        question += "\n\n## Session Context (your prior analyses today)\n"
+        question += "\n".join(session_context)
+        
+    if market_narrative:
+        question += f"\n\n## Current Market Narrative (Your continuous story of the day)\n{market_narrative}\n"
         
     if bars_since_last:
         question += f"\n\n## What happened since your last evaluation:\n"
@@ -542,6 +543,25 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
                         )
                         question += f"\n\n{post_loss_warning}"
                 break  # Only care about the most recent closed trade
+
+    # Format current session risk state
+    risk_state_text = (
+        f"\n\n## CURRENT SESSION ACCOUNT RISK STATE\n"
+        f"- Current Account Equity: ${equity:,.2f}\n"
+        f"- Daily P&L: ${daily_pnl:+.2f} USD\n"
+        f"- Total Trades Taken Today: {trade_count}\n"
+    )
+    if time_since_last_close >= 0:
+        risk_state_text += f"- Time Since Last Closed Trade: {time_since_last_close:.1f} minutes\n"
+        risk_state_text += f"- Last Trade Outcome P&L: ${last_trade_pnl:+.2f} USD\n"
+    else:
+        risk_state_text += "- Time Since Last Closed Trade: N/A (No trades closed yet today)\n"
+        
+    risk_state_text += (
+        "\nUse this risk state context to enforce the ACCOUNT-STATE ADAPTIVE RISK MANAGEMENT & COOLDOWN rules. "
+        "Explain in your reasoning why this setup is worth taking given this risk state, particularly if you recently closed a trade or if you are close to your profit/loss boundaries.\n"
+    )
+    question += risk_state_text
 
     return question
 

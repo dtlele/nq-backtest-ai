@@ -1,0 +1,642 @@
+[
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 180.0,
+        "t_low_trend": 0.0,
+        "t_high_absorb": 280.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": false,
+        "use_mega": false,
+        "contracts": [
+            2,
+            3
+        ],
+        "trades": 41,
+        "wr": 31.70731707317073,
+        "pf": 2.0126315789473685,
+        "net_pnl": 3126.5,
+        "max_dd": 1199.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 180.0,
+        "t_low_trend": 120.0,
+        "t_high_absorb": 280.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": false,
+        "use_mega": false,
+        "contracts": [
+            2,
+            3
+        ],
+        "trades": 41,
+        "wr": 31.70731707317073,
+        "pf": 2.0126315789473685,
+        "net_pnl": 3126.5,
+        "max_dd": 1199.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 180.0,
+        "t_low_trend": 160.0,
+        "t_high_absorb": 280.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": false,
+        "use_mega": false,
+        "contracts": [
+            2,
+            3
+        ],
+        "trades": 41,
+        "wr": 31.70731707317073,
+        "pf": 2.0126315789473685,
+        "net_pnl": 3126.5,
+        "max_dd": 1199.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 180.0,
+        "t_low_trend": 200.0,
+        "t_high_absorb": 280.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": false,
+        "use_mega": false,
+        "contracts": [
+            2,
+            3
+        ],
+        "trades": 41,
+        "wr": 31.70731707317073,
+        "pf": 2.0126315789473685,
+        "net_pnl": 3126.5,
+        "max_dd": 1199.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 200.0,
+        "t_low_trend": 0.0,
+        "t_high_absorb": 280.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": false,
+        "use_mega": false,
+        "contracts": [
+            2,
+            3
+        ],
+        "trades": 41,
+        "wr": 31.70731707317073,
+        "pf": 1.9630390143737166,
+        "net_pnl": 3048.5,
+        "max_dd": 1283.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 200.0,
+        "t_low_trend": 120.0,
+        "t_high_absorb": 280.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": false,
+        "use_mega": false,
+        "contracts": [
+            2,
+            3
+        ],
+        "trades": 41,
+        "wr": 31.70731707317073,
+        "pf": 1.9630390143737166,
+        "net_pnl": 3048.5,
+        "max_dd": 1283.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 200.0,
+        "t_low_trend": 160.0,
+        "t_high_absorb": 280.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": false,
+        "use_mega": false,
+        "contracts": [
+            2,
+            3
+        ],
+        "trades": 41,
+        "wr": 31.70731707317073,
+        "pf": 1.9630390143737166,
+        "net_pnl": 3048.5,
+        "max_dd": 1283.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 200.0,
+        "t_low_trend": 200.0,
+        "t_high_absorb": 280.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": false,
+        "use_mega": false,
+        "contracts": [
+            2,
+            3
+        ],
+        "trades": 41,
+        "wr": 31.70731707317073,
+        "pf": 1.9630390143737166,
+        "net_pnl": 3048.5,
+        "max_dd": 1283.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 180.0,
+        "t_low_trend": 0.0,
+        "t_high_absorb": 280.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": false,
+        "use_mega": false,
+        "contracts": [
+            3,
+            3
+        ],
+        "trades": 41,
+        "wr": 31.70731707317073,
+        "pf": 1.9591147786946737,
+        "net_pnl": 3835.5,
+        "max_dd": 1536.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 180.0,
+        "t_low_trend": 120.0,
+        "t_high_absorb": 280.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": false,
+        "use_mega": false,
+        "contracts": [
+            3,
+            3
+        ],
+        "trades": 41,
+        "wr": 31.70731707317073,
+        "pf": 1.9591147786946737,
+        "net_pnl": 3835.5,
+        "max_dd": 1536.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 180.0,
+        "t_low_trend": 160.0,
+        "t_high_absorb": 280.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": false,
+        "use_mega": false,
+        "contracts": [
+            3,
+            3
+        ],
+        "trades": 41,
+        "wr": 31.70731707317073,
+        "pf": 1.9591147786946737,
+        "net_pnl": 3835.5,
+        "max_dd": 1536.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 180.0,
+        "t_low_trend": 200.0,
+        "t_high_absorb": 280.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": false,
+        "use_mega": false,
+        "contracts": [
+            3,
+            3
+        ],
+        "trades": 41,
+        "wr": 31.70731707317073,
+        "pf": 1.9591147786946737,
+        "net_pnl": 3835.5,
+        "max_dd": 1536.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 200.0,
+        "t_low_trend": 0.0,
+        "t_high_absorb": 280.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": false,
+        "use_mega": false,
+        "contracts": [
+            3,
+            3
+        ],
+        "trades": 41,
+        "wr": 31.70731707317073,
+        "pf": 1.9216335540838851,
+        "net_pnl": 3757.5,
+        "max_dd": 1620.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 200.0,
+        "t_low_trend": 120.0,
+        "t_high_absorb": 280.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": false,
+        "use_mega": false,
+        "contracts": [
+            3,
+            3
+        ],
+        "trades": 41,
+        "wr": 31.70731707317073,
+        "pf": 1.9216335540838851,
+        "net_pnl": 3757.5,
+        "max_dd": 1620.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 200.0,
+        "t_low_trend": 160.0,
+        "t_high_absorb": 280.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": false,
+        "use_mega": false,
+        "contracts": [
+            3,
+            3
+        ],
+        "trades": 41,
+        "wr": 31.70731707317073,
+        "pf": 1.9216335540838851,
+        "net_pnl": 3757.5,
+        "max_dd": 1620.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 200.0,
+        "t_low_trend": 200.0,
+        "t_high_absorb": 280.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": false,
+        "use_mega": false,
+        "contracts": [
+            3,
+            3
+        ],
+        "trades": 41,
+        "wr": 31.70731707317073,
+        "pf": 1.9216335540838851,
+        "net_pnl": 3757.5,
+        "max_dd": 1620.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 200.0,
+        "t_low_trend": 0.0,
+        "t_high_absorb": 999.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": true,
+        "use_mega": false,
+        "contracts": [
+            3,
+            3
+        ],
+        "trades": 87,
+        "wr": 34.48275862068966,
+        "pf": 1.4449689776099273,
+        "net_pnl": 4948.5,
+        "max_dd": 1812.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 200.0,
+        "t_low_trend": 120.0,
+        "t_high_absorb": 999.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": true,
+        "use_mega": false,
+        "contracts": [
+            3,
+            3
+        ],
+        "trades": 87,
+        "wr": 34.48275862068966,
+        "pf": 1.4449689776099273,
+        "net_pnl": 4948.5,
+        "max_dd": 1812.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 200.0,
+        "t_low_trend": 160.0,
+        "t_high_absorb": 999.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": true,
+        "use_mega": false,
+        "contracts": [
+            3,
+            3
+        ],
+        "trades": 87,
+        "wr": 34.48275862068966,
+        "pf": 1.4449689776099273,
+        "net_pnl": 4948.5,
+        "max_dd": 1812.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 200.0,
+        "t_low_trend": 200.0,
+        "t_high_absorb": 999.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": true,
+        "use_mega": false,
+        "contracts": [
+            3,
+            3
+        ],
+        "trades": 87,
+        "wr": 34.48275862068966,
+        "pf": 1.4449689776099273,
+        "net_pnl": 4948.5,
+        "max_dd": 1812.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 180.0,
+        "t_low_trend": 0.0,
+        "t_high_absorb": 999.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": true,
+        "use_mega": false,
+        "contracts": [
+            3,
+            3
+        ],
+        "trades": 87,
+        "wr": 34.48275862068966,
+        "pf": 1.4434114793856103,
+        "net_pnl": 4936.5,
+        "max_dd": 1812.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 180.0,
+        "t_low_trend": 120.0,
+        "t_high_absorb": 999.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": true,
+        "use_mega": false,
+        "contracts": [
+            3,
+            3
+        ],
+        "trades": 87,
+        "wr": 34.48275862068966,
+        "pf": 1.4434114793856103,
+        "net_pnl": 4936.5,
+        "max_dd": 1812.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 180.0,
+        "t_low_trend": 160.0,
+        "t_high_absorb": 999.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": true,
+        "use_mega": false,
+        "contracts": [
+            3,
+            3
+        ],
+        "trades": 87,
+        "wr": 34.48275862068966,
+        "pf": 1.4434114793856103,
+        "net_pnl": 4936.5,
+        "max_dd": 1812.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 180.0,
+        "t_low_trend": 200.0,
+        "t_high_absorb": 999.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": true,
+        "use_mega": false,
+        "contracts": [
+            3,
+            3
+        ],
+        "trades": 87,
+        "wr": 34.48275862068966,
+        "pf": 1.4434114793856103,
+        "net_pnl": 4936.5,
+        "max_dd": 1812.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 200.0,
+        "t_low_trend": 0.0,
+        "t_high_absorb": 999.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": true,
+        "use_mega": false,
+        "contracts": [
+            2,
+            3
+        ],
+        "trades": 87,
+        "wr": 34.48275862068966,
+        "pf": 1.4370439296733435,
+        "net_pnl": 4462.0,
+        "max_dd": 1622.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 200.0,
+        "t_low_trend": 120.0,
+        "t_high_absorb": 999.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": true,
+        "use_mega": false,
+        "contracts": [
+            2,
+            3
+        ],
+        "trades": 87,
+        "wr": 34.48275862068966,
+        "pf": 1.4370439296733435,
+        "net_pnl": 4462.0,
+        "max_dd": 1622.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 200.0,
+        "t_low_trend": 160.0,
+        "t_high_absorb": 999.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": true,
+        "use_mega": false,
+        "contracts": [
+            2,
+            3
+        ],
+        "trades": 87,
+        "wr": 34.48275862068966,
+        "pf": 1.4370439296733435,
+        "net_pnl": 4462.0,
+        "max_dd": 1622.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 200.0,
+        "t_low_trend": 200.0,
+        "t_high_absorb": 999.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": true,
+        "use_mega": false,
+        "contracts": [
+            2,
+            3
+        ],
+        "trades": 87,
+        "wr": 34.48275862068966,
+        "pf": 1.4370439296733435,
+        "net_pnl": 4462.0,
+        "max_dd": 1622.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 180.0,
+        "t_low_trend": 0.0,
+        "t_high_absorb": 999.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": true,
+        "use_mega": false,
+        "contracts": [
+            2,
+            3
+        ],
+        "trades": 87,
+        "wr": 34.48275862068966,
+        "pf": 1.43535684586411,
+        "net_pnl": 4450.0,
+        "max_dd": 1622.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 180.0,
+        "t_low_trend": 120.0,
+        "t_high_absorb": 999.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": true,
+        "use_mega": false,
+        "contracts": [
+            2,
+            3
+        ],
+        "trades": 87,
+        "wr": 34.48275862068966,
+        "pf": 1.43535684586411,
+        "net_pnl": 4450.0,
+        "max_dd": 1622.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 180.0,
+        "t_low_trend": 160.0,
+        "t_high_absorb": 999.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": true,
+        "use_mega": false,
+        "contracts": [
+            2,
+            3
+        ],
+        "trades": 87,
+        "wr": 34.48275862068966,
+        "pf": 1.43535684586411,
+        "net_pnl": 4450.0,
+        "max_dd": 1622.0
+    },
+    {
+        "atr_type": "5-day",
+        "scaling_mode": "static",
+        "atr_thresh": 180.0,
+        "t_low_trend": 200.0,
+        "t_high_absorb": 999.0,
+        "mult": 1.0,
+        "exclude_lunch": true,
+        "use_contrary": true,
+        "use_mega": false,
+        "contracts": [
+            2,
+            3
+        ],
+        "trades": 87,
+        "wr": 34.48275862068966,
+        "pf": 1.43535684586411,
+        "net_pnl": 4450.0,
+        "max_dd": 1622.0
+    }
+]

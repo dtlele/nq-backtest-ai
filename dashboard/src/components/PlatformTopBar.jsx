@@ -34,11 +34,17 @@ export default function PlatformTopBar({ kpi, sessions, activeDate, onDateSelect
     setPrevPrice(currentPrice)
   }, [currentPrice])
 
-  // Session totals
-  const totalPnl = kpi?.total_pnl_usd ?? 0
-  const winRate = kpi?.win_rate ?? 0
-  const totalTrades = kpi?.total_trades ?? 0
-  const sharpe = kpi?.sharpe ?? null
+  // Session totals — use camelCase keys matching MOCK_KPI structure from App.jsx
+  const totalPnl    = kpi?.totalPnL    ?? kpi?.total_pnl_usd ?? 0
+  const rawWinRate  = kpi?.winRate     ?? kpi?.win_rate      ?? 0
+  const totalTrades = kpi?.totalTrades ?? kpi?.total_trades  ?? 0
+  const maxDD       = kpi?.maxDrawdown ?? null
+  const asimmetria  = kpi?.asimmetria  ?? null
+  const sharpe      = kpi?.sharpe      ?? null
+  // winRate in MOCK_KPI is already 0–100; normalize if 0–1
+  const winRate = rawWinRate > 1 ? rawWinRate / 100 : rawWinRate
+
+  const isBacktest = runFilter && runFilter !== 'all'
 
   const isLive = openTrade != null
   const sessionLabel = activeDate || '---'
@@ -127,11 +133,31 @@ export default function PlatformTopBar({ kpi, sessions, activeDate, onDateSelect
         flex: 1, height: '100%',
         overflow: 'hidden',
       }}>
+        {/* Backtest mode badge */}
+        {isBacktest && (
+          <div style={{
+            padding: '0 14px',
+            borderRight: '1px solid var(--border)',
+            height: '100%',
+            display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            background: 'rgba(159,122,234,0.08)',
+          }}>
+            <div style={{ fontSize: 9, color: 'rgba(159,122,234,0.7)', letterSpacing: '0.08em', fontWeight: 700 }}>MODE</div>
+            <div style={{
+              fontSize: 10, fontWeight: 800, color: '#9f7aea',
+              background: 'rgba(159,122,234,0.15)',
+              border: '1px solid rgba(159,122,234,0.35)',
+              borderRadius: 4, padding: '1px 6px', letterSpacing: '0.05em'
+            }}>⚙ BACKTEST</div>
+          </div>
+        )}
         {[
-          { label: 'NET P&L', value: `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(0)}`, color: totalPnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' },
-          { label: 'WIN RATE', value: `${(winRate * 100).toFixed(0)}%`, color: winRate >= 0.5 ? 'var(--accent-green)' : 'var(--accent-red)' },
-          { label: 'TRADES', value: totalTrades, color: 'var(--accent-blue)' },
-          sharpe != null ? { label: 'SHARPE', value: sharpe.toFixed(2), color: sharpe >= 1 ? 'var(--accent-green)' : 'var(--text-secondary)' } : null,
+          { label: 'NET P&L',   value: `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(0)}`, color: totalPnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' },
+          { label: 'WIN RATE',  value: `${(winRate * 100 > 1 ? winRate : winRate * 100).toFixed(0)}%`, color: winRate >= 0.5 ? 'var(--accent-green)' : 'var(--accent-red)' },
+          { label: 'TRADES',    value: totalTrades, color: 'var(--accent-blue)' },
+          asimmetria != null ? { label: 'R:R ASIMM', value: asimmetria.toFixed(2), color: asimmetria >= 1.5 ? 'var(--accent-green)' : 'var(--text-secondary)' } : null,
+          maxDD      != null ? { label: 'MAX DD',    value: `${maxDD.toFixed(1)}%`,   color: maxDD < 5 ? 'var(--accent-green)' : maxDD < 10 ? 'var(--accent-orange)' : 'var(--accent-red)' } : null,
+          sharpe     != null ? { label: 'SHARPE',    value: sharpe.toFixed(2),         color: sharpe >= 1 ? 'var(--accent-green)' : 'var(--text-secondary)' } : null,
         ].filter(Boolean).map((item, i) => (
           <div key={i} style={{
             padding: '0 18px',

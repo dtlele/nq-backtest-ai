@@ -330,14 +330,66 @@ function ExecutionAgentCard({ latestReasoning }) {
 }
 
 // ── Active Trade Card ──────────────────────────────────────────────────────
-function ActiveTradeCard({ openTrade, liveReasoning }) {
-  if (!openTrade) return (
-    <AgentCard icon="📊" title="POSIZIONE APERTA" subtitle="Nessun trade in corso" accent="#63b3ed" isActive={false}>
+function ActiveTradeCard({ openTrade, pendingTrade, liveReasoning, reasonings }) {
+  if (!openTrade && !pendingTrade) return (
+    <AgentCard icon="📊" title="POSIZIONE ATTIVA" subtitle="Nessun trade in corso" accent="#63b3ed" isActive={false}>
       <div style={{ color: 'var(--text-muted)', fontSize: 11, textAlign: 'center', padding: '8px 0' }}>
-        Nessuna posizione aperta
+        Nessuna posizione aperta o pendente
       </div>
     </AgentCard>
   )
+
+  if (!openTrade && pendingTrade) {
+    const { direction, entry, stop, target, contracts, expires_at } = pendingTrade
+    const isLong = direction === 'long'
+    const risk = isLong ? entry - stop : stop - entry
+    const reward = isLong ? target - entry : entry - target
+    const rr = reward > 0 ? (reward / risk).toFixed(2) : '?'
+    const expiresEt = expires_at ? new Date(expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+
+    return (
+      <AgentCard
+        icon="⏳"
+        title="ORDINE LIMITE ATTIVO"
+        subtitle={`${direction?.toUpperCase()} · ${contracts} contracts`}
+        accent="#ff9f43"
+        isActive={true}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{
+            textAlign: 'center', padding: '12px 0',
+            background: 'rgba(255, 159, 67, 0.08)', borderRadius: 8,
+            border: '1px dashed rgba(255, 159, 67, 0.3)',
+          }}>
+            <div style={{ fontSize: 9, color: 'var(--accent-orange)', letterSpacing: '0.08em', marginBottom: 4, fontWeight: 700 }}>PREZZO LIMITE</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 24, fontWeight: 800, color: 'var(--accent-orange)' }}>
+              {entry?.toFixed(2)} pt
+            </div>
+            {expiresEt && (
+              <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 4 }}>
+                Scadenza ordine: {expiresEt} UTC
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5 }}>
+            {[
+              { label: 'STOP LOSS', value: stop?.toFixed(2) },
+              { label: 'TARGET', value: target?.toFixed(2) },
+              { label: 'R:R PROPOSTO', value: rr + 'R', color: 'var(--accent-yellow)' },
+            ].map(item => (
+              <div key={item.label} style={{
+                background: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: '6px 7px', textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 8, color: 'var(--text-muted)', marginBottom: 1 }}>{item.label}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, color: item.color || 'var(--text-primary)' }}>{item.value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </AgentCard>
+    )
+  }
 
   const { direction, entry, stop, target, contracts } = openTrade
   const currentPrice = liveReasoning?.bar_close || entry
@@ -350,6 +402,11 @@ function ActiveTradeCard({ openTrade, liveReasoning }) {
   const pnlUsd = pnlPts * 20 * (contracts || 1)
   const pnlColor = pnlPts >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'
   const progPct = Math.min(100, Math.max(0, (reward > 0 ? Math.abs(pnlPts) / reward * 100 : 0)))
+
+  // Filter APM logs for the current open trade (since the trade entered)
+  const apmLogs = (reasonings || [])
+    .filter(r => r.entry_type === 'apm' && new Date(r.bar_time_utc) >= new Date(openTrade.entry_time))
+    .sort((a, b) => new Date(b.bar_time_utc) - new Date(a.bar_time_utc)) // newest first
 
   return (
     <AgentCard
@@ -408,25 +465,36 @@ function ActiveTradeCard({ openTrade, liveReasoning }) {
           ))}
         </div>
 
-        {/* Active Trade Management reasoning */}
-        {liveReasoning?.fabio_setup === 'apm' && liveReasoning?.fabio_reasoning && (
-          <div style={{
-            fontSize: 10, lineHeight: 1.5, padding: '8px 10px',
-            background: 'rgba(255,255,255,0.03)', borderRadius: 6,
-            borderLeft: '2px solid var(--accent-yellow)', marginTop: 4,
-            textAlign: 'left'
-          }}>
-            <div style={{ fontWeight: 800, fontSize: 8, color: 'var(--text-muted)', marginBottom: 2, letterSpacing: '0.04em' }}>
-              AGGIORNAMENTO GESTIONE (APM):
+        {/* Candle-by-candle Active Trade Management reasoning history */}
+        {apmLogs.length > 0 && (
+          <div style={{ marginTop: 6, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 8 }}>
+            <div style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--accent-yellow)', marginBottom: 6, textTransform: 'uppercase' }}>
+              🔬 GESTIONE ATTIVA CANDELA PER CANDELA (APM):
             </div>
-            <div style={{ color: 'var(--text-primary)', fontStyle: 'italic' }}>
-              "{liveReasoning.fabio_reasoning}"
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 160, overflowY: 'auto', paddingRight: 4 }}>
+              {apmLogs.map((log, i) => {
+                const dec = log.decision?.replace('apm_', '') || 'hold'
+                const color = dec === 'exit' || dec === 'take_profit' ? 'var(--accent-green)' : dec === 'stop_hit' ? 'var(--accent-red)' : 'var(--text-secondary)'
+                return (
+                  <div key={i} style={{ 
+                    background: 'rgba(0,0,0,0.18)', 
+                    borderRadius: 5, 
+                    padding: '6px 8px', 
+                    borderLeft: `2px solid ${color}`,
+                    fontSize: 10,
+                    textAlign: 'left'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 8.5, marginBottom: 3, fontWeight: 600 }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>⏱️ {log.bar_time_et} ET</span>
+                      <span style={{ color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{dec}</span>
+                    </div>
+                    <div style={{ color: 'var(--text-primary)', lineHeight: 1.45, fontStyle: 'italic' }}>
+                      "{log.fabio_reasoning}"
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-            {liveReasoning.decision && (
-              <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent-yellow)', marginTop: 4, textTransform: 'uppercase' }}>
-                Azione: {liveReasoning.decision.replace('apm_', '')}
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -478,7 +546,7 @@ function ReasoningTimeline({ reasonings, onJump, timeZone }) {
   )
 }
 
-export default function AgentSidebar({ latestReasoning, openTrade, reasonings, onJump, timeZone, dayTrades = [], dayProposals = [], activeTrade, onSelectTrade, activeDate }) {
+export default function AgentSidebar({ latestReasoning, openTrade, pendingTrade, reasonings, onJump, timeZone, dayTrades = [], dayProposals = [], activeTrade, onSelectTrade, activeDate }) {
   const [tab, setTab] = useState('agents') // 'agents' | 'log' | 'trade'
   const [selectedTrade, setSelectedTrade] = useState(null)
 
@@ -596,7 +664,7 @@ export default function AgentSidebar({ latestReasoning, openTrade, reasonings, o
             <TradePanel trade={selectedTrade} allTrades={dayTrades} proposals={dayProposals} onSelect={setSelectedTrade} timeZone={timeZone} />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', overflow: 'hidden' }}>
-              <ActiveTradeCard openTrade={openTrade} liveReasoning={latestReasoning} />
+              <ActiveTradeCard openTrade={openTrade} pendingTrade={pendingTrade} liveReasoning={latestReasoning} reasonings={reasonings} />
               <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
                 <TradePanel trade={null} allTrades={dayTrades} proposals={dayProposals} onSelect={setSelectedTrade} timeZone={timeZone} />
               </div>

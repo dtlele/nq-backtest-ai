@@ -198,6 +198,7 @@ def build_status():
         "ALL_REASONINGS": all_reasonings,
         "ANALYZED_DATES": analyzed_dates,
         "OPEN_TRADE": session_state.get('open_trade', None),
+        "PENDING_TRADE": session_state.get('pending_trade', None),
         "LIVE_SESSION_STATE": session_state,
         "LATEST_REASONING": latest_reasoning,
         "MOCK_SESSIONS": group_by_date(trades),
@@ -218,13 +219,12 @@ if __name__ == "__main__":
                 temp_path = out_path.with_suffix('.tmp')
                 with open(temp_path, 'w', encoding='utf-8') as f:
                     json.dump(data, f)
-                # On Windows, replace can fail if the file is being read by the dev server
+                # On Windows, replace can fail if the file is being read by the dev server.
+                # os.replace handles atomic overwrite on Windows safely without deleting the file first.
                 import os
-                if out_path.exists():
-                    os.remove(out_path)
-                os.rename(temp_path, out_path)
-            except PermissionError:
-                # If Vite is currently locking the file, we just skip this 5-sec update
+                os.replace(temp_path, out_path)
+            except (PermissionError, FileNotFoundError):
+                # If Vite is locking the file, we skip this cycle
                 pass
             iteration += 1
             trades_count = len(data["ALL_TRADES"])

@@ -606,3 +606,60 @@ try {
 } catch (e) {
   console.log('phaseBand registration:', e.message)
 }
+
+// Register Session Band Overlay — draws a full-height colored rectangle for a trading session
+// Points: [{ timestamp: startMs }, { timestamp: endMs }]
+// Styles: { color, label, labelColor }
+try {
+  registerOverlay({
+    name: 'sessionBand',
+    needDefaultPointFigure: false,
+    totalStep: 1,
+    drawExtend: ({ ctx, chart, overlay }) => {
+      const points = overlay.points
+      if (!points || points.length < 2) return
+
+      const startTs = points[0].timestamp
+      const endTs   = points[1].timestamp
+
+      const startCoord = chart.convertToPixel({ timestamp: startTs })
+      const endCoord   = chart.convertToPixel({ timestamp: endTs })
+      if (!startCoord || !endCoord) return
+
+      const chartHeight = ctx.canvas.clientHeight
+      const style = overlay.styles || {}
+      const color = style.color || 'rgba(99,179,237,0.05)'
+      const label = style.label || ''
+      const labelColor = style.labelColor || 'rgba(255,255,255,0.3)'
+
+      const x = Math.min(startCoord.x, endCoord.x)
+      const w = Math.abs(endCoord.x - startCoord.x)
+
+      ctx.save()
+      ctx.fillStyle = color
+      ctx.fillRect(x, 0, w, chartHeight)
+
+      // Draw vertical boundary line at start
+      ctx.strokeStyle = style.borderColor || color.replace('0.05', '0.25').replace('0.08', '0.3')
+      ctx.lineWidth = 1
+      ctx.setLineDash([3, 3])
+      ctx.beginPath()
+      ctx.moveTo(x, 0)
+      ctx.lineTo(x, chartHeight)
+      ctx.stroke()
+      ctx.setLineDash([])
+
+      // Draw session label at top
+      if (label) {
+        ctx.fillStyle = labelColor
+        ctx.font = 'bold 10px "Inter", sans-serif'
+        ctx.textAlign = 'left'
+        ctx.fillText(label, x + 4, 14)
+      }
+      ctx.restore()
+    }
+  })
+} catch (e) {
+  console.log('sessionBand registration:', e.message)
+}
+

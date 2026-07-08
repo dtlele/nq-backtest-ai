@@ -1,0 +1,8 @@
+# Analisi Dettagliata del Video di Trading
+
+## Panoramica Generale
+Il video è una registrazione di una sessione di mentoring o analisi di mercato in live streaming. Due trader interagiscono in un formato di webinar: il relatore principale (Speaker 1, in alto a destra, indossa un cappellino nero con il logo "Nasdaq" e una polo blu) spiega concetti di Auction Market Theory (AMT) e setups operativi su un grafico live. Il secondo partecipante (Speaker 2, in basso a destra, con barba e polo bianca) ascolta e osserva. Il grafico principale è la piattaforma **NinjaTrader** (visibile dalla struttura dell'interfaccia, dal DOM a destra e dagli strumenti di disegno). Lo strumento finanziario analizzato è il **NQ (Nasdaq 100 Futures)**, contratto `06-25` (Giugno 2025), come indicato nella barra superiore del grafico. Il grafico è impostato su un **timeframe a 5 minuti** (visibile dall'asse delle X: 8:00, 8:05, 10:00, 10:05). Il grafico visualizza un grafico a candele con dati di **Order Flow** integrati (footprint), dove le candele mostrano il delta interno (verde per delta positivo, rosso/viola per delta negativo) e piccoli numeri che indicano il volume per ogni livello di prezzo. Sull'asse sinistro, in alcune fasi, è visibile un istogramma del **Volume Profile** (TPO). Nell'angolo in basso a sinistra è presente il logo "TRADEZILLA TRADING JOURNAL - 'CODE: WOW'" e in basso a destra "ALPHA CAPITAL USE CODE 'RIZ' FOR 20% OFF".
+
+---
+
+## Analisi Cronologica

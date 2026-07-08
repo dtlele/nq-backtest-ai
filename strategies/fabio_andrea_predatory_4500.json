@@ -1,6 +1,7 @@
 {
   "strategy_id": "fabio_andrea_predatory_4500",
   "min_volume_threshold": 1500,
+  "cooldown_minutes": 15,
   "a_plus_volume_threshold": 1500,
   "a_plus_size_multiplier": 3,
   "apm_trailing_stop_enabled": true,
