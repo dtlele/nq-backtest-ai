@@ -6,6 +6,10 @@ import TradePanel from './components/TradePanel'
 import MacroContext from './components/MacroContext'
 import AgentSidebar from './components/AgentSidebar'
 import StrategyRules from './components/StrategyRules'
+import EdgeStatsModal from './components/EdgeStatsModal'
+import AdvancedAnalytics from './components/AdvancedAnalytics'
+import PlaybookView from './components/PlaybookView'
+import FstScalpView from './components/FstScalpView'
 import './App.css'
 
 export default function App() {
@@ -15,7 +19,6 @@ export default function App() {
     ALL_REASONINGS: [],
     ANALYZED_DATES: [],
     OPEN_TRADE: null,
-    PENDING_TRADE: null,
     LIVE_SESSION_STATE: {},
     LATEST_REASONING: {},
     MOCK_SESSIONS: [],
@@ -30,8 +33,10 @@ export default function App() {
   const [runFilter, setRunFilter] = useState('all')
   const [jumpTimestamp, setJumpTimestamp] = useState(null)
   const [showStrategyRules, setShowStrategyRules] = useState(false)
+  const [showEdgeStats, setShowEdgeStats] = useState(false)
   const [autoScroll, setAutoScroll] = useState(true)
   const [timeZone, setTimeZone] = useState('America/New_York')
+  const [activeTab, setActiveTab] = useState('chart')
 
   // Polling data instead of Vite HMR
   useEffect(() => {
@@ -92,65 +97,85 @@ export default function App() {
         liveReasoning={dashboardData.LATEST_REASONING}
         runFilter={runFilter}
         onRunFilterChange={setRunFilter}
+        onOpenEdgeStats={() => setShowEdgeStats(true)}
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
       />
 
-      {/* MAIN CONTENT — 3 columns */}
+      {/* MAIN CONTENT */}
       <div className="platform-body">
-        {/* LEFT — Session Navigator */}
-        <Sidebar
-          sessions={dashboardData.MOCK_SESSIONS}
-          activeDate={activeDate}
-          onSelect={(d) => { setActiveDate(d); handleSetActiveTrade(null) }}
-          collapsed={sidebarCollapsed}
-          onToggle={() => setSidebarCollapsed(c => !c)}
-          onOpenStrategy={() => setShowStrategyRules(true)}
-        />
+        {activeTab === 'chart' && (
+          <>
+            {/* LEFT — Session Navigator */}
+            <Sidebar
+              sessions={dashboardData.MOCK_SESSIONS}
+              activeDate={activeDate}
+              onSelect={(d) => { setActiveDate(d); handleSetActiveTrade(null) }}
+              collapsed={sidebarCollapsed}
+              onToggle={() => setSidebarCollapsed(c => !c)}
+              onOpenStrategy={() => setShowStrategyRules(true)}
+            />
 
-        {/* CENTER — Chart Area */}
-        <div className="platform-center">
-          <MacroContext ctx={multiDayCtx} date={activeDate} trades={dayTrades} reasonings={dayReasonings} />
-          <TradingChart
-            key={`${activeDate}-${runFilter}-${timeZone}`}
-            trades={dayTrades}
-            proposals={dayProposals}
-            reasonings={dayReasonings}
-            date={activeDate}
-            activeTrade={activeTrade}
-            activeReasoning={activeReasoning}
-            onTradeClick={handleSetActiveTrade}
-            openTrade={dashboardData.OPEN_TRADE}
-            pendingTrade={dashboardData.PENDING_TRADE}
-            latestReasoning={dashboardData.LATEST_REASONING}
-            jumpTimestamp={jumpTimestamp}
-            runFilter={runFilter}
-            autoScroll={autoScroll}
-            onAutoScrollChange={setAutoScroll}
-            timeZone={timeZone}
-            onToggleTimeZone={handleToggleTimeZone}
+            {/* CENTER — Chart Area */}
+            <div className="platform-center">
+              <MacroContext ctx={multiDayCtx} date={activeDate} trades={dayTrades} reasonings={dayReasonings} />
+              <TradingChart
+                key={`${activeDate}-${runFilter}-${timeZone}`}
+                trades={dayTrades}
+                proposals={dayProposals}
+                reasonings={dayReasonings}
+                date={activeDate}
+                activeTrade={activeTrade}
+                activeReasoning={activeReasoning}
+                onTradeClick={handleSetActiveTrade}
+                openTrade={dashboardData.OPEN_TRADE}
+                latestReasoning={dashboardData.LATEST_REASONING}
+                jumpTimestamp={jumpTimestamp}
+                runFilter={runFilter}
+                autoScroll={autoScroll}
+                onAutoScrollChange={setAutoScroll}
+                timeZone={timeZone}
+                onToggleTimeZone={handleToggleTimeZone}
+              />
+            </div>
+
+            {/* RIGHT — Agent Sidebar */}
+            <AgentSidebar
+              latestReasoning={dashboardData.LATEST_REASONING}
+              openTrade={dashboardData.OPEN_TRADE}
+              reasonings={dayReasonings}
+              onJump={(r) => {
+                setActiveReasoning(r)
+                setJumpTimestamp(Date.now() + Math.random())
+              }}
+              timeZone={timeZone}
+              dayTrades={dayTrades}
+              dayProposals={dayProposals}
+              activeTrade={activeTrade}
+              onSelectTrade={handleSetActiveTrade}
+              activeDate={activeDate}
+            />
+          </>
+        )}
+
+        {activeTab === 'analytics' && (
+          <AdvancedAnalytics 
+            trades={runFilter === 'all' ? dashboardData.ALL_TRADES : dashboardData.ALL_TRADES.filter(t => t.run === runFilter)} 
+            kpi={kpi} 
           />
+        )}
 
-        </div>
+        {activeTab === 'playbook' && (
+          <PlaybookView />
+        )}
 
-        {/* RIGHT — Agent Sidebar */}
-        <AgentSidebar
-          latestReasoning={dashboardData.LATEST_REASONING}
-          openTrade={dashboardData.OPEN_TRADE}
-          pendingTrade={dashboardData.PENDING_TRADE}
-          reasonings={dayReasonings}
-          onJump={(r) => {
-            setActiveReasoning(r)
-            setJumpTimestamp(Date.now() + Math.random())
-          }}
-          timeZone={timeZone}
-          dayTrades={dayTrades}
-          dayProposals={dayProposals}
-          activeTrade={activeTrade}
-          onSelectTrade={handleSetActiveTrade}
-          activeDate={activeDate}
-        />
+        {activeTab === 'fst_scalp' && (
+          <FstScalpView />
+        )}
       </div>
 
       {showStrategyRules && <StrategyRules onClose={() => setShowStrategyRules(false)} />}
+      {showEdgeStats && <EdgeStatsModal onClose={() => setShowEdgeStats(false)} kpi={kpi} />}
     </div>
   )
 }

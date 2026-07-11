@@ -31,7 +31,6 @@ def reset_session(date_str: str) -> dict:
         'ib_high': None, 'ib_low': None, 'poc': None,
         'day_type': 'unknown',
         'open_trade': None,
-        'pending_trade': None,
         'equity': current_equity,      # Preserve compounding equity
         'daily_pnl_usd': 0.0,
         'trade_count_today': 0,

@@ -244,7 +244,7 @@ const saveUserDrawings = (chart, currentDate) => {
   }
 }
 
-export default function TradingChart({ trades = [], proposals = [], reasonings = [], date, activeTrade, activeReasoning, onTradeClick, openTrade, pendingTrade, latestReasoning, jumpTimestamp, runFilter, autoScroll, onAutoScrollChange, timeZone, onToggleTimeZone }) {
+export default function TradingChart({ trades = [], proposals = [], reasonings = [], date, activeTrade, activeReasoning, onTradeClick, openTrade, latestReasoning, jumpTimestamp, runFilter, autoScroll, onAutoScrollChange, timeZone, onToggleTimeZone }) {
   const containerRef = useRef(null)
   const chartRef     = useRef(null)
   const prevActiveTradeRef = useRef(null)
@@ -550,90 +550,7 @@ export default function TradingChart({ trades = [], proposals = [], reasonings =
       }
     });
 
-    // 3b. Create SESSION BANDS (Pre-RTH, RTH Open, RTH, After-Hours)
-    // NQ M1 data timestamps are in UTC. NY sessions in UTC:
-    //   Pre-RTH:    18:00 (prev day) → 09:30
-    //   RTH Open:   09:30 → 10:30 (first hour = Initial Balance formation)
-    //   RTH:        10:30 → 16:00
-    //   After-Hours: 16:00 → 18:00
-    if (candles.length) {
-      const d = date; // YYYY-MM-DD
-      // NY time → UTC offset: EST = UTC-5, EDT = UTC-4
-      // Use the actual candle data start to determine offset
-      const firstCandleUtc = new Date(candles[0].time * 1000);
-      const firstCandleHourNY = new Date(firstCandleUtc.toLocaleString('en-US', { timeZone: 'America/New_York' })).getHours();
-      const offsetHours = firstCandleUtc.getHours() - firstCandleHourNY; // e.g. 4 for EDT, 5 for EST
-
-      const toUtcMs = (dateStr, h, m) => {
-        return new Date(`${dateStr}T${String(h + offsetHours).padStart(2, '0')}:${String(m).padStart(2, '0')}:00Z`).getTime();
-      };
-
-      const sessions = [
-        {
-          id: 'system_session_prerth',
-          startMs: toUtcMs(d, 0, 0),       // midnight NY
-          endMs:   toUtcMs(d, 9, 30),       // 9:30 NY
-          color: 'rgba(74, 85, 104, 0.06)',
-          borderColor: 'rgba(160,174,192,0.15)',
-          label: 'Pre-RTH',
-          labelColor: 'rgba(160,174,192,0.4)'
-        },
-        {
-          id: 'system_session_ibwindow',
-          startMs: toUtcMs(d, 9, 30),       // 9:30 NY — RTH open
-          endMs:   toUtcMs(d, 10, 30),      // 10:30 NY — end of IB window
-          color: 'rgba(237, 137, 54, 0.05)',
-          borderColor: 'rgba(237,137,54,0.3)',
-          label: 'IB Window (09:30–10:30)',
-          labelColor: 'rgba(237,137,54,0.6)'
-        },
-        {
-          id: 'system_session_rth',
-          startMs: toUtcMs(d, 10, 30),      // 10:30 NY
-          endMs:   toUtcMs(d, 16, 0),       // 16:00 NY
-          color: 'rgba(72, 187, 120, 0.03)',
-          borderColor: 'rgba(72,187,120,0.15)',
-          label: 'RTH',
-          labelColor: 'rgba(72,187,120,0.4)'
-        },
-        {
-          id: 'system_session_ath',
-          startMs: toUtcMs(d, 16, 0),       // 16:00 NY
-          endMs:   toUtcMs(d, 18, 0),       // 18:00 NY
-          color: 'rgba(74, 85, 104, 0.06)',
-          borderColor: 'rgba(160,174,192,0.1)',
-          label: 'After-Hours',
-          labelColor: 'rgba(160,174,192,0.3)'
-        }
-      ];
-
-      sessions.forEach(s => {
-        const sessionCandles = formattedCandles.filter(c => c.timestamp >= s.startMs && c.timestamp <= s.endMs);
-        if (sessionCandles.length === 0) return; // session not in data
-        const snapStart = formattedCandles.reduce((best, c) => Math.abs(c.timestamp - s.startMs) < Math.abs(best.timestamp - s.startMs) ? c : best).timestamp;
-        const snapEnd   = formattedCandles.reduce((best, c) => Math.abs(c.timestamp - s.endMs)   < Math.abs(best.timestamp - s.endMs)   ? c : best).timestamp;
-        try {
-          chart.createOverlay({
-            id: s.id,
-            name: 'sessionBand',
-            points: [
-              { timestamp: snapStart },
-              { timestamp: snapEnd }
-            ],
-            styles: {
-              color: s.color,
-              borderColor: s.borderColor,
-              label: s.label,
-              labelColor: s.labelColor
-            },
-            lock: true
-          });
-        } catch(e) {}
-      });
-    }
-
     // 4. Create static Initial Balance Levels (IBH, IBL)
-
     if (layers.vp && data?.ib?.high && candles.length) {
       chart.createOverlay({
         id: 'system_ibh',
@@ -737,28 +654,19 @@ export default function TradingChart({ trades = [], proposals = [], reasonings =
         const directionLong = t0.direction && t0.direction.toLowerCase() === 'long';
 
         let snappedEntryTime = entryTimeMs;
-        let snappedExitTime  = exitTimeMs;
+        let snappedExitTime = exitTimeMs;
         if (formattedCandles.length) {
           const entryDiffs = formattedCandles.map(c => ({ c, diff: Math.abs(c.timestamp - entryTimeMs) }));
           entryDiffs.sort((a, b) => a.diff - b.diff);
           snappedEntryTime = entryDiffs[0].c.timestamp;
 
-          // FIX: snap exitTime to nearest candle, but ONLY from candles at or before exitTimeMs
-          // This prevents the exit from snapping far into the future
-          const exitCandidates = formattedCandles.filter(c => c.timestamp <= exitTimeMs + 60000);
-          if (exitCandidates.length > 0) {
-            const exitDiffs = exitCandidates.map(c => ({ c, diff: Math.abs(c.timestamp - exitTimeMs) }));
-            exitDiffs.sort((a, b) => a.diff - b.diff);
-            snappedExitTime = exitDiffs[0].c.timestamp;
-          } else {
-            // No candles before exit, use entry + 1 candle min width
-            snappedExitTime = snappedEntryTime + 60000;
-          }
+          const exitDiffs = formattedCandles.map(c => ({ c, diff: Math.abs(c.timestamp - exitTimeMs) }));
+          exitDiffs.sort((a, b) => a.diff - b.diff);
+          snappedExitTime = exitDiffs[0].c.timestamp;
 
-          // Ensure at least 1 candle of width
-          if (snappedExitTime <= snappedEntryTime) {
-            const entryIdx = formattedCandles.findIndex(c => c.timestamp === snappedEntryTime);
-            if (entryIdx >= 0 && entryIdx < formattedCandles.length - 1) {
+          if (snappedExitTime <= snappedEntryTime && exitTimeMs > entryTimeMs) {
+            const entryIdx = formattedCandles.indexOf(entryDiffs[0].c);
+            if (entryIdx < formattedCandles.length - 1) {
               snappedExitTime = formattedCandles[entryIdx + 1].timestamp;
             } else {
               snappedExitTime = snappedEntryTime + 60000;
@@ -766,61 +674,24 @@ export default function TradingChart({ trades = [], proposals = [], reasonings =
           }
         }
         
-        // Cap to replay mode — only applies when maxTimeMs is limited (not Infinity)
-        if (isFinite(maxTimeMs) && snappedExitTime > maxTimeMs && formattedCandles.length > 0) {
-          snappedExitTime = formattedCandles[formattedCandles.length - 1].timestamp;
+        // Cap to prevent looking into the future during replay
+        if (snappedExitTime > maxTimeMs && formattedCandles.length > 0) {
+           snappedExitTime = formattedCandles[formattedCandles.length - 1].timestamp;
         }
-
-        // Format entry/exit times in ET for the label
-        const fmtET = (ms) => new Date(ms).toLocaleTimeString('en-US', {
-          hour: '2-digit', minute: '2-digit', timeZone: 'America/New_York', hour12: false
-        });
-        const entryET = fmtET(entryTimeMs);
-        const exitET  = fmtET(exitTimeMs);
-        const pnlSign = (finalExit.pnl_usd ?? 0) >= 0 ? '+' : '';
-        const pnlStr  = `${pnlSign}$${(finalExit.pnl_usd ?? 0).toFixed(0)}`;
 
         if (entryTimeMs <= maxTimeMs) {
           const overlayId = `system_trade_${t0.entry_time}`;
-          try {
-            chart.createOverlay({
-              id: overlayId,
-              name: directionLong ? 'longPosition' : 'shortPosition',
-              points: [
-                { timestamp: snappedEntryTime, value: Number(t0.entry) },
-                { timestamp: snappedExitTime,  value: Number(t0.stop || t0.entry) },
-                { timestamp: snappedExitTime,  value: Number(finalExit.target) || Number(t0.target) }
-              ],
-              extendData: {
-                direction: t0.direction,
-                exitReason: finalExit.exit_reason,
-                pnl: finalExit.pnl_usd
-              },
-              styles: { quantity: t0.contracts || 1 },
-              lock: true,
-              mode: 'normal',
-              modeSensitivity: 20,
-              onDrawEnd: null
-            });
-          } catch(e) { console.warn('Trade overlay error:', e); }
-
-          // Labeled entry line with ET time and P&L — always visible
-          const entryLabel = `${directionLong ? '▲' : '▼'} ${entryET}ET → ${exitET}ET | ${Number(t0.entry).toFixed(2)} | ${finalExit.exit_reason?.toUpperCase()} ${pnlStr}`;
-          try {
-            chart.createOverlay({
-              id: `${overlayId}_entry_label`,
-              name: 'labeledHLine',
-              points: [{ timestamp: snappedEntryTime, value: Number(t0.entry) }],
-              styles: {
-                lineColor: directionLong ? 'rgba(72, 187, 120, 0.65)' : 'rgba(252, 129, 129, 0.65)',
-                label: entryLabel,
-
-                lineStyle: 'dashed',
-                lineWidth: 1
-              },
-              lock: true
-            });
-          } catch(e) {}
+          chart.createOverlay({
+            id: overlayId,
+            name: directionLong ? 'longPosition' : 'shortPosition',
+            points: [
+              { timestamp: snappedEntryTime, value: Number(t0.entry) },
+              { timestamp: snappedExitTime, value: Number(t0.stop) },
+              { timestamp: snappedExitTime, value: Number(finalExit.target) || Number(t0.target) }
+            ],
+            styles: { quantity: 1 },
+            lock: true
+          });
         }
       });
     }
@@ -847,106 +718,18 @@ export default function TradingChart({ trades = [], proposals = [], reasonings =
             snappedExitTime = exitDiffs[0].c.timestamp;
           }
 
-          const isLong = openTrade.direction && openTrade.direction.toLowerCase() === 'long';
-          try {
-            chart.createOverlay({
-              id: `system_opentrade_${openTrade.entry_time}`,
-              name: isLong ? 'longPosition' : 'shortPosition',
-              points: [
-                { timestamp: snappedEntryTime, value: Number(openTrade.entry) },
-                { timestamp: snappedExitTime, value: Number(openTrade.stop) },
-                { timestamp: snappedExitTime, value: Number(openTrade.target) }
-              ],
-              styles: { quantity: openTrade.contracts || 1 },
-              lock: true
-            });
-          } catch(e) { console.warn('Open trade overlay error:', e); }
-          
-          // Labeled lines for LIVE open trade (always visible)
-          try {
-            chart.createOverlay({
-              id: `system_opentrade_entry_line`,
-              name: 'labeledHLine',
-              points: [{ timestamp: snappedEntryTime, value: Number(openTrade.entry) }],
-              styles: {
-                lineColor: isLong ? 'rgba(72,187,120,0.9)' : 'rgba(252,129,129,0.9)',
-                label: `LIVE ${isLong ? 'LONG' : 'SHORT'} ENTRY: ${Number(openTrade.entry).toFixed(2)}`,
-                lineStyle: 'solid',
-                lineWidth: 2
-              },
-              lock: true
-            });
-            chart.createOverlay({
-              id: `system_opentrade_stop_line`,
-              name: 'labeledHLine',
-              points: [{ timestamp: snappedEntryTime, value: Number(openTrade.stop) }],
-              styles: {
-                lineColor: 'rgba(252,129,129,0.7)',
-                label: `SL: ${Number(openTrade.stop).toFixed(2)}`,
-                lineStyle: 'dashed',
-                lineWidth: 1.5
-              },
-              lock: true
-            });
-            chart.createOverlay({
-              id: `system_opentrade_target_line`,
-              name: 'labeledHLine',
-              points: [{ timestamp: snappedEntryTime, value: Number(openTrade.target) }],
-              styles: {
-                lineColor: 'rgba(72,187,120,0.7)',
-                label: `TP: ${Number(openTrade.target).toFixed(2)}`,
-                lineStyle: 'dashed',
-                lineWidth: 1.5
-              },
-              lock: true
-            });
-          } catch(e) {}
+          chart.createOverlay({
+            id: `system_opentrade_${openTrade.entry_time}`,
+            name: (openTrade.direction && openTrade.direction.toLowerCase() === 'long') ? 'longPosition' : 'shortPosition',
+            points: [
+              { timestamp: snappedEntryTime, value: Number(openTrade.entry) },
+              { timestamp: snappedExitTime, value: Number(openTrade.stop) },
+              { timestamp: snappedExitTime, value: Number(openTrade.target) }
+            ],
+            styles: { quantity: 1 },
+            lock: true
+          });
         }
-      }
-    }
-
-    // 6b. Create PENDING TRADE overlay
-    if (layers.trades && pendingTrade && candles.length) {
-      chart.createOverlay({
-        id: `system_pendingtrade`,
-        name: 'labeledHLine',
-        points: [{ value: Number(pendingTrade.entry) }],
-        styles: {
-          lineColor: pendingTrade.direction === 'long' ? '#48bb7880' : '#fc818180',
-          label: `PENDING LIMIT ${pendingTrade.direction.toUpperCase()} @ ${pendingTrade.entry.toFixed(2)} (${pendingTrade.contracts} ctrs)`,
-          lineStyle: 'dashed',
-          lineWidth: 2
-        },
-        lock: true
-      });
-      
-      if (pendingTrade.stop) {
-        chart.createOverlay({
-          id: `system_pendingtrade_stop`,
-          name: 'labeledHLine',
-          points: [{ value: Number(pendingTrade.stop) }],
-          styles: {
-            lineColor: 'rgba(252, 129, 129, 0.45)',
-            label: `PENDING STOP: ${pendingTrade.stop.toFixed(2)}`,
-            lineStyle: 'dashed',
-            lineWidth: 1.2
-          },
-          lock: true
-        });
-      }
-      if (pendingTrade.target) {
-        chart.createOverlay({
-          id: `system_pendingtrade_target`,
-          name: 'labeledHLine',
-          points: [{ value: Number(pendingTrade.target) }],
-          styles: {
-            lineColor: 'rgba(72, 187, 120, 0.45)',
-            label: `PENDING TARGET: ${pendingTrade.target.toFixed(2)}`,
-            lineStyle: 'dashed',
-            lineWidth: 1.2
-          },
-          lock: true
-        });
       }
     }
 
@@ -1016,8 +799,7 @@ export default function TradingChart({ trades = [], proposals = [], reasonings =
 
     // 8. Create Big Trades markers
     if (layers.bigTrades && data?.big_trades?.length && candles.length) {
-      const sorted = [...data.big_trades].sort((a, b) => b.size - a.size).slice(0, 20);
-      const MIN_SIZE = sorted.length > 0 ? sorted[sorted.length - 1].size : 30;
+      const MIN_SIZE = 80;
       const btMap = {};
       data.big_trades.filter(bt => bt.size >= MIN_SIZE && (bt.time * 1000) <= maxTimeMs).forEach(bt => {
         const key = `${bt.time}_${bt.side}`;
@@ -1036,6 +818,37 @@ export default function TradingChart({ trades = [], proposals = [], reasonings =
           styles: { side: bt.side, size: bt.totalSize },
           lock: true
         });
+      });
+    }
+
+    // 8b. Create Relation Node markers (from activeTrade.steps)
+    if (activeTrade && activeTrade.steps && activeTrade.steps.length && candles.length) {
+      activeTrade.steps.forEach((step, idx) => {
+        if (!step.time_utc_iso) return;
+        const stepTimeMs = new Date(step.time_utc_iso).getTime();
+        
+        // Find nearest candle
+        let snappedTimeMs = stepTimeMs;
+        if (formattedCandles.length) {
+          const diffs = formattedCandles.map(c => ({ c, diff: Math.abs(c.timestamp - stepTimeMs) }));
+          diffs.sort((a, b) => a.diff - b.diff);
+          snappedTimeMs = diffs[0].c.timestamp;
+        }
+
+        // Only draw if within replay max time
+        if (snappedTimeMs <= maxTimeMs) {
+          chart.createOverlay({
+            id: `system_relation_node_${idx}`,
+            name: 'relationNodeMarker',
+            points: [{ timestamp: snappedTimeMs, value: Number(step.price) }],
+            styles: {
+              side: step.dominant_side,
+              index: idx + 1,
+              volume: step.volume
+            },
+            lock: true
+          });
+        }
       });
     }
 
@@ -1059,7 +872,7 @@ export default function TradingChart({ trades = [], proposals = [], reasonings =
          if (chart.scrollToTimestamp) chart.scrollToTimestamp(targetMs);
       } catch(e){}
     }
-  }, [trades, openTrade, pendingTrade, latestReasoning, activeTrade, activeReasoning, data, date, chartReady, autoScroll, layers]);
+  }, [trades, openTrade, latestReasoning, activeTrade, activeReasoning, data, date, chartReady, autoScroll, layers]);
 
   const prevJumpRef = useRef(jumpTimestamp)
 

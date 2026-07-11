@@ -2,19 +2,51 @@ import pandas as pd
 import numpy as np
 from src import Trade, Bar, NQ_BIG_TRADE_THRESHOLD
 
-def aggregate_to_bars(trades: list, freq: str = '1min') -> list:
-    if not trades:
+def aggregate_to_bars(trades: list, freq: str = '1min', price_only: bool = False) -> list:
+    if trades is None or (isinstance(trades, list) and not trades) or (isinstance(trades, pd.DataFrame) and trades.empty):
         return []
-    records = [{
-        'ts':    pd.Timestamp(t.ts_event).tz_convert('UTC') if t.ts_event.tzinfo else pd.Timestamp(t.ts_event).tz_localize('UTC'),
-        'side':  t.side,
-        'price': t.price,
-        'size':  t.size,
-    } for t in trades]
 
-    df = pd.DataFrame(records).set_index('ts').sort_index()
+    if isinstance(trades, pd.DataFrame):
+        df = trades.copy()
+        if 'ts' not in df.index.names and 'ts' in df.columns:
+            df = df.set_index('ts')
+        elif 'ts_event' in df.columns:
+            df = df.rename(columns={'ts_event': 'ts'}).set_index('ts')
+        df = df.sort_index()
+    else:
+        records = [{
+            'ts':    pd.Timestamp(t.ts_event).tz_convert('UTC') if t.ts_event.tzinfo else pd.Timestamp(t.ts_event).tz_localize('UTC'),
+            'side':  t.side,
+            'price': t.price,
+            'size':  t.size,
+        } for t in trades]
+        df = pd.DataFrame(records).set_index('ts').sort_index()
+
     if df.index.tz is None:
         df.index = df.index.tz_localize('UTC')
+
+    if price_only:
+        g      = df.resample(freq)
+        ohlcv  = g['price'].ohlc().dropna(subset=['open'])
+        bars = []
+        for ts, row in ohlcv.iterrows():
+            bars.append(Bar(
+                timestamp   = ts.to_pydatetime(),
+                open        = float(row['open']),
+                high        = float(row['high']),
+                low         = float(row['low']),
+                close       = float(row['close']),
+                volume      = 0,
+                buy_volume  = 0,
+                sell_volume = 0,
+                delta       = 0,
+                delta_pct   = 0.0,
+                cvd         = 0,
+                vwap        = 0.0,
+                big_trades  = [],
+                footprint   = {},
+            ))
+        return bars
 
     df['buy_vol']  = np.where(df['side'] == 'A', df['size'], 0)
     df['sell_vol'] = np.where(df['side'] == 'B', df['size'], 0)
@@ -50,7 +82,7 @@ def aggregate_to_bars(trades: list, freq: str = '1min') -> list:
     bubbles = footprint[footprint['size'] >= NQ_BIG_TRADE_THRESHOLD]
 
     big_map: dict = {}
-    for _, row in bubbles.iterrows():
+    for row in bubbles.to_dict(orient='records'):
         # The bubble's exact M1 timestamp
         ts_m1 = row['m1_floor']
         
@@ -71,7 +103,7 @@ def aggregate_to_bars(trades: list, freq: str = '1min') -> list:
     # Ignore 'N' side for bid/ask split, but we can capture it. Usually 'B' is hit (bid), 'A' is lift (ask)
     fp_grouped = df[df['side'] != 'N'].groupby(['parent_floor', 'price', 'side'])['size'].sum().reset_index()
     footprint_map: dict = {}
-    for _, row in fp_grouped.iterrows():
+    for row in fp_grouped.to_dict(orient='records'):
         ts_parent = row['parent_floor']
         price = float(row['price'])
         side = row['side']

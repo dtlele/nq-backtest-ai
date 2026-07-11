@@ -119,7 +119,14 @@ def download_segment(url: str, output_dir: Path, video_id: str,
     """Scarica una sezione del video in bassa risoluzione."""
     output_dir.mkdir(parents=True, exist_ok=True)
     filename_base = f"yt_{video_id}_s{start_sec}_e{end_sec}"
-    temp_template = str(output_dir / f"{filename_base}.%(ext)s")
+    
+    # Cerca se esiste già il file segmentato
+    files = list(output_dir.glob(f"{filename_base}.*"))
+    if files:
+        downloaded = files[0]
+        size_mb = downloaded.stat().st_size / (1024 * 1024)
+        print(f"[OK] Segmento esistente: {downloaded.name} ({size_mb:.2f} MB)")
+        return downloaded
 
     try:
         import static_ffmpeg
@@ -129,29 +136,68 @@ def download_segment(url: str, output_dir: Path, video_id: str,
 
     start_str = seconds_to_hms(start_sec)
     end_str = seconds_to_hms(end_sec)
+    
+    # Prova prima il download parziale nativo
     print(f"[WAIT] Download segmento {start_str} - {end_str}...")
-
+    temp_template = str(output_dir / f"{filename_base}.%(ext)s")
     cmd = [
         "python", "-m", "yt_dlp",
         "--format", "worst[ext=mp4]/worst",
         "-o", temp_template,
         "--download-sections", f"*{start_str}-{end_str}",
-        "--force-keyframes-at-cuts",
         "--quiet", "--no-warnings",
         url
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"Errore nel download:\n{result.stderr}")
+    
+    if result.returncode == 0:
+        files = list(output_dir.glob(f"{filename_base}.*"))
+        if files:
+            downloaded = files[0]
+            size_mb = downloaded.stat().st_size / (1024 * 1024)
+            print(f"[OK] Segmento scaricato: {downloaded.name} ({size_mb:.2f} MB)")
+            return downloaded
 
-    files = list(output_dir.glob(f"{filename_base}.*"))
-    if not files:
-        raise FileNotFoundError("Nessun file generato da yt-dlp.")
+    # Fallback se fallisce (es. crash di ffmpeg/access violation)
+    print(f"[WARN] Download-sections fallito o crash ffmpeg. Provo a scaricare il video completo e tagliarlo...")
+    full_template = str(output_dir / f"yt_{video_id}_full.%(ext)s")
+    
+    full_files = list(output_dir.glob(f"yt_{video_id}_full.*"))
+    if not full_files:
+        print(f"[WAIT] Download video completo in bassa risoluzione...")
+        cmd_full = [
+            "python", "-m", "yt_dlp",
+            "--format", "worst[ext=mp4]/worst",
+            "-o", full_template,
+            "--quiet", "--no-warnings",
+            url
+        ]
+        result_full = subprocess.run(cmd_full, capture_output=True, text=True)
+        if result_full.returncode != 0:
+            raise RuntimeError(f"Errore nel download del video completo:\n{result_full.stderr}")
+        full_files = list(output_dir.glob(f"yt_{video_id}_full.*"))
+        if not full_files:
+            raise FileNotFoundError("Impossibile scaricare il video completo.")
 
-    downloaded = files[0]
-    size_mb = downloaded.stat().st_size / (1024 * 1024)
-    print(f"[OK] Segmento scaricato: {downloaded.name} ({size_mb:.2f} MB)")
-    return downloaded
+    full_video = full_files[0]
+    out_sliced = output_dir / f"{filename_base}.mp4"
+    
+    print(f"[WAIT] Taglio segmento locale {start_str} - {end_str} con ffmpeg...")
+    cmd_slice = [
+        ffmpeg_path(), "-y",
+        "-ss", start_str,
+        "-to", end_str,
+        "-i", str(full_video),
+        "-c", "copy",
+        str(out_sliced)
+    ]
+    result_slice = subprocess.run(cmd_slice, capture_output=True, text=True)
+    if result_slice.returncode != 0:
+        raise RuntimeError(f"Errore ffmpeg nel taglio del segmento:\n{result_slice.stderr}")
+        
+    size_mb = out_sliced.stat().st_size / (1024 * 1024)
+    print(f"[OK] Segmento tagliato localmente: {out_sliced.name} ({size_mb:.2f} MB)")
+    return out_sliced
 
 def compress_segment(input_path: Path, target_mb: float = 14.0) -> Path:
     """
@@ -210,7 +256,7 @@ def analyze_chunk(url: str, tmp_dir: Path, video_id: str,
     final_path = stable_video_path(tmp_dir, video_id, start_sec, end_sec)
 
     # Controlla cache preventiva
-    cache_key = _cache_key(SYSTEM_PROMPT_VIDEO, prompt, str(final_path))
+    cache_key = _cache_key(SYSTEM_PROMPT_VIDEO, prompt, str(final_path), provider="openrouter")
     if not force:
         cache = _load_cache()
         if cache_key in cache:

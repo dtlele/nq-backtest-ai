@@ -16,7 +16,7 @@ function useETClock() {
   return { time, date }
 }
 
-export default function PlatformTopBar({ kpi, sessions, activeDate, onDateSelect, openTrade, liveReasoning, runFilter, onRunFilterChange }) {
+export default function PlatformTopBar({ kpi, sessions, activeDate, onDateSelect, openTrade, liveReasoning, runFilter, onRunFilterChange, onOpenEdgeStats, activeTab, onSelectTab }) {
   const { time, date } = useETClock()
   const [prevPrice, setPrevPrice] = useState(null)
   const [priceDir, setPriceDir] = useState(null) // 'up' | 'down' | null
@@ -34,17 +34,12 @@ export default function PlatformTopBar({ kpi, sessions, activeDate, onDateSelect
     setPrevPrice(currentPrice)
   }, [currentPrice])
 
-  // Session totals — use camelCase keys matching MOCK_KPI structure from App.jsx
-  const totalPnl    = kpi?.totalPnL    ?? kpi?.total_pnl_usd ?? 0
-  const rawWinRate  = kpi?.winRate     ?? kpi?.win_rate      ?? 0
-  const totalTrades = kpi?.totalTrades ?? kpi?.total_trades  ?? 0
-  const maxDD       = kpi?.maxDrawdown ?? null
-  const asimmetria  = kpi?.asimmetria  ?? null
-  const sharpe      = kpi?.sharpe      ?? null
-  // winRate in MOCK_KPI is already 0–100; normalize if 0–1
-  const winRate = rawWinRate > 1 ? rawWinRate / 100 : rawWinRate
-
-  const isBacktest = runFilter && runFilter !== 'all'
+  // Session totals
+  const totalPnl = kpi?.totalPnL ?? 0
+  const winRate = kpi?.winRate ?? 0
+  const totalTrades = kpi?.totalTrades ?? 0
+  const sharpe = kpi?.profitFactor ?? null
+  const expectancy = kpi?.expectancy ?? null
 
   const isLive = openTrade != null
   const sessionLabel = activeDate || '---'
@@ -81,25 +76,8 @@ export default function PlatformTopBar({ kpi, sessions, activeDate, onDateSelect
         }}>⚡</div>
         <div>
           <div style={{ fontWeight: 800, fontSize: 12, letterSpacing: '0.04em', background: 'linear-gradient(90deg, #63b3ed, #9f7aea)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>NQ PREDATOR</div>
-          <div style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>TRADING PLATFORM</div>
+          <div style={{ fontSize: 8, color: '#63b3ed', fontWeight: 'bold', letterSpacing: '0.06em' }}>ALL OPTIMIZED SETUPS</div>
         </div>
-        <select 
-          value={runFilter || 'all'}
-          onChange={(e) => onRunFilterChange?.(e.target.value)}
-          style={{
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border)',
-            color: 'var(--text-primary)',
-            fontSize: 11,
-            padding: '4px 8px',
-            borderRadius: 6,
-            outline: 'none',
-            cursor: 'pointer'
-          }}
-        >
-          <option value="all">Live / All Trades</option>
-          <option value="vwap_nav">Backtest: VWAP + NAV</option>
-        </select>
       </div>
 
       {/* Instrument + Live Price */}
@@ -133,31 +111,12 @@ export default function PlatformTopBar({ kpi, sessions, activeDate, onDateSelect
         flex: 1, height: '100%',
         overflow: 'hidden',
       }}>
-        {/* Backtest mode badge */}
-        {isBacktest && (
-          <div style={{
-            padding: '0 14px',
-            borderRight: '1px solid var(--border)',
-            height: '100%',
-            display: 'flex', flexDirection: 'column', justifyContent: 'center',
-            background: 'rgba(159,122,234,0.08)',
-          }}>
-            <div style={{ fontSize: 9, color: 'rgba(159,122,234,0.7)', letterSpacing: '0.08em', fontWeight: 700 }}>MODE</div>
-            <div style={{
-              fontSize: 10, fontWeight: 800, color: '#9f7aea',
-              background: 'rgba(159,122,234,0.15)',
-              border: '1px solid rgba(159,122,234,0.35)',
-              borderRadius: 4, padding: '1px 6px', letterSpacing: '0.05em'
-            }}>⚙ BACKTEST</div>
-          </div>
-        )}
         {[
-          { label: 'NET P&L',   value: `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(0)}`, color: totalPnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' },
-          { label: 'WIN RATE',  value: `${(winRate * 100 > 1 ? winRate : winRate * 100).toFixed(0)}%`, color: winRate >= 0.5 ? 'var(--accent-green)' : 'var(--accent-red)' },
-          { label: 'TRADES',    value: totalTrades, color: 'var(--accent-blue)' },
-          asimmetria != null ? { label: 'R:R ASIMM', value: asimmetria.toFixed(2), color: asimmetria >= 1.5 ? 'var(--accent-green)' : 'var(--text-secondary)' } : null,
-          maxDD      != null ? { label: 'MAX DD',    value: `${maxDD.toFixed(1)}%`,   color: maxDD < 5 ? 'var(--accent-green)' : maxDD < 10 ? 'var(--accent-orange)' : 'var(--accent-red)' } : null,
-          sharpe     != null ? { label: 'SHARPE',    value: sharpe.toFixed(2),         color: sharpe >= 1 ? 'var(--accent-green)' : 'var(--text-secondary)' } : null,
+          { label: 'NET P&L', value: `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(0)}`, color: totalPnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' },
+          { label: 'WIN RATE', value: `${winRate.toFixed(1)}%`, color: winRate >= 50 ? 'var(--accent-green)' : 'var(--accent-red)' },
+          { label: 'TRADES', value: totalTrades, color: 'var(--accent-blue)' },
+          sharpe != null ? { label: 'PROFIT FACTOR', value: sharpe.toFixed(2), color: sharpe >= 1.5 ? 'var(--accent-green)' : 'var(--text-secondary)' } : null,
+          expectancy != null ? { label: 'EXPECTANCY', value: `$${expectancy.toFixed(0)}`, color: expectancy > 0 ? 'var(--accent-green)' : 'var(--accent-red)' } : null,
         ].filter(Boolean).map((item, i) => (
           <div key={i} style={{
             padding: '0 18px',
@@ -169,6 +128,33 @@ export default function PlatformTopBar({ kpi, sessions, activeDate, onDateSelect
             <div style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--font-mono)', color: item.color }}>{item.value}</div>
           </div>
         ))}
+
+        <div style={{ display: 'flex', height: '100%', borderRight: '1px solid var(--border)', alignItems: 'center', padding: '0 12px', gap: '6px' }}>
+          {[
+            { id: 'chart', label: '📊 Grafico' },
+            { id: 'analytics', label: '📈 Statistiche' },
+            { id: 'playbook', label: '📘 Regole' },
+            { id: 'fst_scalp', label: '⚡ FST Scalp' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => onSelectTab?.(tab.id)}
+              style={{
+                background: activeTab === tab.id ? 'var(--accent-blue-glow)' : 'transparent',
+                border: activeTab === tab.id ? '1px solid var(--border-accent)' : '1px solid transparent',
+                color: activeTab === tab.id ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                borderRadius: '4px',
+                padding: '6px 12px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
         {/* Live session badge */}
         <div style={{

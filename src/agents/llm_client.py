@@ -130,16 +130,6 @@ def _claude_exe() -> str:
 
 
 def _ask_claude(system_prompt: str, user_msg: str, timeout: int = 120) -> str:
-    # Force cache hits for the Jan 7 "4 win" day to restore state despite prompt tweaks
-    if "2025-01-07" in user_msg and "10:00" in user_msg and "Do NOT think about entry prices" in system_prompt:
-        return '{"setup_valid": true, "setup_type": "ivb_model_1_continuation", "bias": "short", "trapped_side": "buyers", "market_state": "imbalance", "key_structural_level": 21660.50, "session_narrative": "Trend down"}'
-    if "2025-01-07" in user_msg and "10:00" in user_msg and "PRECISE mechanical execution" in system_prompt:
-        return '{"reasoning": "The market is in a clear downtrend...", "direction": "short", "confidence": 85, "entry": 21602.75, "stop": 21662.50, "target": 21550.00}'
-    if "2025-01-07" in user_msg and "10:01" in user_msg and "Do NOT think about entry prices" in system_prompt:
-        return '{"setup_valid": true, "setup_type": "ivb_model_1_continuation", "bias": "short", "trapped_side": "buyers", "market_state": "imbalance", "key_structural_level": 21660.50, "session_narrative": "Trend down"}'
-    if "2025-01-07" in user_msg and "10:01" in user_msg and "PRECISE mechanical execution" in system_prompt:
-        return '{"reasoning": "The nearest counter-trend BUY wall is at 21660.50 with 881 contracts...", "direction": "short", "confidence": 85, "entry": 21621.50, "stop": 21662.50, "target": 21550.00}'
-
     full_prompt = f"{system_prompt}\n\n---\n\n{user_msg}"
     result = subprocess.run(
         [_claude_exe(), "-p"],
@@ -165,7 +155,7 @@ def _ask_human(system_prompt: str, user_msg: str) -> str:
     
     # --- DECISION OVERRIDE LOGIC ---
     # Check if a manual decision already exists in the override file
-    override_file = Path(r"C:\Users\Mauro\Documents\nq-backtest\agent_memory\human_decisions.jsonl")
+    override_file = Path(r"C:\Users\Mauro\Documents\nq-backtest-clean\agent_memory\human_decisions.jsonl")
     key = _cache_key(system_prompt, user_msg)
     
     if override_file.exists():
@@ -319,7 +309,7 @@ def _ask_gemini(system_prompt: str, user_msg: str, model: str = None) -> str:
                 if hasattr(response, 'usage_metadata') and response.usage_metadata:
                     in_tok = response.usage_metadata.prompt_token_count or 0
                     out_tok = response.usage_metadata.candidates_token_count or 0
-                    log_file = Path(r"C:\Users\Mauro\Documents\nq-backtest\agent_memory\token_usage.log")
+                    log_file = Path(r"C:\Users\Mauro\Documents\nq-backtest-clean\agent_memory\token_usage.log")
                     with open(log_file, "a") as f:
                         f.write(f"{in_tok},{out_tok}\n")
             except Exception as e:
@@ -366,16 +356,8 @@ def _ask_gemini(system_prompt: str, user_msg: str, model: str = None) -> str:
 # ── OpenRouter backend ─────────────────────────────────────────────────────────
 
 def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None, model: str = None) -> str:
-    # Append educational context/suggestions to ensure prompt exceeds 4096 tokens for Cache Read
     import os
     from pathlib import Path
-    try:
-        padding_file = Path("C:/Users/Mauro/Documents/nq-backtest/knowledge/amt_glossary_padding.txt")
-        if padding_file.exists():
-            system_prompt += "\n\n" + padding_file.read_text(encoding="utf-8")
-    except Exception:
-        system_prompt += "\n\n" + ("PAD " * 4000)
-    
     import time
     try:
         from openai import OpenAI
@@ -430,7 +412,7 @@ def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None, m
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content}
                 ],
-                max_tokens=1000,
+                max_tokens=4096,
                 extra_headers={
                     "HTTP-Referer": "http://localhost:8000",
                     "X-Title": "AgentForge Backtester",
@@ -442,13 +424,30 @@ def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None, m
                 if usage:
                     in_tok = getattr(usage, "prompt_tokens", 0)
                     out_tok = getattr(usage, "completion_tokens", 0)
-                    log_file = Path(r"C:\Users\Mauro\Documents\nq-backtest\agent_memory\token_usage.log")
+                    log_file = Path(r"C:\Users\Mauro\Documents\nq-backtest-clean\agent_memory\token_usage.log")
                     with open(log_file, "a") as f:
                         f.write(f"OPENROUTER,{model},{in_tok},{out_tok}\n")
             except Exception:
                 pass
+            
+            # Guard: response or choices can be None (MiniMax M3 intermittent issue)
+            if response is None or not getattr(response, 'choices', None):
+                raise ValueError(f"Model returned empty response (choices=None). Will retry.")
+            choice = response.choices[0]
+            text = getattr(choice.message, 'content', None)
+            if text is None:
+                # Try alternative fields (some models use 'reasoning' or tool_calls)
+                raw_msg = choice.message
+                refusal = getattr(raw_msg, 'refusal', None)
+                finish_reason = getattr(choice, 'finish_reason', 'unknown')
+                print(f"  [WARN] content=None from model. finish_reason={finish_reason}, refusal={refusal}")
+                # Try to extract from model_extra if present
+                extra = getattr(raw_msg, 'model_extra', {}) or {}
+                text = extra.get('content') or extra.get('text') or refusal
+                if not text:
+                    raise ValueError(f"Model returned None content (finish_reason={finish_reason}). Possible video format issue.")
                 
-            text = response.choices[0].message.content.strip()
+            text = text.strip()
             if text.startswith("```json"): text = text[7:]
             elif text.startswith("```"): text = text[3:]
             if text.endswith("```"): text = text[:-3]
@@ -470,40 +469,6 @@ def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None, m
 def llm_ask(system_prompt: str, user_msg: str, timeout: int = 120,
             use_cache: bool = True, video_path: str = None,
             provider: str = None, model: str = None) -> str:
-    # Force cache hits for the Jan 7 "4 win" day to restore state despite prompt tweaks
-    if "2025-01-07" in user_msg and "10:00" in user_msg and "Do NOT think about entry prices" in system_prompt:
-        return '{"setup_valid": true, "setup_type": "ivb_model_1_continuation", "bias": "short", "trapped_side": "buyers", "market_state": "imbalance", "key_structural_level": 21660.50, "session_narrative": "Trend down"}'
-    if "2025-01-07" in user_msg and "10:00" in user_msg and "PRECISE mechanical execution" in system_prompt:
-        return '{"reasoning": "The market is in a clear downtrend...", "direction": "short", "confidence": 85, "entry": 21602.75, "stop": 21662.50, "target": 21550.00}'
-    if "2025-01-07" in user_msg and "10:01" in user_msg and "Do NOT think about entry prices" in system_prompt:
-        return '{"setup_valid": true, "setup_type": "ivb_model_1_continuation", "bias": "short", "trapped_side": "buyers", "market_state": "imbalance", "key_structural_level": 21660.50, "session_narrative": "Trend down"}'
-    if "2025-01-07" in user_msg and "10:01" in user_msg and "PRECISE mechanical execution" in system_prompt:
-        return '{"reasoning": "The nearest counter-trend BUY wall is at 21660.50 with 881 contracts...", "direction": "short", "confidence": 85, "entry": 21621.50, "stop": 21662.50, "target": 21550.00}'
-    
-    if "2025-01-08" in user_msg and "09:31" in user_msg and "Do NOT think about entry prices" in system_prompt:
-        return '{"setup_valid": true, "setup_type": "ivb_model_1_continuation", "bias": "short", "trapped_side": "buyers", "market_state": "imbalance", "key_structural_level": 21786.00, "session_narrative": "Trend down"}'
-    if "2025-01-08" in user_msg and "09:31" in user_msg and "PRECISE mechanical execution" in system_prompt:
-        return '{"reasoning": "The nearest counter-trend BUY wall...", "direction": "short", "confidence": 75, "entry": 21786.00, "stop": 21797.75, "target": 21683.25}'
-
-
-
-
-    # Load dynamic rules and inject into system_prompt
-    dynamic_rules_file = Path(__file__).parent.parent.parent / 'knowledge' / 'dynamic_rules.json'
-    if dynamic_rules_file.exists():
-        try:
-            with open(dynamic_rules_file, encoding='utf-8') as f:
-                rules_data = json.load(f)
-                rules_list = rules_data.get("dynamic_rules", [])
-                if rules_list:
-                    corrections_block = "\n\n## ACTIVE LIVE CORRECTIONS (DYNAMIC RULES FROM PRIOR SESSIONS)\n"
-                    corrections_block += "You MUST strictly follow these dynamic heuristics generated from recent post-mortem audits to avoid repeating past errors:\n"
-                    for rule in rules_list:
-                        corrections_block += f"- [{rule.get('rule_id', 'RULE')}] (Topic: {rule.get('topic', 'General')}) {rule.get('description', '')} -> ACTION: {rule.get('action', 'Follow carefully')}\n"
-                    system_prompt = system_prompt + corrections_block
-        except Exception as e:
-            print(f"  [DEBUG] Error injecting dynamic rules: {e}")
-
     key = _cache_key(system_prompt, user_msg, video_path, provider, model)
 
     if provider is None:
@@ -544,3 +509,4 @@ def llm_ask(system_prompt: str, user_msg: str, timeout: int = 120,
 
 # Backward compat alias
 claude_ask = llm_ask
+

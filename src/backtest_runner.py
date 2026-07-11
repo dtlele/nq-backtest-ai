@@ -79,11 +79,11 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         return [], prev_day_vp, 0.0
 
     # ── THURSDAY SKIP (WR 29.2%, only losing day of the week) ───────
-    import datetime as _dt
-    _dow = _dt.date.fromisoformat(date_str).weekday()  # 0=Mon ... 4=Thu
-    if _dow == 3:  # Thursday
-        print(f"  [SKIPPED] {date_str} is Thursday (WR 29.2%, net -$165.70 historically). Saving API calls.")
-        return [], prev_day_vp, 0.0
+    # import datetime as _dt
+    # _dow = _dt.date.fromisoformat(date_str).weekday()  # 0=Mon ... 4=Thu
+    # if _dow == 3:  # Thursday
+    #     print(f"  [SKIPPED] {date_str} is Thursday (WR 29.2%, net -$165.70 historically). Saving API calls.")
+    #     return [], prev_day_vp, 0.0
 
     reset_session(date_str)
     trades_raw = load_day(csv_path)
@@ -100,14 +100,15 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
     if not bars_1min_ny:
         return [], vp, 0.0   # Return whatever VP was computed from overnight
         
-    ctx = build_session_context(date_str, bars_1min_ny, vp, prev_day_vp=prev_day_vp, historical_days=historical_days)
+    # Initialize SessionContext look-ahead free: empty bars list, gets populated progressively
+    ctx = build_session_context(date_str, [], vp, prev_day_vp=prev_day_vp, historical_days=historical_days)
     today_close = bars_1min_ny[-1].close
 
     # Candidate detection and agent reasoning use M5 bars (only for macro context)
     bars_ny = filter_ny_window(aggregate_to_bars(trades_raw, freq='5min'))
     
     from src.candidate_detector import detect_candidates, detect_m1_candidates
-    from src.session_context import is_fabio_active, compute_ib, update_session_memory, get_session_memory_up_to
+    from src.session_context import is_fabio_active, compute_ib, update_session_memory, get_session_memory_up_to, update_day_type
     
     candidates = detect_candidates(bars_ny, ctx, bars_1min_ny=bars_1min_ny, bars_1min_overnight=bars_1min_overnight)
 
@@ -116,12 +117,11 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
     m1_candidates = []
     
     for idx, m1_bar in enumerate(bars_1min_ny):
-        if not is_fabio_active(m1_bar, ctx=ctx) or m1_bar.timestamp in existing_ts:
-            continue
-        # Find recent M5 bars up to this M1 bar for macro context
-        m5_recent = [b for b in bars_ny if b.timestamp <= m1_bar.timestamp][-5:]
         # History of M1 bars up to (but not including) this one, for RVOL/VWAP
         m1_history = bars_1min_ny[:idx]
+        
+        # --- DYNAMIC DAY TYPE UPDATE (Eliminates Lookahead Bias) ---
+        update_day_type(ctx, bars_1min_ny[:idx+1])
         
         # --- DYNAMIC IB UPDATE (Eliminates Lookahead Bias) ---
         if m1_history:
@@ -141,6 +141,11 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 ib_end = ny_open + _dt.timedelta(minutes=IB_DURATION_MIN)
                 ctx.ib_complete = latest_t >= ib_end
 
+        if not is_fabio_active(m1_bar, ctx=ctx) or m1_bar.timestamp in existing_ts:
+            continue
+        # Find recent M5 bars up to this M1 bar for macro context
+        m5_recent = [b for b in bars_ny if b.timestamp <= m1_bar.timestamp][-5:]
+
         # Update dynamic session memory tracker
         update_session_memory(ctx, m1_bar, bars_1min_ny[:idx+1])
 
@@ -149,8 +154,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         
     def get_candidate_eval_ts(c):
         import datetime as _dt
-        duration = 1 if c.setup_category == 'imbalance_hunting' else 5
-        return c.bar.timestamp + _dt.timedelta(minutes=duration)
+        # All candidates are M1-based and should be evaluated on the next M1 bar (1-minute delay)
+        return c.bar.timestamp + _dt.timedelta(minutes=1)
 
     candidates.extend(m1_candidates)
     candidates.sort(key=get_candidate_eval_ts)
@@ -166,6 +171,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
     session_buffer = []     # OPT 4: cross-bar context (last 5 analyses)
     market_narrative = "Inizio giornata. Nessuna narrativa."
     last_eval_idx = 0
+    session_terminated = False
     
     # Money Management state
     daily_stops_count = 0
@@ -175,7 +181,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
 
 
     
-    def sync_session_state(open_t, closed_trades, ctx, equity_change=0.0, pending_t=None):
+    def sync_session_state(open_t, closed_trades, ctx, equity_change=0.0):
         state = load_session()
         if equity_change != 0.0:
             state['equity'] += equity_change
@@ -193,18 +199,6 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
             }
         else:
             state['open_trade'] = None
-            
-        if pending_t is not None:
-            state['pending_trade'] = {
-                'direction': pending_t.direction,
-                'entry': pending_t.limit_price,
-                'stop': pending_t.stop,
-                'target': pending_t.target,
-                'contracts': pending_t.contracts,
-                'expires_at': pending_t.expires_at.isoformat() if hasattr(pending_t.expires_at, 'isoformat') else pending_t.expires_at
-            }
-        else:
-            state['pending_trade'] = None
         
         state['daily_pnl_usd'] = sum(t.pnl_usd for t in closed_trades)
         state['trade_count_today'] = len(closed_trades)
@@ -262,6 +256,28 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
             
         bar_idx = last_m5_idx
 
+        # --- SYNCHRONIZE CONTEXT TO CANDIDATE TIMESTAMP (Eliminates Lookahead Bias) ---
+        sub_1min_current = [b for b in bars_1min_ny if b.timestamp <= candidate.bar.timestamp]
+        if sub_1min_current:
+            dyn_ib_high, dyn_ib_low = compute_ib(sub_1min_current)
+            if dyn_ib_high > 0:
+                ctx.ib_high = dyn_ib_high
+                ctx.ib_low = dyn_ib_low
+                ctx.ib_range = round(dyn_ib_high - dyn_ib_low, 2)
+                
+                # Check completion using timezone-aware time comparison (matching build_session_context)
+                import pytz as _br_pytz
+                import datetime as _dt
+                from src import IB_DURATION_MIN
+                _br_ET = _br_pytz.timezone('America/New_York')
+                latest_t = candidate.bar.timestamp.astimezone(_br_ET)
+                ny_open = latest_t.replace(hour=9, minute=30, second=0, microsecond=0)
+                ib_end = ny_open + _dt.timedelta(minutes=IB_DURATION_MIN)
+                ctx.ib_complete = latest_t >= ib_end
+            
+            # Update dynamic day type
+            update_day_type(ctx, sub_1min_current)
+
         bar_ts = eval_ts.strftime('%H:%M UTC')
         bar_et = eval_ts.astimezone(_ff_ET).strftime('%H:%M')
         orig_bar_et = candidate.bar.timestamp.astimezone(_ff_ET).strftime('%H:%M')
@@ -271,13 +287,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         if closed_trades:
             last_close_time = closed_trades[-1].exit_time
         if last_close_time is not None:
-            strat_config = {}
-            try:
-                from src.signal_context import get_strategy_config
-                strat_config = get_strategy_config()
-            except Exception:
-                pass
-            cooldown_minutes = 0  # Reverted: Cooldown checks delegated to LLM reasoning
+            cooldown_minutes = 0  # Disabled cooldown to allow immediate re-entry
             time_since_last_close = (eval_ts - last_close_time).total_seconds() / 60.0
             if time_since_last_close < cooldown_minutes:
                 if not quiet:
@@ -448,6 +458,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 
                 # 2. Process OPEN trades
                 if open_t is not None:
+                    if m1_bar.timestamp < getattr(open_t, 'entry_time', open_t.entry_bar.timestamp):
+                        continue
                     def on_partial(result_part):
                         nonlocal daily_stops_count
                         daily_stops_count = handle_close(result_part, session_buffer, daily_stops_count)
@@ -459,8 +471,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
 
                     result = step_trade(open_t, [m1_bar], 
                                         first_bar_after_entry=(m1_bar.timestamp == getattr(open_t, 'entry_time', open_t.entry_bar.timestamp)),
-                                        on_partial_close=on_partial,
-                                        session_bars=bars_1min_ny)
+                                        on_partial_close=on_partial)
                     if result:
                         daily_stops_count = handle_close(result, session_buffer, daily_stops_count)
                         open_t = None
@@ -511,7 +522,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                         # INJECT RUNNER MODE PROMPT IF APPLICABLE
                         active_narrative = market_narrative
                         if is_runner_mode:
-                            active_narrative += f"\n\n🎯 [RUNNER MODE ACTIVATED — {current_rr:.2f} R:R]\nThe trade has reached {current_rr:.2f} R:R profit. PRIMARY OBJECTIVE: do NOT let this become a loser. However, do NOT trail aggressively without structural confirmation.\n\nTRAIL ONLY if ALL of these are true:\n1. A new structural event has occurred (new swing low for LONG, body close past key structural level)\n2. A Big Trade cluster (>=30 contracts) in your direction has ACCEPTED at a new level\n3. The new stop gives at least 15-20 ticks of breathing room behind the structural event\n\nIf no clear structural event → output 'hold'. Giving the trade room to reach the target is worth more than an early trail. DEFAULT = HOLD."
+                            active_narrative += f"\n\n🚨🚨 [RUNNER MODE ACTIVATED] 🚨🚨\nThe trade has reached {current_rr:.2f} R:R profit! You MUST protect profits. Start trailing the stop loss aggressively behind the nearest structural M1/M5 wall or Big Trade cluster. Do NOT let this trade turn into a loser or scratch. Your sole objective is to extract maximum value while protecting the downside."
 
                         apm = manage_active_trade(
                             trade=open_t,
@@ -659,6 +670,9 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
             # We do NOT skip candidate evaluation when a trade is active because we want to see if
             # new signals confirm holding the trade. However, we will not open a new trade if one is active.
             pass
+
+        if session_terminated:
+            continue
 
 
         if dry_run:
@@ -818,7 +832,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         
         is_short_structure = False
         # 1. Breakout sotto i minimi (Bearish Imbalance)
-        if candidate.setup_category == 'imbalance_hunting':
+        if candidate.setup_category == 'imbalance_hunting' or str(candidate.setup_category).startswith('liquidity_map_'):
             if ctx.ib_complete and price < ctx.ib_low:
                 is_short_structure = True
                 short_reason = "bearish_ib_breakout"
@@ -917,37 +931,57 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         # ── PRE-LLM IGNITION VETO (pure Python, saves API tokens) ───────────
         # RULE: Only enter at the ignition bar OR within 20 bars of it.
         # Block: mid-accumulation, mid/late expansion (chasing), no signal.
-        # Modified: We no longer skip candidate evaluation to allow continuous market narrative updates.
         _ign = detect_accumulation_breakout(m1_bars, candidate.bar, session_ctx=ctx)
         _is_ignition       = _ign.get('is_ignition', False)
         _bars_since        = _ign.get('bars_since_ignition', -1)
         _in_early_exp      = 0 <= _bars_since <= 20
         _ign_label         = _ign.get('label', '')
         _ib_complete       = getattr(ctx, 'ib_complete', False)
+
+        # Only veto when IB is complete (we have a reference zone to measure from)
+        # Before IB completes, let the LLM decide normally
+        # Liquidity Map events are Tier 1 footprints and override the ignition veto
+        is_liquidity_map = str(candidate.setup_category).startswith('liquidity_map_')
+        is_big_trade = str(candidate.setup_category) == 'big_trade_event'
+        if _ib_complete and not _is_ignition and not _in_early_exp and not (is_liquidity_map or is_big_trade):
+            _acc_hi  = _ign.get('accumulation_high', 0.0)
+            _acc_lo  = _ign.get('accumulation_low', 0.0)
+            _acc_mins = _ign.get('accumulation_mins', 0)
+            _veto_reason = f'veto_ignition_filter ({_ign_label[:80]})'
+            print(f"  [IGNITION VETO] -> SKIP | {_ign_label[:60]}")
+            import pytz as _pytz2
+            _ET2 = _pytz2.timezone('America/New_York')
+            _bar_et2 = candidate.bar.timestamp.astimezone(_ET2).strftime('%H:%M')
+            _quick_log = {
+                'date': date_str,
+                'bar_time_utc': candidate.bar.timestamp.isoformat(),
+                'bar_time_et': _bar_et2,
+                'bar_close': candidate.bar.close,
+                'bar_open': candidate.bar.open, 'bar_high': candidate.bar.high,
+                'bar_low': candidate.bar.low, 'bar_volume': candidate.bar.volume,
+                'bar_delta': candidate.bar.delta,
+                'ib_high': ctx.ib_high, 'ib_low': ctx.ib_low, 'ib_range': ctx.ib_range,
+                'poc': ctx.vp.poc if ctx.vp else 0.0,
+                'va_high': ctx.vp.va_high if ctx.vp else 0.0,
+                'va_low': ctx.vp.va_low if ctx.vp else 0.0,
+                'day_type': ctx.day_type,
+                'market_state': getattr(candidate, 'market_state', 'balance'),
+                'fabio_direction': 'none', 'fabio_confidence': 0,
+                'fabio_setup': 'none', 'fabio_entry': None,
+                'fabio_stop': None, 'fabio_target': None, 'fabio_reasoning': '',
+                'decision': 'prefiltered',
+                'no_trade_reason': _veto_reason,
+                'ignition_label': _ign_label,
+                'ignition_in_acc': _ign.get('in_accumulation', False),
+                'ignition_acc_high': _acc_hi, 'ignition_acc_low': _acc_lo,
+                'ignition_acc_mins': _acc_mins,
+                'ignition_bars_since': _bars_since,
+            }
+            log_reasoning(_quick_log)
+            continue
         # ─────────────────────────────────────────────────────────────────────
 
-        # Get today's trades only for the count and cooldown analysis
-        _today_closed = [t for t in closed_trades if t.entry_time.date() == candidate.bar.timestamp.date()]
-        _time_since_last_close = -1.0
-        _last_trade_pnl = 0.0
-        if _today_closed:
-            _last_trade = _today_closed[-1]
-            _last_trade_pnl = _last_trade.pnl_usd
-            _time_since_last_close = (candidate.bar.timestamp - _last_trade.exit_time).total_seconds() / 60.0
-
-        _sess_state = load_session()
-        fabio_signal = fabio_analyze(
-            candidate, 
-            session_context=session_buffer, 
-            m1_bars=m1_bars, 
-            market_narrative=current_narrative, 
-            bars_since_last=bars_since_last,
-            equity=_sess_state.get('equity', 50000.0),
-            daily_pnl=_sess_state.get('daily_pnl_usd', 0.0),
-            trade_count=len(_today_closed),
-            last_trade_pnl=_last_trade_pnl,
-            time_since_last_close=_time_since_last_close
-        )
+        fabio_signal = fabio_analyze(candidate, session_context=session_buffer, m1_bars=m1_bars, market_narrative=current_narrative, bars_since_last=bars_since_last)
 
         # STOP BUFFER: 0.5 points (2 ticks) — minimal spread protection only.
         # Statistical insight: buffer 0-1pt → WR 41.7% (+$905). Buffer 3-6pt → WR 23.1% (-$309).
@@ -967,6 +1001,10 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         # Update dynamic day type after processing this bar
         update_day_type(ctx, bars_ny[:bar_idx+1])
         last_eval_idx = bar_idx
+        
+        if getattr(fabio_signal, 'session_verdict', 'continue') == 'stop':
+            session_terminated = True
+            print(f"\n🛑 [DYNAMIC EARLY STOP] Fabio decided to stop the session early at {bar_ts} because of current conditions.")
         if not quiet:
             print(f"dir={fabio_signal.direction} conf={fabio_signal.confidence} "
                   f"setup={fabio_signal.setup_type}")
@@ -1100,6 +1138,23 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 reason = f'fabio_confidence={fabio_signal.confidence} < {required_confidence}'
             else:
                 reason = 'fabio_direction_none'
+        elif fabio_signal.setup_type == 'reversal':
+            reason = 'veto_reversal_setup'
+        elif ignition.get('in_accumulation', False) and not ignition.get('is_ignition', False) \
+                and ignition.get('bars_since_ignition', -1) == -1:
+            # Mid-accumulation: no ignition yet, no early expansion window → block entry
+            acc_mins = ignition.get('accumulation_mins', 0)
+            acc_high = ignition.get('accumulation_high', 0.0)
+            acc_low  = ignition.get('accumulation_low', 0.0)
+            reason = (f'veto_mid_accumulation ({acc_mins}min zone [{acc_low:.2f}-{acc_high:.2f}], '
+                      f'waiting for ignition bar)')
+            print(f"  [IGNITION VETO] {reason}")
+        elif candidate.session_bias in ['long', 'short'] and fabio_signal.direction != candidate.session_bias:
+            reason = f'veto_counter_trend (bias={candidate.session_bias}, direction={fabio_signal.direction})'
+        elif getattr(fabio_signal, 'imbalance_phase', 'none') == 'expansive':
+            # User requested: "noi cerchiamo l'entrata perlopiù nel segnale confermato di expansive"
+            # Do NOT veto expansive phase, allow the trade.
+            reason = None
         else:
             reason = None
             
@@ -1248,7 +1303,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
 
         # ── INVALIDATION WALL STOP LOGIC ─────────────────────────────
         active_wall = None
-        _is_imbalance_setup = candidate.setup_category == 'imbalance_hunting' or 'imbalance' in str(consensus.fabio.setup_type).lower()
+        _is_imbalance_setup = candidate.setup_category == 'imbalance_hunting' or str(candidate.setup_category).startswith('liquidity_map_') or 'imbalance' in str(consensus.fabio.setup_type).lower()
 
         if _is_imbalance_setup and candidate.wall_level > 0:
             active_wall = candidate.wall_level
@@ -1290,50 +1345,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 is_valid_wall = True
                 
             if is_valid_wall:
-                wall_distance = abs(consensus.entry - active_wall)
-                # COMMENTED OUT PER USER REQUEST: Avoid hardcoded numeric if-veto for wall distance.
-                # The stop_distance > 50.0 cap filter below still protects against excessively wide stops.
-                # if wall_distance > 30.0:
-                #     print(f"  [VETO] Protective wall is too far ({wall_distance:.1f}pt > 30pt max risk). Vetoing to avoid unprotected stop.")
-                #     log_entry['decision'] = 'no_trade'
-                #     log_entry['no_trade_reason'] = f'wall_too_far_unprotected_stop ({wall_distance:.1f}pt > 30pt)'
-                #     log_reasoning(log_entry)
-                #     continue
-                
-                # Enforce stop behind wall with buffer (2.5pt for imbalance, 1.0pt for structural), but reject the trade if the stop distance would exceed 45.0 points.
-                buffer_pt = 2.5 if _is_imbalance_setup else 1.0
-                max_stop_distance = 45.0 # Max 180 ticks risk (contracts scale down dynamically to keep $50 risk constant)
-                
-                if consensus.direction == 'long' and (_is_imbalance_setup or consensus.stop >= active_wall):
-                    _new_stop = active_wall - buffer_pt
-                    _dist = abs(consensus.entry - _new_stop)
-                    if _dist < 15.0:
-                        _new_stop = consensus.entry - 15.0
-                        _dist = 15.0
-                    if _dist <= max_stop_distance:
-                        print(f"  [ADJUST] Stop {consensus.stop} moved behind wall {active_wall} -> {_new_stop} (risk: {_dist:.2f} pts, buffer: {buffer_pt})")
-                        consensus.stop = _new_stop
-                    else:
-                        print(f"  [VETO] Wall is too far ({_dist:.2f} pts > {max_stop_distance} pts). Vetoing trade to avoid unprotected/excessive risk.")
-                        log_entry['decision'] = 'no_trade'
-                        log_entry['no_trade_reason'] = f'wall_too_far_excessive_risk ({_dist:.2f} pts)'
-                        log_reasoning(log_entry)
-                        continue
-                elif consensus.direction == 'short' and (_is_imbalance_setup or consensus.stop <= active_wall):
-                    _new_stop = active_wall + buffer_pt
-                    _dist = abs(consensus.entry - _new_stop)
-                    if _dist < 15.0:
-                        _new_stop = consensus.entry + 15.0
-                        _dist = 15.0
-                    if _dist <= max_stop_distance:
-                        print(f"  [ADJUST] Stop {consensus.stop} moved behind wall {active_wall} -> {_new_stop} (risk: {_dist:.2f} pts, buffer: {buffer_pt})")
-                        consensus.stop = _new_stop
-                    else:
-                        print(f"  [VETO] Wall is too far ({_dist:.2f} pts > {max_stop_distance} pts). Vetoing trade to avoid unprotected/excessive risk.")
-                        log_entry['decision'] = 'no_trade'
-                        log_entry['no_trade_reason'] = f'wall_too_far_excessive_risk ({_dist:.2f} pts)'
-                        log_reasoning(log_entry)
-                        continue
+                # We trust the LLM's structural stop loss. Do not override it.
+                pass
 
 
         # ── OPTIMIZATION: Stop Loss Cap Filter (50 points) ──
@@ -1464,7 +1477,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         if _min_vol > 0:
             # For imbalance_hunting (M1 bars), use the parent M5 bar volume
             _exec_vol = candidate.bar.volume
-            if candidate.setup_category == 'imbalance_hunting' and candidate.recent_bars:
+            if candidate.setup_category == 'imbalance_hunting' or str(candidate.setup_category).startswith('liquidity_map_') and candidate.recent_bars:
                 _exec_vol = candidate.recent_bars[-1].volume
 
             if _exec_vol < _min_vol:
@@ -1563,22 +1576,28 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 log_entry['decision'] = 'pending'
                 log_entry['no_trade_reason'] = f'limit_order_placed_at_{consensus.entry:.2f}'
                 log_reasoning(log_entry)
-                sync_session_state(open_t, closed_trades, ctx, pending_t=pending_t)
             else:
                 # Execute at Market
                 import datetime as _dt
-                if candidate.setup_category == 'imbalance_hunting':
+                if candidate.setup_category == 'imbalance_hunting' or str(candidate.setup_category).startswith('liquidity_map_'):
                     actual_entry_time = eval_ts + _dt.timedelta(minutes=1)
                 else:
                     actual_entry_time = eval_ts + _dt.timedelta(minutes=5)
                     
-                # Find the actual bar for entry to get its open price
-                entry_bar_actual = next((b for b in m1_bars if b.timestamp == actual_entry_time), candidate.bar)
+                # Find the actual bar for entry to get its open price (search full day bars list to find future entry time)
+                entry_bar_actual = next((b for b in bars_1min_ny if b.timestamp == actual_entry_time), candidate.bar)
                 
                 open_t = open_trade(consensus, entry_bar_actual, contracts=contracts, entry_time=actual_entry_time)
-                # Override the entry price to be the exact OPEN of the next candle
-                if entry_bar_actual != candidate.bar:
-                    open_t.entry = entry_bar_actual.open
+                # Override the entry price to be the exact OPEN of the next candle (or close of current if same)
+                actual_entry_price = entry_bar_actual.open if entry_bar_actual != candidate.bar else candidate.bar.close
+                # Calculate the original distance from the LLM's hallucinated entry
+                stop_distance = consensus.entry - consensus.stop
+                target_distance = consensus.target - consensus.entry
+                
+                # Apply the realistic entry and shift stop/target to preserve intended structure and risk distance
+                open_t.entry = actual_entry_price
+                open_t.stop = actual_entry_price - stop_distance
+                open_t.target = actual_entry_price + target_distance
                 
                 open_t.amt_day_profile = log_entry.get('amt_day_profile')
                 open_t.macro_regime = log_entry.get('macro_regime')
@@ -1638,7 +1657,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
             
             # Create a market order mimicking pending_t but at current price and reduced size
             import datetime as _dt
-            if candidate.setup_category == 'imbalance_hunting':
+            if candidate.setup_category == 'imbalance_hunting' or str(candidate.setup_category).startswith('liquidity_map_'):
                 actual_entry_time = candidate.bar.timestamp + _dt.timedelta(minutes=1)
             else:
                 actual_entry_time = candidate.bar.timestamp + _dt.timedelta(minutes=5)
@@ -1703,7 +1722,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
     if open_t is not None and bars_1min_ny:
         eval_t = getattr(open_t, 'last_eval_time', None) or getattr(open_t, 'entry_time', None) or open_t.entry_bar.timestamp
         remaining = [b for b in bars_1min_ny if b.timestamp > eval_t]
-        result    = step_trade(open_t, remaining, session_bars=bars_1min_ny) or close_eod(open_t, bars_1min_ny[-1])
+        result    = step_trade(open_t, remaining) or close_eod(open_t, bars_1min_ny[-1])
         closed_trades.append(result)
         
         # UPDATE EQUITY and sync EOD close

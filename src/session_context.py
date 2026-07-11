@@ -2,7 +2,7 @@ import pytz
 from datetime import datetime, timezone, timedelta
 from typing import List
 from src import (
-    Bar, SessionContext, VolumeProfile,
+    Bar, SessionContext, VolumeProfile, LiquidityWall,
     NY_WINDOW_START_H, NY_WINDOW_START_M,
     NY_WINDOW_END_H, NY_WINDOW_END_M,
     FABIO_ACTIVE_H, FABIO_ACTIVE_M, IB_DURATION_MIN,
@@ -76,16 +76,7 @@ def is_fabio_active(bar: Bar, ctx: SessionContext = None) -> bool:
     t = _to_et(bar)
     # Fabio's Core Window dynamic start from config (e.g. 09:55 ET)
     start_time = t.replace(hour=FABIO_ACTIVE_H, minute=FABIO_ACTIVE_M, second=0, microsecond=0)
-    end_time   = t.replace(hour=11, minute=0, second=0, microsecond=0)
-    
-    if ctx:
-        if ctx.day_type in ['trend_up', 'trend_down']:
-            # For expansive imbalance days, stop early at 10:30 ET
-            end_time = t.replace(hour=10, minute=30, second=0, microsecond=0)
-        elif ctx.day_type in ['balance', 'transition_state']:
-            # For choppy/manipulation days, extend to 12:00 ET
-            end_time = t.replace(hour=12, minute=0, second=0, microsecond=0)
-        
+    end_time   = t.replace(hour=NY_WINDOW_END_H, minute=NY_WINDOW_END_M, second=0, microsecond=0)
     return start_time <= t < end_time
 
 def classify_day_type(bars: list) -> str:
@@ -294,14 +285,37 @@ def update_session_memory(ctx: SessionContext, current_bar: Bar, bars_processed:
             sell_v = sum(t.size for t in current_bar.big_trades if t.side == 'B')
             side = "Buy" if buy_v > sell_v else "Sell"
             
-            # Group by 5 points range to prevent spamming
+            # Create and store the LiquidityWall for tracking Trapped/Initiative events
+            # Use rounded_price or max_size price
+            wall_price = max_p if side == 'Buy' else min_p
+            
+            # Check if we already have a very similar active wall (within 2 points) to avoid duplicates
+            duplicate = False
+            for w in ctx.active_walls:
+                if w.status == 'active' and abs(w.price - wall_price) <= 2.0 and w.side == side:
+                    w.size += total_size # Increase size
+                    w.timestamp = current_bar.timestamp # Update time
+                    duplicate = True
+                    break
+                    
+            if not duplicate:
+                wall = LiquidityWall(
+                    price=wall_price,
+                    side=side,
+                    size=total_size,
+                    timestamp=current_bar.timestamp,
+                    status='active'
+                )
+                ctx.active_walls.append(wall)
+                
+            # Log it (throttled by 5 mins per 5-point zone)
             rounded_price = round(min_p / 5.0) * 5
             last_logged_time = ctx._last_wall_logged.get(rounded_price)
             if last_logged_time is None or (current_bar.timestamp - last_logged_time).total_seconds() > 300:
                 ctx._last_wall_logged[rounded_price] = current_bar.timestamp
                 ctx.session_memory.append({
                     'timestamp': current_bar.timestamp,
-                    'text': f"[{time_str} ET] Institutional order wall of {total_size} contracts ({side}) detected at {min_p:.2f}-{max_p:.2f}."
+                    'text': f"[{time_str} ET] Institutional order wall of {total_size} contracts ({side}) detected at {wall_price:.2f}."
                 })
 
     # 4. Level Interactions (Yesterday VAH/VAL/POC, Today IBH/IBL, Today VAH/VAL/POC)

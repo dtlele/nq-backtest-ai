@@ -6,7 +6,7 @@ from typing import Optional
 # ── NQ constants ──────────────────────────────────────────────────────────────
 NQ_TICK_SIZE            = 0.25
 NQ_TICK_VALUE           = 5.0      # USD per tick
-NQ_BIG_TRADE_THRESHOLD  = 30       # contracts (Fabio's filter)
+NQ_BIG_TRADE_THRESHOLD  = 80       # contracts (Fabio's filter)
 
 # ── Volume Profile ────────────────────────────────────────────────────────────
 VA_PERCENTAGE           = 0.70
@@ -31,7 +31,7 @@ BIG_TRADE_LOOKBACK_BARS = 3        # 3 M5 bars = 15 min lookback for wall cluste
 RECENT_BARS_CONTEXT     = 6        # M5 bars of context sent to agents (30 min)
 
 # ── Agent thresholds ──────────────────────────────────────────────────────────
-FABIO_MIN_CONFIDENCE       = 75
+FABIO_MIN_CONFIDENCE       = 70
 ANDREA_VETO_THRESHOLD      = 40
 LIGHT_CONFIDENCE_THRESHOLD = 0    # disabled: always run full analysis for every candidate bar
 
@@ -104,6 +104,8 @@ class SessionContext:
     # Expansive phase tracking
     ib_breakouts_count: int = 0          # How many times IB has been broken this session
     ib_first_breakout_dir: str = 'none'  # 'long'|'short'|'none' — direction of the FIRST IB breakout
+    active_walls: List['LiquidityWall'] = field(default_factory=list) # Permanent liquidity map nodes
+
 @dataclass
 class CandidateBar:
     bar: Bar
@@ -136,6 +138,14 @@ class CandidateBar:
 
 
 @dataclass
+class LiquidityWall:
+    price: float
+    side: str      # 'Buy' or 'Sell'
+    size: int
+    timestamp: datetime
+    status: str = 'active' # 'active', 'defended', 'trapped', 'broken'
+
+@dataclass
 class FabioSignal:
     direction: str             # 'long'|'short'|'none'
     confidence: int            # 0-100
@@ -147,6 +157,7 @@ class FabioSignal:
     imbalance_phase: str = "none" # NEW: 'expansive'|'accumulation'|'none'
     market_narrative_update: str = "" # NEW: Continuous story update
     nlm_answer: str = ""            # raw NLM response
+    session_verdict: str = "continue" # 'continue' | 'stop'
 
 @dataclass
 class AndreaSignal:
@@ -180,12 +191,13 @@ class OpenTrade:
     target: float
     entry_bar: Bar
     consensus: ConsensusSignal
-    contracts: float = 1.0         # Dynamic position size
+    contracts: float = 1.0         # NEW: Dynamic position size
     news_flag: str = "none"
     partial_taken: bool = False
     entry_time: Optional[datetime] = None
     last_eval_time: Optional[datetime] = None
-    initial_stop: Optional[float] = None  # Original structural stop, before trailing moves
+    bars_seen: list = field(default_factory=list)
+    bars_stalling_vs_poc: int = 0
 
 @dataclass
 class PendingTrade:

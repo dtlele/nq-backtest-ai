@@ -18,9 +18,14 @@ export default function KpiBar({ kpi = MOCK_KPI }) {
         <span className="kpi-sub">{kpi.wins}W / {kpi.losses}L</span>
       </div>
       <div className="kpi-card">
-        <span className="kpi-label">Asimmetria</span>
-        <span className="kpi-value pos">{kpi.asimmetria}x</span>
-        <span className="kpi-sub">avg win / avg loss</span>
+        <span className="kpi-label">Profit Factor</span>
+        <span className="kpi-value pos">{kpi.profitFactor || 0}</span>
+        <span className="kpi-sub">gross win / loss</span>
+      </div>
+      <div className="kpi-card">
+        <span className="kpi-label">Expectancy</span>
+        <span className="kpi-value pos">${kpi.expectancy || 0}</span>
+        <span className="kpi-sub">edge per trade</span>
       </div>
       <div className="kpi-card">
         <span className="kpi-label">Max Drawdown</span>

@@ -1,25 +1,4 @@
 {
-  "dynamic_rules": [
-    {
-      "rule_id": "AMT_NEW_61",
-      "topic": "Ignition Bar Confirmation",
-      "description": "Wait for a confirmed ignition bar (close outside IB with |delta| >= 30) before entering a trade to avoid premature entries during accumulation/balance phases.",
-      "action": "skip_trade",
-      "status": "active",
-      "successes": 5,
-      "failures": 0,
-      "probation_days": 18
-    },
-    {
-      "rule_id": "AMT_NEW_62",
-      "topic": "Accumulation/Balance Phase",
-      "description": "Avoid entering trades during accumulation/balance phases inside the IB range. Wait for a clear breakout or breakdown with ignition bar confirmation.",
-      "action": "skip_trade",
-      "status": "active",
-      "successes": 5,
-      "failures": 0,
-      "probation_days": 17
-    }
-  ],
+  "dynamic_rules": [],
   "session_learnings": []
 }

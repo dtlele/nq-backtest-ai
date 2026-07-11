@@ -1,4 +1,4 @@
-# Graph Report - C:\Users\Mauro\Documents\nq-backtest\knowledge\trader_lessons_graph  (2026-06-20)
+# Graph Report - C:\Users\Mauro\Documents\nq-backtest-clean\knowledge\trader_lessons_graph  (2026-06-20)
 
 ## Corpus Check
 - cluster-only mode — file stats not available

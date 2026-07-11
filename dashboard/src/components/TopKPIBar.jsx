@@ -17,7 +17,7 @@ const TopKPIBar = () => {
           </div>
           <div className="kpi-data">
             <span className="kpi-label">Win Rate</span>
-            <span className="kpi-value">68.4%</span>
+            <span className="kpi-value">{kpi?.winRate?.toFixed(1) || '0.0'}%</span>
           </div>
         </div>
 
@@ -27,7 +27,9 @@ const TopKPIBar = () => {
           </div>
           <div className="kpi-data">
             <span className="kpi-label">Total PnL</span>
-            <span className="kpi-value profit-value">+$4,250.00</span>
+            <span className={`kpi-value ${kpi?.totalPnL >= 0 ? 'profit-value' : 'drawdown-value'}`}>
+              {kpi?.totalPnL >= 0 ? '+' : ''}${kpi?.totalPnL?.toFixed(2) || '0.00'}
+            </span>
           </div>
         </div>
 
@@ -37,7 +39,9 @@ const TopKPIBar = () => {
           </div>
           <div className="kpi-data">
             <span className="kpi-label">Max Drawdown</span>
-            <span className="kpi-value drawdown-value">-2.1%</span>
+            <span className="kpi-value drawdown-value">
+              -{kpi?.maxDrawdown?.toFixed(1) || '0.0'}%
+            </span>
           </div>
         </div>
       </div>

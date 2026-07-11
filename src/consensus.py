@@ -85,17 +85,19 @@ def build_consensus(fabio: FabioSignal, andrea: AndreaSignal, candidate = None) 
             andrea_rr = reward / andrea_risk if andrea_risk > 0 else 0.0
             
             should_override = False
-            if fabio.direction == 'long':
-                if andrea_stop < fabio.stop:  # Andrea wants a wider stop
-                    if fabio_risk < 20.0 or andrea_rr >= 0.5:
-                        should_override = True
-                elif andrea_stop > fabio.stop:  # Andrea wants a tighter stop
+            if fabio.direction == 'long' and andrea_stop < entry:
+                # Andrea wants a wider stop (lower)
+                # Only override if Fabio's stop is too tight (< 10 pts) and Andrea's stop still offers R:R >= 1.0,
+                # OR if Andrea's stop is actually tighter (less risk) than Fabio's stop
+                if fabio_risk < 10.0 and andrea_rr >= 1.0:
                     should_override = True
-            elif fabio.direction == 'short':
-                if andrea_stop > fabio.stop:  # Andrea wants a wider stop
-                    if fabio_risk < 20.0 or andrea_rr >= 0.5:
-                        should_override = True
-                elif andrea_stop < fabio.stop:  # Andrea wants a tighter stop
+                elif andrea_stop > fabio.stop:
+                    should_override = True
+            elif fabio.direction == 'short' and andrea_stop > entry:
+                # Andrea wants a wider stop (higher)
+                if fabio_risk < 10.0 and andrea_rr >= 1.0:
+                    should_override = True
+                elif andrea_stop < fabio.stop:
                     should_override = True
                     
             if should_override:

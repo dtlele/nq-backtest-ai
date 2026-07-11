@@ -4,7 +4,7 @@ from src import Trade
 
 REQUIRED_COLS = {'ts_event', 'action', 'side', 'price', 'size'}
 
-def load_day(filepath: str) -> list:
+def load_day(filepath: str, as_df: bool = False) -> list:
     """Parse one DataBento *.trades.csv. Returns action='T' rows for front-month NQ only.
 
     DataBento files may contain multiple symbols: front-month futures (e.g. NQM5),
@@ -32,6 +32,9 @@ def load_day(filepath: str) -> list:
             df = outright[outright['symbol'] == front_month].copy()
 
     df['ts_event'] = pd.to_datetime(df['ts_event'], utc=True)
+    if as_df:
+        return df
+
     with warnings.catch_warnings():
         # DataBento timestamps have nanosecond precision; Python datetime truncates to microseconds
         warnings.filterwarnings('ignore', message='Discarding nonzero nanoseconds')

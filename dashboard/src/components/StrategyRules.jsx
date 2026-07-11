@@ -53,20 +53,24 @@ export default function StrategyRules({ onClose }) {
           {activeTab === 'rules' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div className="detail-section">
-                <div className="detail-section-header">⏱ Orario Istituzionale</div>
-                <div className="detail-section-body">Si trada SOLO durante la NY Session mattutina (09:30 - 12:30 ET). Gli agenti iniziano a valutare ingressi solo dalle 09:35 in poi per evitare lo spike iniziale.</div>
+                <div className="detail-section-header">⏱ Orari & Giorni (Master V3 - V2 Caso A)</div>
+                <div className="detail-section-body">Usiamo i filtri "V2 Caso A" per mappare le sessioni orarie e giornaliere valide (evitando i giorni/orari peggiori per limitare il drawdown).</div>
+              </div>
+              <div className="detail-section">
+                <div className="detail-section-header">💰 Position Sizing</div>
+                <div className="detail-section-body">Il size standard è di 25 Micro NQ per minimizzare il rischio di rovina (2%).</div>
+              </div>
+              <div className="detail-section">
+                <div className="detail-section-header">🔍 Filtri Operativi</div>
+                <div className="detail-section-body">Applicati rigorosamente: Buildup di 10 minuti, Estensione di 30 minuti, e Ritardo Short di 1 minuto per le inversioni.</div>
               </div>
               <div className="detail-section">
                 <div className="detail-section-header">🧠 Doppio Consenso (Fabio + Andrea)</div>
-                <div className="detail-section-body">Fabio cerca il setup (confidenza min: 75%). Andrea fa da garante strutturale (se scende sotto 40%, il trade viene scartato).</div>
+                <div className="detail-section-body">Fabio cerca il setup (confidenza min: 75%). Andrea fa da garante strutturale.</div>
               </div>
               <div className="detail-section">
                 <div className="detail-section-header">🧱 Tracce Istituzionali (NAV & VWAP)</div>
-                <div className="detail-section-body">Si applica la logica Abnormal Volume (Bajo 2010). Ricerca di "muri" nell'orderbook con un threshold minimo di 30 contratti (Big Trades).</div>
-              </div>
-              <div className="detail-section">
-                <div className="detail-section-header">📊 Soglie di Liquidità</div>
-                <div className="detail-section-body">Momentum: Almeno 3.000 contratti/M5. Reversal: Almeno 1.500 contratti (assorbimento).</div>
+                <div className="detail-section-body">Ricerca di "muri" nell'orderbook con un threshold minimo di 30 contratti.</div>
               </div>
             </div>
           )}
@@ -109,9 +113,11 @@ export default function StrategyRules({ onClose }) {
           {activeTab === 'stats' && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 16 }}>
               <div style={{ fontSize: 40 }}>📈</div>
-              <div style={{ fontSize: 18, color: 'var(--text-secondary)' }}>Dati Storici in Aggiornamento...</div>
+              <div style={{ fontSize: 18, color: 'var(--text-secondary)' }}>Performance Master V3 (25 Micro NQ)</div>
               <div style={{ color: 'var(--text-muted)', textAlign: 'center', maxWidth: 400 }}>
-                Il backtest è attualmente in esecuzione. Le metriche aggregate (Win Rate, Profit Factor, Drawdown) saranno popolate qui automaticamente dal modulo metrics_reporter.py.
+                <strong>Profitto Reale:</strong> $15.280<br/>
+                <strong>Max Drawdown:</strong> $1.535<br/>
+                <strong>Rischio Rovina:</strong> 2%
               </div>
             </div>
           )}

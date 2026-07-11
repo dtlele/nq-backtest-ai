@@ -141,25 +141,27 @@ def build_amt_narrative(ctx: SessionContext, candidate: CandidateBar, ignition_i
                 narrative.append("═══════════════════════════════════════")
 
     # 0. IGNITION STATUS — injected first so LLM reads it immediately
-    if ignition_info:
+    is_big_trade_or_map = str(candidate.setup_category).startswith('liquidity_map_') or str(candidate.setup_category) == 'big_trade_event'
+    
+    if ignition_info and not is_big_trade_or_map:
         label = ignition_info.get('label', '')
         if label:
-            narrative.append("\n═══════════════════════════════════════")
+            narrative.append("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
             narrative.append("[IGNITION / ACCUMULATION STATUS (Python-computed, NO LLM)]")
             narrative.append(label)
             if ignition_info.get('in_accumulation') and not ignition_info.get('is_ignition'):
                 narrative.append(
-                    "⛔ REGOLA: Sei in MID-ACCUMULATION. NON ENTRARE. "
+                    "➔ REGOLA: Sei in MID-ACCUMULATION. NON ENTRARE. "
                     "Aspetta che il prezzo rompa la zona sopra indicata con delta confermato."
                 )
             elif ignition_info.get('is_ignition'):
                 narrative.append(
-                    "✅ REGOLA: Questo È il momento di entrare. "
+                    "➔ REGOLA: Questo è il momento di entrare. "
                     "La rottura è appena avvenuta su questa barra."
                 )
             elif 0 <= ignition_info.get('bars_since_ignition', -1) <= 20:
                 narrative.append(
-                    "✅ REGOLA: Siamo in EARLY EXPANSION. "
+                    "➔ REGOLA: Siamo in EARLY EXPANSION. "
                     "Entrata ancora valida se la struttura lo supporta."
                 )
             narrative.append("═══════════════════════════════════════")
@@ -255,8 +257,7 @@ def build_amt_narrative(ctx: SessionContext, candidate: CandidateBar, ignition_i
 
     return "\n".join(narrative)
 
-def build_fabio_question(candidate: CandidateBar, session_context: list = None, m1_bars: list[Bar] = None, market_narrative: str = "", bars_since_last: list[Bar] = None,
-                         equity: float = 50000.0, daily_pnl: float = 0.0, trade_count: int = 0, last_trade_pnl: float = 0.0, time_since_last_close: float = -1.0) -> str:
+def build_fabio_question(candidate: CandidateBar, session_context: list = None, m1_bars: list[Bar] = None, market_narrative: str = "", bars_since_last: list[Bar] = None) -> str:
     templates = _load_templates()
     bar = candidate.bar
     ctx = candidate.session_ctx
@@ -312,8 +313,8 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
     m5_sequence = _format_m5_sequence(candidate.recent_bars) if candidate.recent_bars else ""
     m1_sequence = _format_m1_sequence(m1_bars) if m1_bars else ""
     
-    # Select appropriate template: imbalance_hunting gets a trend-continuation framing
-    if candidate.setup_category == 'imbalance_hunting' and 'fabio_imbalance_question_template' in templates:
+    # Select appropriate template: imbalance_hunting and liquidity_map get a trend-continuation framing
+    if (candidate.setup_category == 'imbalance_hunting' or str(candidate.setup_category).startswith('liquidity_map_')) and 'fabio_imbalance_question_template' in templates:
         tpl = templates['fabio_imbalance_question_template']
     else:
         tpl = templates['fabio_nlm_question_template']
@@ -352,12 +353,6 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
             f"\n\nPrevious day VP: POC={pvp.poc:.2f} VAH={pvp.va_high:.2f} "
             f"VAL={pvp.va_low:.2f} HVN={pvp.hvn_levels} LVN={pvp.lvn_levels}"
         )
-    if ctx.vp:
-        question += (
-            f"\n\nOvernight VP: POC={ctx.vp.poc:.2f} VAH={ctx.vp.va_high:.2f} "
-            f"VAL={ctx.vp.va_low:.2f} HVN={ctx.vp.hvn_levels} LVN={ctx.vp.lvn_levels}"
-        )
-        
     # Inject Inter-Day Memory (Telegram Analysis and End-of-Day Narrative)
     if ctx.historical_days:
         question += "\n\n### MULTI-DAY MEMORY & LESSONS LEARNED ###\n"
@@ -436,9 +431,19 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
     from src.session_context import get_session_memory_up_to
     struc_mem = get_session_memory_up_to(ctx, bar.timestamp)
     if struc_mem:
-        question += "\n\n## TODAY'S SESSION STRUCTURAL MEMORY (CHRONOLOGICAL HISTORY)\n"
+        question += "\n\n### STRUCTURAL MEMORY ###\n"
         question += "You must check how levels reacted earlier today to avoid traps (e.g. do not short a level that was strongly rejected twice already):\n"
         question += "\n".join(f"- {line}" for line in struc_mem)
+
+    # Inject Liquidity Map History (Big Trade Nodes)
+    if hasattr(ctx, 'active_walls') and ctx.active_walls:
+        question += "\n\n### LIQUIDITY MAP (BIG TRADE NODES) ###\n"
+        question += "These are the key institutional levels established so far today. Use them to link events (e.g. accumulation, defense, trapped participants).\n"
+        # Sort by time
+        walls_sorted = sorted(ctx.active_walls, key=lambda w: w.timestamp)
+        for w in walls_sorted[-10:]: # Show max last 10 walls to save context
+            time_str = w.timestamp.astimezone(ET).strftime('%H:%M:%S')
+            question += f"- {time_str} | {w.side} Wall at {w.price:.2f} | Size: {w.size} | Status: {w.status}\n"
 
     if session_context:
         question += "\n\n## Session Context (your prior analyses today)\n"
@@ -543,25 +548,6 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
                         )
                         question += f"\n\n{post_loss_warning}"
                 break  # Only care about the most recent closed trade
-
-    # Format current session risk state
-    risk_state_text = (
-        f"\n\n## CURRENT SESSION ACCOUNT RISK STATE\n"
-        f"- Current Account Equity: ${equity:,.2f}\n"
-        f"- Daily P&L: ${daily_pnl:+.2f} USD\n"
-        f"- Total Trades Taken Today: {trade_count}\n"
-    )
-    if time_since_last_close >= 0:
-        risk_state_text += f"- Time Since Last Closed Trade: {time_since_last_close:.1f} minutes\n"
-        risk_state_text += f"- Last Trade Outcome P&L: ${last_trade_pnl:+.2f} USD\n"
-    else:
-        risk_state_text += "- Time Since Last Closed Trade: N/A (No trades closed yet today)\n"
-        
-    risk_state_text += (
-        "\nUse this risk state context to enforce the ACCOUNT-STATE ADAPTIVE RISK MANAGEMENT & COOLDOWN rules. "
-        "Explain in your reasoning why this setup is worth taking given this risk state, particularly if you recently closed a trade or if you are close to your profit/loss boundaries.\n"
-    )
-    question += risk_state_text
 
     return question
 

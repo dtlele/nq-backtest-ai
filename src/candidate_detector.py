@@ -100,19 +100,13 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
         is_reversal = False
         is_momentum = False
         is_pullback = False
-        is_imbalance_hunter = False
         
-        # In Imbalance State, we actively hunt on every M5 bar (using M1 footprint later in Fabio).
-        # We bypass the strict volume floor.
-        if m_state == 'imbalance':
-            is_imbalance_hunter = True
+        # Check standard volume floor (Balance state sniper)
+        if bar.volume >= MIN_VOLUME_PER_BAR:
+            is_momentum = True
+        elif bar.volume >= MIN_REVERSAL_VOLUME:
+            is_reversal = True
         else:
-            # Check standard volume floor (Balance state sniper)
-            if bar.volume >= MIN_VOLUME_PER_BAR:
-                is_momentum = True
-            elif bar.volume >= MIN_REVERSAL_VOLUME:
-                is_reversal = True
-            else:
                 # PULLBACK RETEST LOGIC:
                 for lookback in range(1, 4):
                     prev_idx = i - lookback
@@ -140,7 +134,7 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
         if not is_pullback:
             window   = bars[max(0, i - BIG_TRADE_LOOKBACK_BARS + 1): i + 1]
             all_big  = [t for b in window for t in b.big_trades]
-            if not all_big and not is_imbalance_hunter:
+            if not all_big:
                 continue
                 
             if all_big:
@@ -149,29 +143,21 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
                 buy_big  = sum(t.size for t in all_big if t.side == 'A')
                 sell_big = sum(t.size for t in all_big if t.side == 'B')
                 wall_side  = 'ask' if buy_big >= sell_big else 'bid'
-            else:
-                # Dummy values for imbalance hunter if literally no big trades happened
-                wall_level = price
-                wall_side = 'none'
-                all_big = []
-                wall_max_trade = Trade(ts_event=bar.timestamp, side='A', price=price, size=0)
 
         levels = _get_vp_levels(active_ctx)
         
-        # Must be near a structural level (VA or IB edges), EXCEPT if we are hunting in Imbalance
+        # Must be near a structural level (VA or IB edges)
         nearby = [(lvl, name) for lvl, name in levels
                   if _near(price, lvl, VA_PROXIMITY_TICKS)]
         
+        if not nearby:
+            continue
+
         if nearby:
             nearby.sort(key=lambda x: abs(price - x[0]))
             prox_level, prox_name = nearby[0]
-        else:
-            prox_level, prox_name = price, "inside_va_zone"
             
-        if is_imbalance_hunter:
-            setup_cat = 'imbalance_hunting'
-        else:
-            setup_cat = 'pullback' if is_pullback else ('momentum' if is_momentum else 'reversal')
+        setup_cat = 'pullback' if is_pullback else ('momentum' if is_momentum else 'reversal')
             
         # --- SQUEEZE DETECTION ---
         upper_lvls = [lvl for lvl, name in levels if lvl > price]
@@ -278,7 +264,7 @@ def detect_candidates(bars: list, ctx: SessionContext, bars_1min_ny: list = None
         
     return candidates
 
-def generate_m1_candidate(m1_bar: Bar, m5_recent: list, ctx: SessionContext, m1_history: list = None) -> CandidateBar:
+def generate_m1_candidate(m1_bar: Bar, m5_recent: list, ctx: SessionContext, m1_history: list = None, override_wall_level: float = None, override_wall_side: str = None) -> CandidateBar:
     """
     Generates a CandidateBar for EVERY single M1 bar. No mechanical filtering (Zero-Waste logic).
     The LLM will decide if the bar contains a valid setup based on the footprint.
@@ -290,19 +276,25 @@ def generate_m1_candidate(m1_bar: Bar, m5_recent: list, ctx: SessionContext, m1_
     session_vols = [b.volume for b in all_m1_so_far]
     is_nav_alert = _check_nav_alert(session_vols)
     
-    # Find the wall by looking back up to 3 M1 bars
-    recent_m1 = all_m1_so_far[-3:]
-    all_big = [t for b in recent_m1 for t in b.big_trades]
-    if all_big:
-        wall_max_trade = max(all_big, key=lambda t: t.size)
-        wall_level = wall_max_trade.price
-        buy_big = sum(t.size for t in all_big if t.side == 'A')
-        sell_big = sum(t.size for t in all_big if t.side == 'B')
-        wall_side = 'ask' if buy_big >= sell_big else 'bid'
+    if override_wall_level is not None:
+        wall_level = override_wall_level
+        wall_side = override_wall_side or 'none'
+        wall_max_trade = Trade(ts_event=m1_bar.timestamp, side='A', price=wall_level, size=0)
+        all_big = []
     else:
-        wall_level = m1_bar.close
-        wall_side = 'none'
-        wall_max_trade = Trade(ts_event=m1_bar.timestamp, side='A', price=m1_bar.close, size=0)
+        # Find the wall by looking back up to 3 M1 bars
+        recent_m1 = all_m1_so_far[-3:]
+        all_big = [t for b in recent_m1 for t in b.big_trades]
+        if all_big:
+            wall_max_trade = max(all_big, key=lambda t: t.size)
+            wall_level = wall_max_trade.price
+            buy_big = sum(t.size for t in all_big if t.side == 'A')
+            sell_big = sum(t.size for t in all_big if t.side == 'B')
+            wall_side = 'ask' if buy_big >= sell_big else 'bid'
+        else:
+            wall_level = m1_bar.close
+            wall_side = 'none'
+            wall_max_trade = Trade(ts_event=m1_bar.timestamp, side='A', price=m1_bar.close, size=0)
         
     poc_mig = "flat"
     if ctx.vp and ctx.prev_day_vp:
@@ -372,19 +364,80 @@ def generate_m1_candidate(m1_bar: Bar, m5_recent: list, ctx: SessionContext, m1_
 
 def detect_m1_candidates(m1_bar, m5_recent: list, ctx: SessionContext, m1_history: list = None) -> list:
     """
-    Evaluates a single M1 bar as a candidate, even inside VA, if it contains big trades.
+    Evaluates a single M1 bar as a candidate.
+    Yields a candidate if:
+    1. A collision with a Liquidity Wall occurred, resolving an Event X (Defense or Trapped).
+    2. OR, the market is in IMBALANCE state and there is a Big Trade.
     """
     candidates = []
+    price = m1_bar.close
     
-    # We only pass M1 candidates that contain at least one Big Trade to avoid spam and keep execution efficient
+    # 1. LIQUIDITY MAP COLLISION ENGINE
+    walls_to_remove = []
+    collision_triggered = False
+    collision_event = None
+    
+    for wall in ctx.active_walls:
+        if wall.status != 'active':
+            continue
+            
+        # Check if the current bar intersects the wall
+        # We also allow proximity sweeps (within 2 ticks) to count as a test
+        buffer = 2 * NQ_TICK_SIZE
+        if (m1_bar.low - buffer) <= wall.price <= (m1_bar.high + buffer):
+            # Collision detected! Evaluate the Close to determine Event X
+            
+            # Event X1: Absorption / Defense
+            if wall.side == 'Buy' and price >= wall.price:
+                collision_triggered = True
+                collision_event = 'DEFENSE_LONG'
+                wall.status = 'defended'
+            elif wall.side == 'Sell' and price <= wall.price:
+                collision_triggered = True
+                collision_event = 'DEFENSE_SHORT'
+                wall.status = 'defended'
+                
+            # Event X2: Trapped Participants (Resa)
+            elif wall.side == 'Buy' and price < wall.price - buffer:
+                collision_triggered = True
+                collision_event = 'TRAPPED_SELL'
+                wall.status = 'broken'
+                walls_to_remove.append(wall)
+            elif wall.side == 'Sell' and price > wall.price + buffer:
+                collision_triggered = True
+                collision_event = 'TRAPPED_BUY'
+                wall.status = 'broken'
+                walls_to_remove.append(wall)
+                
+            if collision_triggered:
+                # Assign the active wall for context
+                break
+                
+    # Clean up broken walls
+    for w in walls_to_remove:
+        if w in ctx.active_walls:
+            ctx.active_walls.remove(w)
+            
+    if collision_triggered:
+        cand = generate_m1_candidate(
+            m1_bar, m5_recent, ctx, m1_history=m1_history,
+            override_wall_level=wall.price,
+            override_wall_side=('bid' if wall.side == 'Buy' else 'ask')
+        )
+        cand.setup_category = f'liquidity_map_{collision_event.lower()}'
+        candidates.append(cand)
+        return candidates
+        
+    # 2. NEW LOGIC: Trigger purely on Big Trades, regardless of being inside/outside IB
+    # We only pass M1 candidates that contain at least one Big Trade to avoid spam
     if not m1_bar.big_trades:
         return candidates
 
     cand = generate_m1_candidate(m1_bar, m5_recent, ctx, m1_history=m1_history)
     
-    # Override setup_category and proximity_to to match legacy imbalance hunting format
-    cand.setup_category = "imbalance_hunting"
-    cand.proximity_to = "imbalance_zone_m1"
+    # Override setup_category and proximity_to to match new event-driven format
+    cand.setup_category = "big_trade_event"
+    cand.proximity_to = "big_trade_node"
     
     candidates.append(cand)
     return candidates
