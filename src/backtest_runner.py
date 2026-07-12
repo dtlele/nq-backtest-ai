@@ -796,8 +796,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
             print(f"\n  [CANDIDATE] {bar_ts} | {category_color} | wall={candidate.wall_level:.2f} ({candidate.wall_side}) "
                   f"| near={candidate.proximity_to} @ {candidate.proximity_level:.2f}")
 
-        # OPT: extract M1 context for Fabio V3 Unified
-        m1_bars = get_m1_context(bars_1min_ny, candidate.bar)
+        # OPT: extract M1 context for Fabio V3 Unified (reduced to 7 bars to save tokens and latency)
+        m1_bars = get_m1_context(bars_1min_ny, candidate.bar, context_before=7)
 
         # INTELLIGENT COOLDOWN (2-Loss Rule)
         current_narrative = market_narrative
