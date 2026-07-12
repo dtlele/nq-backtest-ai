@@ -31,7 +31,14 @@ _LANG_SUFFIX = {
 }
 
 def _get_system_prompt() -> str:
-    prompt = "You are Fabio Valentini's PREDATORY trading methodology agent analyzing NQ futures (E-mini).\nYou follow a high-conviction institutional approach based on Volume Profile and Order Flow, aiming strictly for high-probability Triple A (A+) setups.\n\n"
+    prompt = """You are Fabio Valentini's PREDATORY trading methodology agent analyzing NQ futures (E-mini).
+You follow a high-conviction institutional approach based on Volume Profile and Order Flow, aiming strictly for high-probability Triple A (A+) setups.
+
+⚠️ LATENCY CONSTRAINTS (LIVE TRADING):
+- You must make decisions in under 1 second. 
+- Keep your internal chain of thought (thinking process) extremely brief and direct (max 3 sentences). Avoid detailed market commentaries.
+- Limit your reasoning and narrative updates in the JSON output to maximum 15-20 words. Be concise and telegraphic.
+"""
     
     # Load Active Dynamic Rules (Live corrections)
     try:
@@ -94,17 +101,17 @@ STOP LOSS: Must be wide structural stops (30-50 pts) behind key boundaries. No m
     import os as _os2
     _l = _os2.environ.get('BACKTEST_LANG', '').lower().strip()
     if _l == 'zh':
-        _reasoning_instr = '<最多150字。用中文解释大单分析、被困参与者和时间/制度自审的定性结果。哪方被困？Delta确认主动权还是被动吸收？说明结构止损选择的理由。写一段流畅的段落，不要用列表或JSON键。>'
-        _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% （明确计算5个因素的百分比以强制推理）'
-        _narrative_instr = '<用中文构建关于大单的流畅、逻辑连贯的盘面叙述。如果没有交易，说明你在等待什么。>'
+        _reasoning_instr = '<最多20字。中文，解释大单分析、被困参与者、自审止损。>'
+        _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% （明确计算5个因素的百分比）'
+        _narrative_instr = '<最多20字。中文，构建流畅的盘面叙述或你在等待什么。>'
     elif _l == 'en':
-        _reasoning_instr = '<MAX 150 WORDS. Explain in flowing prose the Big Trades analysis, trapped participants, and qualitative results of your temporal/regime self-audit. Which side is trapped? Does delta confirm initiative or passive absorption? Justify the structural stop loss choice. One fluent paragraph, no bullet points or JSON keys.>'
-        _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% (explicitly calculate the percentages for all 5 factors to force reasoning)'
-        _narrative_instr = '<Build a flowing, consequential narrative of the session focused on Big Trades. You may return direction=none and use this field to state what you are waiting for.>'
+        _reasoning_instr = '<MAX 20 WORDS. Explain big trades, trapped sides, and structural stop placement.>'
+        _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% (calculate percentages for all 5 factors)'
+        _narrative_instr = '<MAX 20 WORDS. Session flow update or what you are waiting for.>'
     else:  # default: Italian
-        _reasoning_instr = '<MAX 150 WORDS. Spiega in modo discorsivo l\'analisi dei Big Trades, i partecipanti intrappolati e i risultati qualitativi del tuo self-audit temporale/regime. Quale lato è in trappola? Il delta conferma l\'iniziativa o c\'è assorbimento passivo sui muri? Giustifica la scelta dello Stop Loss strutturale. Scrivi un paragrafo fluido senza elenchi puntati o chiavi JSON.>'
-        _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% (calcola esplicitamente le percentuali per i 5 fattori per forzare il ragionamento)'
-        _narrative_instr = '<Costruisci un ragionamento fluido e consequenziale della sessione focalizzandoti sui Big Trades. Puoi restituire direction=\'none\' e usare questo campo per dichiarare cosa stai aspettando.>'
+        _reasoning_instr = '<MAX 20 PAROLE. Spiega big trades, lato in trappola e posizionamento stop strutturale.>'
+        _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% (calcola le percentuali per i 5 fattori)'
+        _narrative_instr = '<MAX 20 PAROLE. Stato della sessione o cosa stai aspettando.>'
     # Speed rule instructions based on language
     if _l == 'zh':
         _speed_rule = '\n⚠️ 速度规则：如果 "direction" 为 "none"，你必须将 "reasoning" 设置为极短的一句话（最多10个字），并将 "market_narrative_update" 设置为空字符串 ""。只有在 direction 为 "long" 或 "short" 时才生成完整的分析和叙述。'
