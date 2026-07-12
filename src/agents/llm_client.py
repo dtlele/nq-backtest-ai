@@ -244,113 +244,8 @@ def _ask_human(system_prompt: str, user_msg: str) -> str:
         time.sleep(2) # Silent polling
 
 
-# ── Gemini backend ─────────────────────────────────────────────────────────────
+# Gemini backend removed - only OpenRouter, Claude, and Human are supported
 
-# Session-level context cache: {system_prompt_hash -> cache_name}
-_gemini_ctx_cache: dict = {}
-
-def _get_or_create_gemini_cache(client, model: str, system_prompt: str) -> str:
-    """
-    Opt3: Gemini API-level Context Caching.
-    Currently disabled because the system prompt is < 4096 tokens (minimum required by Gemini).
-    """
-    return ""
-
-
-def _ask_gemini(system_prompt: str, user_msg: str, model: str = None) -> str:
-    from google import genai
-    from google.genai.errors import APIError
-    import os
-    import time
-    
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY environment variable not set in .env")
-        
-    client = genai.Client(api_key=api_key)
-    if not model:
-        model = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
-
-    # Opt3: Try to use server-side context cache for the system prompt
-    cache_name = _get_or_create_gemini_cache(client, model, system_prompt)
-    
-    max_retries = 8
-    for attempt in range(max_retries):
-        try:
-            if cache_name:
-                # Use the cached system prompt
-                response = client.models.generate_content(
-                    model=model,
-                    contents=[
-                        {"role": "user", "parts": [{"text": user_msg}]}
-                    ],
-                    config={"cached_content": cache_name}
-                )
-            else:
-                # Fallback: standard call with system+user merged
-                response = client.models.generate_content(
-                    model=model,
-                    contents=[
-                        {"role": "user", "parts": [{"text": f"System Guidelines:\n{system_prompt}\n\nTask:\n{user_msg}"}]}
-                    ]
-                )
-            
-            # Strip markdown code blocks if gemini returned them
-            text = response.text.strip()
-            if text.startswith("```json"):
-                text = text[7:]
-            elif text.startswith("```"):
-                text = text[3:]
-            if text.endswith("```"):
-                text = text[:-3]
-                
-            # Log token usage
-            try:
-                if hasattr(response, 'usage_metadata') and response.usage_metadata:
-                    in_tok = response.usage_metadata.prompt_token_count or 0
-                    out_tok = response.usage_metadata.candidates_token_count or 0
-                    log_file = Path(r"C:\Users\Mauro\Documents\nq-backtest-clean\agent_memory\token_usage.log")
-                    with open(log_file, "a") as f:
-                        f.write(f"{in_tok},{out_tok}\n")
-            except Exception as e:
-                pass
-                
-            return text.strip()
-            
-        except APIError as e:
-            # Handle transient errors (429, 503, 500, 504) with exponential backoff
-            if e.code in (429, 503, 500, 504) and attempt < max_retries - 1:
-                # If we get multiple 503s, stop retries after 4 attempts (attempt index 3)
-                if e.code == 503 and attempt >= 3:
-                    print(f"  [GEMINI API] 503 persisted after 4 attempts. Exiting retries.", flush=True)
-                    return ""
-                # Drop context cache after repeated 503/429 errors
-                if e.code in (429, 503) and attempt >= 2 and cache_name:
-                    print(f"  [GEMINI API] 503/429 persists. Dropping context cache for fallback.", flush=True)
-                    cache_name = ""
-                    
-                sleep_sec = 2 ** (attempt + 1)
-                # Cap sleep time to 30s
-                if sleep_sec > 30:
-                    sleep_sec = 30
-                    
-                print(f"  [GEMINI API] Transient error {e.code} ({e.message or 'No message'}). Retrying in {sleep_sec}s (attempt {attempt + 1}/{max_retries})...", flush=True)
-                time.sleep(sleep_sec)
-                continue
-            else:
-                print(f"  [GEMINI API] Fatal API error: {e}", flush=True)
-                raise
-        except Exception as e:
-            # Catch other unexpected network issues
-            if attempt < max_retries - 1:
-                sleep_sec = 2 ** (attempt + 1)
-                print(f"  [GEMINI API] Unexpected error: {e}. Retrying in {sleep_sec}s...", flush=True)
-                time.sleep(sleep_sec)
-                continue
-            else:
-                raise
-                
-    raise RuntimeError("Gemini API retries exhausted.")
 
 
 # ── OpenRouter backend ─────────────────────────────────────────────────────────
@@ -496,14 +391,12 @@ def llm_ask(system_prompt: str, user_msg: str, timeout: int = 120,
 
     if provider == "claude":
         response = _ask_claude(system_prompt, user_msg, timeout)
-    elif provider == "gemini":
-        response = _ask_gemini(system_prompt, user_msg, model=model)
     elif provider == "openrouter":
         response = _ask_openrouter(system_prompt, user_msg, video_path, model=model)
     elif provider == "human":
         response = _ask_human(system_prompt, user_msg)
     else:
-        raise ValueError(f"Unknown LLM_PROVIDER: {provider}. Use 'claude', 'gemini', 'openrouter', or 'human'.")
+        raise ValueError(f"Unknown LLM_PROVIDER: {provider}. Use 'claude', 'openrouter', or 'human'.")
 
     if use_cache and response and provider != "human":
         cache = _load_cache()

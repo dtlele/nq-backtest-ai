@@ -36,20 +36,41 @@ def loop():
                 status["ANALYZED_DATES"].append(date_str)
                 status["ANALYZED_DATES"].sort()
                 
-            # Parse trades.jsonl and populate ALL_TRADES
+            # Parse reasoning_log.jsonl and populate ALL_REASONINGS
+            all_reasonings = []
+            REASONING_PATH = Path("agent_memory/reasoning_log.jsonl")
+            if REASONING_PATH.exists():
+                with open(REASONING_PATH, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        if line.strip():
+                            try:
+                                all_reasonings.append(json.loads(line))
+                            except: pass
+            status["ALL_REASONINGS"] = all_reasonings
+            
             all_trades = []
+            OPTIMAL_PATH = Path("agent_memory/optimal_backtest_trades.json")
+            if OPTIMAL_PATH.exists():
+                try:
+                    with open(OPTIMAL_PATH, 'r', encoding='utf-8') as f:
+                        opts = json.load(f)
+                        for o in opts:
+                            d = o.get("date", "")
+                            if len(d) == 8 and "-" not in d:
+                                o["date"] = f"{d[:4]}-{d[4:6]}-{d[6:]}"
+                        all_trades.extend(opts)
+                except:
+                    pass
+                    
             if TRADES_PATH.exists():
                 with open(TRADES_PATH, 'r', encoding='utf-8') as f:
                     for line in f:
                         if line.strip():
                             try:
                                 trade = json.loads(line)
-                                # Filter only for the current backtest run (2026)
-                                if trade.get("date", "").startswith("2026"):
-                                    # Convert some fields to match what dashboard expects if necessary
-                                    if 'pnl_usd' in trade and 'pnl' not in trade:
-                                        trade['pnl'] = trade['pnl_usd']
-                                    all_trades.append(trade)
+                                if 'pnl_usd' in trade and 'pnl' not in trade:
+                                    trade['pnl'] = trade['pnl_usd']
+                                all_trades.append(trade)
                             except:
                                 pass
             status["ALL_TRADES"] = all_trades
@@ -79,8 +100,14 @@ def loop():
             status["MOCK_SESSIONS"] = mock_sessions
             status["ALL_PROPOSALS"] = all_trades
             
-            with open(STATUS_PATH, 'w', encoding='utf-8') as f:
+            temp_path = STATUS_PATH.with_suffix('.tmp')
+            with open(temp_path, 'w', encoding='utf-8') as f:
                 json.dump(status, f, indent=2)
+            try:
+                temp_path.replace(STATUS_PATH)
+            except PermissionError:
+                with open(STATUS_PATH, 'w', encoding='utf-8') as f:
+                    json.dump(status, f, indent=2)
                 
             # Create a dummy day file if it doesn't exist so dashboard doesn't 404
             day_file = DATA_DIR / f"{date_str}.json"

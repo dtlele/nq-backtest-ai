@@ -34,10 +34,10 @@ def _get_system_prompt() -> str:
     prompt = """You are Fabio Valentini's PREDATORY trading methodology agent analyzing NQ futures (E-mini).
 You follow a high-conviction institutional approach based on Volume Profile and Order Flow, aiming strictly for high-probability Triple A (A+) setups.
 
-⚠️ LATENCY CONSTRAINTS (LIVE TRADING):
-- You must make decisions in under 1 second. 
-- Keep your internal chain of thought (thinking process) extremely brief and direct (max 3 sentences). Avoid detailed market commentaries.
-- Limit your reasoning and narrative updates in the JSON output to maximum 15-20 words. Be concise and telegraphic.
+⚠️ DETAILED CHAIN OF THOUGHT (EXTENDED REASONING):
+- You must produce a deep, articulate, and discursive analysis of the market structure and order flow.
+- Explain your reasoning step by step. Do not rush.
+- You are encouraged to provide detailed market commentaries, building a coherent narrative of what the buyers and sellers are doing.
 
 ⚠️ PREDATORY PATIENCE (ANTI-FOMO):
 - Do NOT be hasty or premature in classification. 
@@ -105,24 +105,19 @@ STOP LOSS: Must be wide structural stops (30-50 pts) behind key boundaries. No m
     import os as _os2
     _l = _os2.environ.get('BACKTEST_LANG', '').lower().strip()
     if _l == 'zh':
-        _reasoning_instr = '<最多20字。中文，解释大单分析、被困参与者、自审止损。>'
+        _reasoning_instr = '<中文，详细的推导过程，解释大单分析、被困参与者、自审止损。>'
         _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% （明确计算5个因素的百分比）'
-        _narrative_instr = '<最多20字。中文，构建流畅的盘面叙述或你在等待什么。>'
+        _narrative_instr = '<中文，详细构建流畅的盘面叙述或你在等待什么。>'
     elif _l == 'en':
-        _reasoning_instr = '<MAX 20 WORDS. Explain big trades, trapped sides, and structural stop placement.>'
+        _reasoning_instr = '<EXTENDED THOUGHT. Detail your step-by-step reasoning on big trades, trapped sides, and structural stop placement.>'
         _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% (calculate percentages for all 5 factors)'
-        _narrative_instr = '<MAX 20 WORDS. Session flow update or what you are waiting for.>'
+        _narrative_instr = '<EXTENDED NARRATIVE. Describe the session flow update or what you are waiting for in detail.>'
     else:  # default: Italian
-        _reasoning_instr = '<MAX 20 PAROLE. Spiega big trades, lato in trappola e posizionamento stop strutturale.>'
+        _reasoning_instr = '<PENSIERO ESTESO. Spiega dettagliatamente il tuo ragionamento su big trades, lato in trappola e posizionamento stop strutturale.>'
         _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% (calcola le percentuali per i 5 fattori)'
-        _narrative_instr = '<MAX 20 PAROLE. Stato della sessione o cosa stai aspettando.>'
-    # Speed rule instructions based on language
-    if _l == 'zh':
-        _speed_rule = '\n⚠️ 速度规则：如果 "direction" 为 "none"，你必须将 "reasoning" 设置为极短的一句话（最多10个字），并将 "market_narrative_update" 设置为空字符串 ""。只有在 direction 为 "long" 或 "short" 时才生成完整的分析和叙述。'
-    elif _l == 'en':
-        _speed_rule = '\n⚠️ SPEED RULE: If "direction" is "none", you MUST set "reasoning" to a very short 1-sentence explanation (max 10 words) and "market_narrative_update" to an empty string "". Only generate full reasoning and narrative if direction is "long" or "short".'
-    else: # default: Italian
-        _speed_rule = '\n⚠️ REGOLA DI VELOCITÀ: Se "direction" è "none", DEVI impostare "reasoning" a una spiegazione brevissima di 1 frase (max 10 parole) e "market_narrative_update" a una stringa vuota "". Genera il ragionamento completo e la narrativa solo se direction è "long" o "short".'
+        _narrative_instr = '<NARRATIVA ESTESA. Descrivi dettagliatamente lo stato della sessione o cosa stai aspettando.>'
+    
+    _speed_rule = ''
 
     prompt += f"""Respond ONLY with valid JSON matching this schema:
 {{
@@ -407,7 +402,7 @@ Respond ONLY with valid JSON matching this schema:
   "decision": "confirm" | "veto",
   "adjusted_stop": <float or null (provide a float value to update/adjust the Stop Loss structural level, or null to keep original)>,
   "adjusted_target": <float or null (provide a float value to update/adjust the Target structural level, or null to keep original)>,
-  "reasoning": "<Explain why you decided to confirm, veto, or modify the stop/target. Quote relevant order flow and structural facts. Max 40 words.>"
+  "reasoning": "<Explain in detail why you decided to confirm, veto, or modify the stop/target. Quote relevant order flow and structural facts. Do not limit your length.>"
 }"""
 
 

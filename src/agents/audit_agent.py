@@ -66,7 +66,7 @@ def save_dynamic_rules(rules: dict) -> None:
         json.dump(rules, f, indent=2)
 
 def audit_session(date_str: str) -> dict:
-    """Read logs for date_str, call Gemini to audit, and update dynamic_rules.json."""
+    """Read logs for date_str, call LLM to audit, and update dynamic_rules.json."""
     existing_rules = load_dynamic_rules()
 
 # Validation helper (if not already imported from manager)
@@ -157,6 +157,6 @@ Respond with JSON only."""
             print(f"  [AUDIT] Success! Dynamic Rules updated. Total rules: {len(updated_data['dynamic_rules'])}")
             return updated_data
     except Exception as e:
-        print(f"  [AUDIT] Error parsing Gemini audit response: {e}. Raw response: {raw_response[:500]}")
+        print(f"  [AUDIT] Error parsing LLM audit response: {e}. Raw response: {raw_response[:500]}")
     
     return existing_rules

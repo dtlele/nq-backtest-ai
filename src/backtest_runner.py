@@ -1035,7 +1035,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         
         if getattr(fabio_signal, 'session_verdict', 'continue') == 'stop':
             session_terminated = True
-            print(f"\n🛑 [DYNAMIC EARLY STOP] Fabio decided to stop the session early at {bar_ts} because of current conditions.")
+            print(f"\n[STOP] [DYNAMIC EARLY STOP] Fabio decided to stop the session early at {bar_ts} because of current conditions.")
         if not quiet:
             print(f"dir={fabio_signal.direction} conf={fabio_signal.confidence} "
                   f"setup={fabio_signal.setup_type}")
