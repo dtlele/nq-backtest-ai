@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Stop Placement (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini places his stop loss with mathematical precision based on the institutional activity he identifies through the order flow. He treats institutional \"Big Trades\" as a literal wall of protection for his capital [1, 2].",
+        "### Where Exactly the Stop is Placed",
+        "*   **Behind the Institutional Wall:** Fabio places his stop loss directly **behind the cluster of \"Big Trades\"** (orders filtered by 30 contracts on NASDAQ) that initiated or defended the current move [1, 2].",
+        "*   **Surgical Stop (Risk Box)**: By entering precisely after the M1 reversal trigger, the stop can be placed surgically **1-2 ticks inside/before** the absorption wall. On NQ, this often permits a very tight risk of **3-10 points** ($200-$260 per contract) [Inquiry 2026].",
+        "*   **Anti-Sweep Logic**: The placement *before* the extreme protects against the violent acceleration (liquidity sweep) that happens once the level is actually broken. Exiting early if the wall fails minimizes slippage [Inquiry 2026]."
+    ],
+    "outcome": "### Dynamic Management 1.  **The \"Winner\" Level:** He places the stop behind the specific wall of orders that **\"won the battle\"** [10]. 2.  **Fast Break-Even:** Fabio is famous for moving to **break-even** almost immediately (within 20-30 seconds) as soon as momentum is confirmed by CVD and a \"laser-like\" price move [7, 8]. 3.  **The \"Must Have Reason\" Rule:** \"You must have reason or be out.\" If the specific institutional wall he hid behind is breached, the reason for the trade is gone, and he...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_stop_placement"
+}

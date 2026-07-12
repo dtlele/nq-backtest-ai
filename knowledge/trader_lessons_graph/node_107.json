@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Ibob Vs Failed Auction Selection (andrea)",
+    "trigger_conditions": [
+        "Answer:",
+        "Based on the sources, Andrea Cimi decides between the **IBOB breakout",
+        "confirmation** and the **Failed Auction/Break-In confirmation** by evaluating",
+        "the **Market Distribution (Day Type)** and the specific **Orderflow",
+        "Signatures** (bubble placement) at the edge of the range."
+    ],
+    "outcome": "The decision is not based on a single factor but on a hierarchy of context: ### **1. The Primary Filter: Market Distribution (Day Type)** The most significant factor is whether the day is classified as a \"Discovery\" day or a \"Balance\" day: *   **Trend/Discovery Days (P or B Shape):** If the market shows clear initiative and shifts fair value (forming a \"P\" for longs or \"B\" for shorts), Andrea applies the **IBOB breakout confirmation** [1, 2]. He looks for a \"strong\" or \"full\" candle to close out...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_ibob_vs_failed_auction_selection"
+}

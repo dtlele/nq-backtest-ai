@@ -1,0 +1,145 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "label": "Masterclass Document \u2014 Video Trading Analysis",
+      "file_type": "document",
+      "source_file": "analysis_StaphlRH8NQ.md",
+      "source_location": null,
+      "source_url": "https://www.youtube.com/watch?v=StaphlRH8NQ",
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "norm_label": "masterclass document \u2014 video trading analysis",
+      "community_name": "Imbalance Cluster Definition",
+      "id": "analysis_staphlrh8nq_masterclass_document"
+    },
+    {
+      "label": "Edge on Trading",
+      "file_type": "concept",
+      "source_file": "analysis_StaphlRH8NQ.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "norm_label": "edge on trading",
+      "community_name": "Imbalance Cluster Definition",
+      "id": "analysis_staphlrh8nq_edge_on_trading"
+    },
+    {
+      "label": "PayQRS Research Terminal",
+      "file_type": "concept",
+      "source_file": "analysis_StaphlRH8NQ.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "norm_label": "payqrs research terminal",
+      "community_name": "Imbalance Cluster Definition",
+      "id": "analysis_staphlrh8nq_payqrs_research_terminal"
+    },
+    {
+      "label": "Video Sales Letter (VSL)",
+      "file_type": "concept",
+      "source_file": "analysis_StaphlRH8NQ.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "norm_label": "video sales letter (vsl)",
+      "community_name": "Imbalance Cluster Definition",
+      "id": "analysis_staphlrh8nq_video_sales_letter"
+    },
+    {
+      "label": "Framework Quantitativi",
+      "file_type": "concept",
+      "source_file": "analysis_StaphlRH8NQ.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "norm_label": "framework quantitativi",
+      "community_name": "Imbalance Cluster Definition",
+      "id": "analysis_staphlrh8nq_framework_quantitativi"
+    },
+    {
+      "label": "Relatore Sezione 1 (Edge on Trading)",
+      "file_type": "concept",
+      "source_file": "analysis_StaphlRH8NQ.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 0,
+      "norm_label": "relatore sezione 1 (edge on trading)",
+      "community_name": "Imbalance Cluster Definition",
+      "id": "analysis_staphlrh8nq_trader_relatore_sezione1"
+    }
+  ],
+  "links": [
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "analysis_StaphlRH8NQ.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "analysis_staphlrh8nq_masterclass_document",
+      "target": "analysis_staphlrh8nq_edge_on_trading"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "analysis_StaphlRH8NQ.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "analysis_staphlrh8nq_masterclass_document",
+      "target": "analysis_staphlrh8nq_framework_quantitativi"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "analysis_StaphlRH8NQ.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "analysis_staphlrh8nq_masterclass_document",
+      "target": "analysis_staphlrh8nq_payqrs_research_terminal"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "analysis_StaphlRH8NQ.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "analysis_staphlrh8nq_masterclass_document",
+      "target": "analysis_staphlrh8nq_trader_relatore_sezione1"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "analysis_StaphlRH8NQ.md",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "analysis_staphlrh8nq_masterclass_document",
+      "target": "analysis_staphlrh8nq_video_sales_letter"
+    }
+  ],
+  "hyperedges": [],
+  "built_at_commit": "148c19f4adf8b8a158fea0114db2dbef8938df08"
+}

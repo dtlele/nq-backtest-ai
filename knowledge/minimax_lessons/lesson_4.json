@@ -1,0 +1,13 @@
+{
+    "pattern_name": "3 \u2014 Stop Run + Iceberg Accumulation (Trappola Istituzionale)",
+    "trigger_conditions": [
+        "**Contesto visivo**: Sequenza temporale:",
+        "1. **Cluster rosso enorme** a sinistra \u2192 sweep di stop loss retail (liquidity grab).",
+        "2. **Assorbimento verde massivo** immediatamente dopo \u2192 le istituzioni usano la svendita per riempire long a prezzi scontati.",
+        "3. **Prezzo risale** \u2192 i venditori retail sono intrappolati (trapped shorts).",
+        "**Valutazione AMT (regole attive)**:"
+    ],
+    "outcome": "**Direzione suggerita**: LONG, con stop sotto i minimi del cluster rosso.",
+    "confidence": 0.95,
+    "graphify_node_link": "Node_3_\u2014_Stop_Run_+_"
+}

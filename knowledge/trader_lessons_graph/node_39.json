@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Wall Size Minimum Balance (fabio)",
+    "trigger_conditions": [
+        "Based on Fabio Valentini\u2019s model and recent live sessions, there is no single,",
+        "rigid \"minimum\" contract number that acts as a magic threshold; however, **300",
+        "contracts** at a single horizontal tick is explicitly cited as a **\"perfect",
+        "example\"** of a valid institutional wall [1].",
+        "The decision to trade on a balance day is **primarily contextual**, governed by"
+    ],
+    "outcome": "the Law of Effort vs. Result and the specific location of the volume cluster. ### **1. The Numerical Benchmark (300+ Contracts)** While Fabio uses a baseline filter of **30 contracts** to identify a single \"Big Trade\" bubble on NASDAQ [2], a protective \"wall\" is formed by a stacked cluster of these bubbles. *   **The \"300 Rule\":** In a specific example of absorption, Fabio identifies a cluster totaling **300 contracts** (composed of individual trades like 72, 61, 60, and 62) hitting one level wi...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_wall_size_minimum_balance"
+}

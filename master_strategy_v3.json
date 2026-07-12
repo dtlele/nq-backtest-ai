@@ -1,0 +1,40 @@
+{
+  "strategy_name": "NQ Institutional Ultimate V3 (Level 3)",
+  "account_limits": {
+    "max_drawdown_allowed_usd": 2500.0,
+    "recommended_position_size": "2.5 Mini NQ (25 Micro NQ)"
+  },
+  "execution_rules": {
+    "trend_short_delay_minutes": 1,
+    "buildup_10m_filter": {
+      "description": "Filtro sul trend dei 10 minuti precedenti (prezzo chiusura - prezzo apertura)",
+      "absorb_long": "price_change >= -10",
+      "trend_long": "price_change > 0",
+      "absorb_short": "price_change <= 10",
+      "trend_short": "price_change < 0"
+    },
+    "extension_30m_filter": {
+      "description": "Distanza in punti dalla Media Mobile a 30 minuti",
+      "trend_long": "price_distance_from_sma30 >= 35",
+      "absorb_short": "price_distance_from_sma30 <= -45"
+    }
+  },
+  "time_sessions": {
+    "reference_file": "time_session_rules_v2.json (Caso A)",
+    "exclude_time": "9:55 - 10:05 (News/Reversal Zone)"
+  },
+  "volatility_regimes": {
+    "low_volatility_atr_lt_200": {
+      "trend_long": {"sl_pts": 39.0, "tp_pts": 120.0},
+      "absorb_long": {"sl_pts": 49.0, "tp_pts": 37.0},
+      "trend_short": {"sl_pts": 46.0, "tp_pts": 120.0},
+      "absorb_short": {"sl_pts": 49.0, "tp_pts": 114.0}
+    },
+    "high_volatility_atr_gt_200": {
+      "trend_long": {"sl_pts": 22.0, "tp_pts": 113.0},
+      "absorb_long": {"sl_pts": 50.0, "tp_pts": 115.0},
+      "trend_short": {"sl_pts": 48.0, "tp_pts": 113.0},
+      "absorb_short": {"sl_pts": 34.0, "tp_pts": 35.0}
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Gap Open Ivb Interaction (andrea)",
+    "trigger_conditions": [
+        "Answer:",
+        "In Andrea Cimi's methodology, a market open with a gap (opening outside",
+        "yesterday's Regular Trading Hours (RTH) Value Area) fundamentally changes the",
+        "interpretation of the **Initial Balance (IB)** from a simple breakout zone to a",
+        "test of **price discovery versus price acceptance** [1, 2]."
+    ],
+    "outcome": "### **Effect on IB/IVB Formation** When a gap occurs, the first 15 minutes of the New York session establish a range at \"premium\" or \"discount\" prices relative to yesterday's fair value (the 70% Value Area) [2, 3]. *   **Statistical Anomaly:** An open outside yesterday\u2019s VA is viewed as a statistical anomaly [4, 5]. The market is essentially \"searching for liquidity\" [6]. *   **The \"Break-In\" Signal:** If the market opens outside yesterday's VA but the first move is to break back **inside** that...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_gap_open_ivb_interaction"
+}

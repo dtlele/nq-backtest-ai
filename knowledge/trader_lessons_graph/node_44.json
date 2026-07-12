@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Repeated Level Test (fabio)",
+    "trigger_conditions": [
+        "In Fabio Valentini\u2019s model, the **second test at 10:15 with 120 contracts is",
+        "more valid** and constitutes a higher-probability setup than the first test.",
+        "This is because his methodology is built on the requirement of **institutional",
+        "validation** and the **\"Second Drive\" rule**, which filters out the noise of",
+        "the initial market opening. [1, 2]"
+    ],
+    "outcome": "### **1. The \"Second Drive\" Rule** Fabio explicitly forbids entering on the \"first drive\" or the first impulsive move of a session, as these are often \"finta\" (fake-outs) or temporary spikes. [1, 2] *   **Waiting for Confirmation:** He notes that the market usually needs to complete its first impulsive movement and then provide a **retracement or retest** to prove the original direction or level is being defended. [1, 3] *   **Validity Increase:** A second test at 10:15 following a test at 09:50...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_repeated_level_test"
+}

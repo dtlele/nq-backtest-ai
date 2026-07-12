@@ -1,0 +1,360 @@
+{
+  "communities": {
+    "0": [
+      "rule_fabio_squeeze_definition_squeeze_definition",
+      "rule_fabio_squeeze_entry_trigger_squeeze_entry_trigger",
+      "rule_fabio_squeeze_vs_failed_auction_squeeze_vs_failed_auction",
+      "rule_fabio_squeeze_vs_ivb_priority_balance_squeeze_vs_ivb_priority_balance",
+      "rule_fabio_statistical_levels_statistical_levels",
+      "rule_fabio_stop_placement_stop_placement",
+      "rule_fabio_target_selection_hierarchy_target_selection_hierarchy",
+      "rule_fabio_targets_high_volatility_targets_high_volatility",
+      "rule_fabio_targets_standard_targets_standard",
+      "rule_fabio_timing_entry_precision_timing_entry_precision"
+    ],
+    "1": [
+      "rule_andrea_entry_pbd_b_entry_pbd_b",
+      "rule_andrea_entry_pbd_p_entry_pbd_p",
+      "rule_andrea_failed_auction_definition_failed_auction_definition",
+      "rule_andrea_failed_auction_variants_failed_auction_variants",
+      "rule_andrea_footprint_reading_footprint_reading",
+      "rule_andrea_gap_open_ivb_interaction_gap_open_ivb_interaction",
+      "rule_andrea_hvn_lvn_hvn_lvn",
+      "rule_andrea_ibob_relaxed_conditions_ibob_relaxed_conditions",
+      "rule_andrea_ibob_vs_failed_auction_selection_ibob_vs_failed_auction_selection"
+    ],
+    "2": [
+      "rule_fabio_trailing_stop_trailing_stop",
+      "rule_fabio_trapped_buyers_trapped_buyers",
+      "rule_fabio_trapped_sellers_trapped_sellers",
+      "rule_fabio_trend_day_second_drive_confirmation_trend_day_second_drive_confirmation",
+      "rule_fabio_trend_vs_mean_reversion_model_trend_vs_mean_reversion_model",
+      "rule_fabio_vp_includes_overnight_vp_includes_overnight",
+      "rule_fabio_vp_session_scope_vp_session_scope",
+      "rule_fabio_wall_size_minimum_balance_wall_size_minimum_balance"
+    ],
+    "3": [
+      "rule_andrea_absorption_vs_exhaustion_absorption_vs_exhaustion",
+      "rule_andrea_andrea_balance_day_confirmation_andrea_balance_day_confirmation",
+      "rule_andrea_andrea_overnight_gap_va_andrea_overnight_gap_va",
+      "rule_andrea_andrea_stop_per_setup_andrea_stop_per_setup",
+      "rule_andrea_andrea_vp_session_scope_andrea_vp_session_scope",
+      "rule_andrea_balance_vs_imbalance_balance_vs_imbalance",
+      "rule_andrea_bolle_filter_bolle_filter"
+    ],
+    "4": [
+      "rule_fabio_big_trades_filter",
+      "rule_fabio_breakeven_rules",
+      "rule_fabio_coherence_of_information",
+      "rule_fabio_confidence_40_60_zone",
+      "rule_fabio_conflict_resolution_pingpong",
+      "rule_fabio_counter_trend_on_trend_day",
+      "rule_fabio_counter_trend_rules"
+    ],
+    "5": [
+      "rule_fabio_cvd_as_leading_indicator_cvd_as_leading_indicator",
+      "rule_fabio_cvd_in_simplified_model_cvd_in_simplified_model",
+      "rule_fabio_effort_vs_result_effort_vs_result",
+      "rule_fabio_entry_mechanics_entry_mechanics",
+      "rule_fabio_failed_auction_is_the_setup_failed_auction_is_the_setup",
+      "rule_fabio_footprint_delta_footprint_delta",
+      "rule_fabio_hvn_big_wall_rules_hvn_big_wall_rules"
+    ],
+    "6": [
+      "analysis_staphlrh8nq_edge_on_trading",
+      "analysis_staphlrh8nq_framework_quantitativi",
+      "analysis_staphlrh8nq_masterclass_document",
+      "analysis_staphlrh8nq_payqrs_research_terminal",
+      "analysis_staphlrh8nq_trader_relatore_sezione1",
+      "analysis_staphlrh8nq_video_sales_letter"
+    ],
+    "7": [
+      "rule_andrea_composite_profile_composite_profile",
+      "rule_andrea_confirmation_timeframe_confirmation_timeframe",
+      "rule_andrea_confirmation_without_ibob_confirmation_without_ibob",
+      "rule_andrea_day_type_classification_day_type_classification",
+      "rule_andrea_entry_failed_auction_entry_failed_auction"
+    ],
+    "8": [
+      "rule_andrea_imbalance_cluster_definition_imbalance_cluster_definition",
+      "rule_andrea_initiative_vs_response_initiative_vs_response",
+      "rule_andrea_multi_timeframe_multi_timeframe",
+      "rule_andrea_overnight_gaps_overnight_gaps",
+      "rule_andrea_pbd_shapes_pbd_shapes"
+    ],
+    "9": [
+      "rule_andrea_conflicting_walls_resolution_conflicting_walls_resolution",
+      "rule_andrea_cvd_divergence_cvd_divergence",
+      "rule_andrea_delta_thresholds_delta_thresholds",
+      "rule_andrea_entry_iceberg_entry_iceberg"
+    ],
+    "10": [
+      "rule_andrea_institutional_activity_institutional_activity",
+      "rule_andrea_losing_trade_characteristics_losing_trade_characteristics",
+      "rule_andrea_lunch_effect_lunch_effect",
+      "rule_andrea_no_trade_rules_no_trade_rules"
+    ],
+    "11": [
+      "rule_andrea_range_acceptance_range_acceptance",
+      "rule_andrea_rotation_within_va_rotation_within_va",
+      "rule_andrea_second_drive_andrea_second_drive_andrea",
+      "rule_andrea_session_times_session_times"
+    ],
+    "12": [
+      "rule_andrea_trade_management_trade_management",
+      "rule_andrea_trend_day_rules_trend_day_rules",
+      "rule_andrea_value_area_definition_value_area_definition",
+      "rule_andrea_volume_floor_volume_floor"
+    ],
+    "13": [
+      "rule_fabio_participation_baseline_participation_baseline",
+      "rule_fabio_pre_market_levels_usage_pre_market_levels_usage",
+      "rule_fabio_session_schedule_session_schedule",
+      "rule_fabio_setup_time_cutoff_setup_time_cutoff"
+    ],
+    "14": [
+      "rule_andrea_rr_ratio_rr_ratio",
+      "rule_andrea_stop_placement_all_stop_placement_all",
+      "rule_andrea_target_rules_target_rules"
+    ],
+    "15": [
+      "rule_fabio_acceptance_definition_exact_acceptance_definition_exact",
+      "rule_fabio_aplus_setup_aplus_setup",
+      "rule_fabio_avoid_times_avoid_times"
+    ],
+    "16": [
+      "rule_fabio_ib_bias_ib_bias",
+      "rule_fabio_ib_breakout_rules_ib_breakout_rules",
+      "rule_fabio_ib_definition_ib_definition"
+    ],
+    "17": [
+      "rule_andrea_andrea_minimum_rr_andrea_minimum_rr",
+      "rule_andrea_best_setups_statistics_best_setups_statistics"
+    ],
+    "18": [
+      "rule_andrea_squeeze_setup_andrea_squeeze_setup_andrea",
+      "rule_andrea_toxic_flow_toxic_flow"
+    ],
+    "19": [
+      "rule_fabio_balance_day_exceptions_balance_day_exceptions",
+      "rule_fabio_balance_vs_failed_auction_balance_vs_failed_auction"
+    ],
+    "20": [
+      "rule_fabio_ib_extension_targets_fabio",
+      "rule_fabio_ib_extension_targets_ib_extension_targets"
+    ],
+    "21": [
+      "rule_fabio_ivb_15_vs_30_minutes_fabio",
+      "rule_fabio_ivb_15_vs_30_minutes_ivb_15_vs_30_minutes"
+    ],
+    "22": [
+      "rule_fabio_ivb_breakout_vs_false_balance_apr30_fabio",
+      "rule_fabio_ivb_breakout_vs_false_balance_apr30_ivb_breakout_vs_false_balance_apr30"
+    ],
+    "23": [
+      "rule_fabio_ivb_breakout_vs_false_balance_may01_fabio",
+      "rule_fabio_ivb_breakout_vs_false_balance_may01_ivb_breakout_vs_false_balance_may01"
+    ],
+    "24": [
+      "rule_fabio_ivb_breakout_vs_false_balance_may02_fabio",
+      "rule_fabio_ivb_breakout_vs_false_balance_may02_ivb_breakout_vs_false_balance_may02"
+    ],
+    "25": [
+      "rule_fabio_ivb_protection_level_fabio",
+      "rule_fabio_ivb_protection_level_ivb_protection_level"
+    ],
+    "26": [
+      "rule_fabio_losing_trade_anatomy_fabio",
+      "rule_fabio_losing_trade_anatomy_losing_trade_anatomy"
+    ],
+    "27": [
+      "rule_fabio_max_daily_loss_fabio",
+      "rule_fabio_max_daily_loss_max_daily_loss"
+    ],
+    "28": [
+      "rule_fabio_multi_timeframe_fabio",
+      "rule_fabio_multi_timeframe_multi_timeframe"
+    ],
+    "29": [
+      "rule_fabio_partial_exits_fabio",
+      "rule_fabio_partial_exits_partial_exits"
+    ],
+    "30": [
+      "rule_fabio_position_building_position_building",
+      "rule_fabio_risk_per_trade_risk_per_trade"
+    ],
+    "31": [
+      "rule_fabio_pre_explosion_pattern_pre_explosion_pattern",
+      "rule_fabio_punches_to_wall_punches_to_wall"
+    ],
+    "32": [
+      "rule_fabio_repeated_level_test_repeated_level_test",
+      "rule_fabio_second_drive_second_drive"
+    ],
+    "33": [
+      "rule_fabio_win_rate_by_setup_win_rate_by_setup",
+      "rule_fabio_world_cup_performance_world_cup_performance"
+    ],
+    "34": [
+      "analysis_wpmiyjxl0zu"
+    ],
+    "35": [
+      "rule_fabio_choppy_day_identification"
+    ],
+    "36": [
+      "rule_fabio_composite_vs_session_vp"
+    ]
+  },
+  "cohesion": {
+    "0": 0.2222222222222222,
+    "1": 0.2777777777777778,
+    "2": 0.25,
+    "3": 0.38095238095238093,
+    "4": 0.6190476190476191,
+    "5": 0.3333333333333333,
+    "6": 0.3333333333333333,
+    "7": 0.6,
+    "8": 0.4,
+    "9": 0.5,
+    "10": 0.6666666666666666,
+    "11": 0.5,
+    "12": 0.5,
+    "13": 0.5,
+    "14": 1.0,
+    "15": 0.6666666666666666,
+    "16": 0.6666666666666666,
+    "17": 1.0,
+    "18": 1.0,
+    "19": 1.0,
+    "20": 1.0,
+    "21": 1.0,
+    "22": 1.0,
+    "23": 1.0,
+    "24": 1.0,
+    "25": 1.0,
+    "26": 1.0,
+    "27": 1.0,
+    "28": 1.0,
+    "29": 1.0,
+    "30": 1.0,
+    "31": 1.0,
+    "32": 1.0,
+    "33": 1.0,
+    "34": 1.0,
+    "35": 1.0,
+    "36": 1.0
+  },
+  "gods": [
+    {
+      "id": "rule_andrea_failed_auction_definition_failed_auction_definition",
+      "label": "Failed Auction Definition",
+      "degree": 7
+    },
+    {
+      "id": "rule_fabio_trend_vs_mean_reversion_model_trend_vs_mean_reversion_model",
+      "label": "Trend Vs Mean Reversion Model",
+      "degree": 6
+    },
+    {
+      "id": "rule_fabio_big_trades_filter",
+      "label": "Big Trades Filter",
+      "degree": 5
+    },
+    {
+      "id": "rule_fabio_coherence_of_information",
+      "label": "Coherence Of Information",
+      "degree": 5
+    },
+    {
+      "id": "rule_fabio_confidence_40_60_zone",
+      "label": "Confidence 40 60 Zone",
+      "degree": 5
+    },
+    {
+      "id": "analysis_staphlrh8nq_masterclass_document",
+      "label": "Masterclass Document \u2014 Video Trading Analysis",
+      "degree": 5
+    },
+    {
+      "id": "rule_andrea_andrea_balance_day_confirmation_andrea_balance_day_confirmation",
+      "label": "Andrea Balance Day Confirmation",
+      "degree": 4
+    },
+    {
+      "id": "rule_andrea_andrea_vp_session_scope_andrea_vp_session_scope",
+      "label": "Andrea Vp Session Scope",
+      "degree": 4
+    },
+    {
+      "id": "rule_andrea_composite_profile_composite_profile",
+      "label": "Composite Profile",
+      "degree": 4
+    },
+    {
+      "id": "rule_andrea_balance_vs_imbalance_balance_vs_imbalance",
+      "label": "Balance Vs Imbalance",
+      "degree": 3
+    }
+  ],
+  "surprises": [
+    {
+      "source": "Bolle Filter",
+      "target": "Andrea Balance Day Confirmation",
+      "source_files": [
+        "rule_andrea_bolle_filter.md",
+        "rule_andrea_andrea_balance_day_confirmation.md"
+      ],
+      "confidence": "AMBIGUOUS",
+      "relation": "references",
+      "why": "ambiguous connection - not explicitly stated in source; connects across different repos/directories"
+    },
+    {
+      "source": "Conflicting Walls Resolution",
+      "target": "Entry Iceberg",
+      "source_files": [
+        "rule_andrea_conflicting_walls_resolution.md",
+        "rule_andrea_entry_iceberg.md"
+      ],
+      "confidence": "INFERRED",
+      "relation": "conceptually_related_to",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories"
+    },
+    {
+      "source": "Entry Pbd B",
+      "target": "Failed Auction Definition",
+      "source_files": [
+        "rule_andrea_entry_pbd_b.md",
+        "rule_andrea_failed_auction_definition.md"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "connects across different repos/directories; peripheral node `Entry Pbd B` unexpectedly reaches hub `Failed Auction Definition`"
+    },
+    {
+      "source": "Entry Pbd P",
+      "target": "Failed Auction Definition",
+      "source_files": [
+        "rule_andrea_entry_pbd_p.md",
+        "rule_andrea_failed_auction_definition.md"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "connects across different repos/directories; peripheral node `Entry Pbd P` unexpectedly reaches hub `Failed Auction Definition`"
+    },
+    {
+      "source": "Failed Auction Definition",
+      "target": "Failed Auction Variants",
+      "source_files": [
+        "rule_andrea_failed_auction_definition.md",
+        "rule_andrea_failed_auction_variants.md"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "connects across different repos/directories; peripheral node `Failed Auction Variants` unexpectedly reaches hub `Failed Auction Definition`"
+    }
+  ],
+  "tokens": {
+    "input": 1093,
+    "output": 811
+  }
+}

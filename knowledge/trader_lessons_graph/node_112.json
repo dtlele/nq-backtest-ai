@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Conflicting Walls Resolution (andrea)",
+    "trigger_conditions": [
+        "When buy-side and sell-side big trade clusters appear within a narrow range",
+        "(2\u20133 ticks), Andrea Cimi classifies this phenomenon as a **\"liquidity pocket\"**",
+        "or a state of **\"pure war\"** between big institutional participants [1, 2].",
+        "### **What This Means**",
+        "This scenario indicates a **balanced market** where aggressive buyers and"
+    ],
+    "outcome": "sellers are fighting for control, but their efforts are being neutralized by passive limit orders (absorption) on both sides [2, 3]. It represents an area where huge amounts of money are being exchanged, but the market has not yet reached an agreement on a new fair price [4, 5]. ### **Is it a \"No-Trade\"?** In many cases, yes. Andrea identifies these high-conflict zones as part of a **\"consolidative auction\"** characterized by **undecisiveness** [6]. *   **The Filter:** If you are looking for an ...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_conflicting_walls_resolution"
+}

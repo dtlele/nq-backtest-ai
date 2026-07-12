@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Bolle Filter (andrea)",
+    "trigger_conditions": [
+        "In Andrea Cimi\u2019s trading methodology, **\"bolle\" (bubbles)** and **icebergs**",
+        "represent the two different sides of liquidity in the market\u2014aggressive and",
+        "passive\u2014and are filtered to reveal institutional activity.",
+        "### **What are 'Bolle' (Bubbles)?**",
+        "\"Bolle\" is the term used to describe **aggressive liquidity** (market takers)"
+    ],
+    "outcome": "visible on a heat map or order flow chart [1]. *   **Definition:** Bubbles represent aggressive buyers and sellers who are physically \"clicking the buy or sell button\" to execute orders at the best available price immediately [2], [3]. *   **Function:** They represent the **demand** side of the market [1]. Because they are market orders, they consume the resting limit orders in the book; price only moves when these aggressive \"bubbles\" have consumed all available passive liquidity at a certain l...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_bolle_filter"
+}

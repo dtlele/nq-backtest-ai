@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Footprint Reading (andrea)",
+    "trigger_conditions": [
+        "Andrea Cimi reads a footprint chart (specifically utilizing **Market By Order",
+        "or MBO** data) as a way to see the \"anatomy and physiology\" of price movements",
+        "by analyzing every single transaction at a granular level [1, 2]. Unlike",
+        "standard charts, the footprint reveals the **imbalances** between aggressive",
+        "buyers and passive sellers, allowing a trader to follow the \"smart money\" in"
+    ],
+    "outcome": "real-time [3, 4]. ### Reading the Footprint (MBO Orderflow) Andrea\u2019s approach to reading the footprint involves several key components: *   **MBO vs. MBP:** Traditional \"Market By Price\" (MBP) charts only show the total volume at a price level [5]. **MBO data** provides the individual **Order IDs**, allowing Andrea to see if 100 contracts at a level consist of one large institutional order or 100 small retail orders [6, 7]. *   **Imbalances:** These are calculated **diagonally** because the auct...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_footprint_reading"
+}

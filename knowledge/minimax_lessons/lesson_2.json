@@ -1,0 +1,13 @@
+{
+    "pattern_name": "#3: Iceberg \"Tip\" Re-filling Pattern",
+    "trigger_conditions": [
+        "[AMT_CORE_18] (Topic: Iceberg Tip Consistency)",
+        "Un vero Iceberg mostra bolle di dimensione COSTANTE che riformano",
+        "istantaneamente dopo ogni esecuzione. Se la dimensione delle bolle",
+        "VARIA ad ogni refresh, \u00e8 probabilmente un wall statico normale,",
+        "non un Iceberg. Gli Iceberg istituzionali hanno \"Maximum Displayed Size\" fisso."
+    ],
+    "outcome": "-> ACTION: require_size_consistency",
+    "confidence": 0.95,
+    "graphify_node_link": "Node_#3_Iceberg_\"Ti"
+}

@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Session Schedule (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini primarily trades the **New York session** for US indices like",
+        "the NASDAQ (NQ) because it contains the maximum volume and strongest",
+        "participant battles of the day [1-3].",
+        "### **Fabio's Trading Hours**",
+        "*   **Start Time:** Fabio typically starts his session around the **New York"
+    ],
+    "outcome": "cash open**, which is **3:30 PM Italian/European time** (9:30 AM EST) [4, 5]. However, he often waits **30 minutes** after the open to allow the session to stabilize before looking for premium setups [6]. *   **Stop Time:** He generally trades the **first three or four hours** of the New York session [7]. He has specifically noted that it is often \"not worth to trade\" after **7:00 PM Italian/European time** (approximately 1:00 PM EST) because his win rate at that hour is statistically lower [8]....",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_session_schedule"
+}

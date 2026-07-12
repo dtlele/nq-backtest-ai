@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Rotation Within Va (andrea)",
+    "trigger_conditions": [
+        "When the market is in a balanced **D-shape distribution**, price is rotating",
+        "within a \"business zone\" where buyers and sellers agree on a fair price [1, 2].",
+        "In this environment, any move outside the **Value Area (VA)**\u2014the 70% range of",
+        "volume\u2014is considered a **statistical anomaly** that is likely to revert to the",
+        "mean [3, 4]."
+    ],
+    "outcome": "### **Rules for Fading VAH and VAL** To execute a fade (reversal) at the Value Area High (VAH) or Value Area Low (VAL), follow these specific rules: 1.  **Identify the Boundary:** Plot the first standard deviation (70%) of the session's volume profile to find the VAH and VAL [3, 5]. 2.  **Wait for the Deviation:** Allow price to poke outside the Value Area. Prices above the VAH are considered \"premium,\" and prices below the VAL are \"cheap\" [4]. 3.  **The \"Break-In\" Trigger:** Do not enter as pri...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_rotation_within_va"
+}

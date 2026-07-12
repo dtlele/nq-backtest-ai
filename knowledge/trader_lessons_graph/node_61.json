@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Squeeze Vs Ivb Priority Balance (fabio)",
+    "trigger_conditions": [
+        "In Fabio Valentini\u2019s model, the transition from a **Squeeze (Mean Reversion)**",
+        "to an **IVB Breakout (Trend Following)** on a Balance Day is governed by the",
+        "mechanical shift from **Equilibrium** to **Price Discovery** [1, 2].",
+        "Here is how he prioritizes these setups and the specific order flow triggers",
+        "that differentiate a \"B\" grade (62 confidence) from an \"AAA\" grade (65+"
+    ],
+    "outcome": "confidence) execution. ### **1. Prioritization: Equilibrium vs. Acceptance** On a Balance Day, Valentini views the market as a \"double auction\" where the price is expected to \"ping-pong\" between the Initial Volume Breakout (IVB) High and Low [3, 4]. *   **Priority for Squeeze (Mean Reversion):** This is the default approach as long as the price remains inside the established range or pierces the edge only with **wicks/shadows** [5, 6]. He prioritizes the Squeeze when he sees **Absorption** (effo...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_squeeze_vs_ivb_priority_balance"
+}

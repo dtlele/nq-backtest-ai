@@ -1,0 +1,52 @@
+{
+  "communities": {
+    "0": [
+      "analysis_staphlrh8nq_edge_on_trading",
+      "analysis_staphlrh8nq_framework_quantitativi",
+      "analysis_staphlrh8nq_masterclass_document",
+      "analysis_staphlrh8nq_payqrs_research_terminal",
+      "analysis_staphlrh8nq_trader_relatore_sezione1",
+      "analysis_staphlrh8nq_video_sales_letter"
+    ]
+  },
+  "cohesion": {
+    "0": 0.3333333333333333
+  },
+  "gods": [
+    {
+      "id": "analysis_staphlrh8nq_masterclass_document",
+      "label": "Masterclass Document \u2014 Video Trading Analysis",
+      "degree": 5
+    },
+    {
+      "id": "analysis_staphlrh8nq_edge_on_trading",
+      "label": "Edge on Trading",
+      "degree": 1
+    },
+    {
+      "id": "analysis_staphlrh8nq_payqrs_research_terminal",
+      "label": "PayQRS Research Terminal",
+      "degree": 1
+    },
+    {
+      "id": "analysis_staphlrh8nq_video_sales_letter",
+      "label": "Video Sales Letter (VSL)",
+      "degree": 1
+    },
+    {
+      "id": "analysis_staphlrh8nq_framework_quantitativi",
+      "label": "Framework Quantitativi",
+      "degree": 1
+    },
+    {
+      "id": "analysis_staphlrh8nq_trader_relatore_sezione1",
+      "label": "Relatore Sezione 1 (Edge on Trading)",
+      "degree": 1
+    }
+  ],
+  "surprises": [],
+  "tokens": {
+    "input": 0,
+    "output": 0
+  }
+}

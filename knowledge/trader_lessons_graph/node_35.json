@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Losing Trade Anatomy (fabio)",
+    "trigger_conditions": [
+        "In Fabio Valentini\u2019s system, a **losing trade** is characterized not by its",
+        "size\u2014as his risk management limits losses to approximately **\u20ac600 per",
+        "contract** or a total of **2% of the account per day**\u2014but by the market",
+        "conditions in which it occurs [1, 2]. Most losing trades take place during",
+        "**compression or contraction phases**, where his trend-following and momentum"
+    ],
+    "outcome": "models lack the \"steroids\" of directional aggression [3-6]. ### What a Losing Trade Looks Like A typical losing trade in Fabio\u2019s framework often manifests as a **\"fake out\"** or a **failed auction** [7, 8]. For instance: *   **Failed Breakout:** Price attempts to leave the **Initial Volume Breakout (IVB)** range but fails to close a full-body candle outside the range, or immediately returns inside [9-12]. *   **Whipsaw in Compression:** During choppy days, price may \"liquidate the high and low\" ...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_losing_trade_anatomy"
+}

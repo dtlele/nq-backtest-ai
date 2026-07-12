@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Entry Failed Auction (andrea)",
+    "trigger_conditions": [
+        "Based on Andrea Cimi\u2019s methodology, a **Failed Auction** (also known as a",
+        "statistical anomaly) occurs when the market attempts to find new value outside",
+        "of a balanced range but fails to attract sufficient participation to sustain",
+        "the move [1-3].",
+        "The following is the specific step-by-step sequence for a Failed Auction entry:"
+    ],
+    "outcome": "### **1) Price Exits the Range** The sequence begins when price moves outside of the established **Value Area** (the range where 70% of the session's volume is traded) or pokes through a previous session's high or low [2, 4, 5]. Statistically, any activity in these outer percentiles is considered an **anomaly** that has a high probability of reverting to the mean [1, 4]. ### **2) Rejection via Absorption or Exhaustion** Once price is outside the range, you look for signs that the breakout is fai...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_entry_failed_auction"
+}

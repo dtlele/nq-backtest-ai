@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Trend Day Second Drive Confirmation (fabio)",
+    "trigger_conditions": [
+        "On a **bullish trend day** like May 5th, where the price breaks the **Initial",
+        "Volume Breakout (IVB)** range and sets up a \"second drive,\" Fabio Valentini",
+        "requires a specific sequence of mechanical and order flow confirmations before",
+        "an entry can reach the **65+ high-confidence threshold**.",
+        "### **1. Exact Order Flow Confirmation for a Second Drive**"
+    ],
+    "outcome": "For a valid Trend Following entry, Valentini\u2019s model moves through three mandatory phases of confirmation: *   **Acceptance (The Body Close):** The market must achieve a **full-body candle close** outside the IVB High (the range defined in the first 15\u201330 minutes) [1-4]. This distinguishes a structural shift from a \"look above and fail\" (failed auction) [5]. *   **The \"Initiative\" Signature:** Unlike mean reversion setups, \"Big Trade\" bubbles (filtered for 30+ contracts on NQ) must appear specif...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_trend_day_second_drive_confirmation"
+}

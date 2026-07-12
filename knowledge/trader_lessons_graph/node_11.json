@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Big Trades Filter (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini utilizes a specific \"Big Trades\" or \"Deep Trades\" filter on his",
+        "proprietary platform, Deep Charts, to isolate institutional activity from",
+        "retail noise.",
+        "### Contract Size Thresholds",
+        "Valentini\u2019s standard quantitative thresholds for NQ (NASDAQ) depend on the"
+    ],
+    "outcome": "trading session: *   **New York Session:** The filter is set to **30 contracts** [1, 2]. *   **London Session:** The threshold is reduced to **20 contracts** due to lower relative volume [2, 3]. ### Visual Appearance on Screen On his charts, these trades appear as **proportional bubbles** or \"balls\" overlaid on the price action [4-6]: *   **Color-Coded:** Red bubbles represent aggressive institutional sell orders, while green bubbles represent aggressive buy orders [5, 7]. *   **Size-Proportiona...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_big_trades_filter"
+}

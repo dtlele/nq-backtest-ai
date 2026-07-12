@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Confidence 40 60 Zone (fabio)",
+    "trigger_conditions": [
+        "In Fabio Valentini\u2019s simplified model, the **40\u201360 confidence zone** represents",
+        "setups that he classifies as **\"B\" or \"C\" grades**. These are trades where the",
+        "foundational logic (Location) is correct, but one or more critical \"steroids\"",
+        "(Order Flow confluences) are missing or contradictory [1, 2].",
+        "In backtesting, the binary nature of your results (<30 or 65+) suggests you are"
+    ],
+    "outcome": "likely filtering for \"perfect\" alignment. Realistic 40\u201360 setups typically occur in the following scenarios: ### **Setups that produce 40\u201360 Confidence** *   **Outside Core Hours:** A setup that would be a \"Triple A\" during the New York open is automatically downgraded if it occurs in the pre-market or late session. Fabio notes that a **B setup becomes a C setup** (dropping win rate from ~50% to ~40%) simply because it is **outside trading hours** [3, 4]. *   **Counter-Trend/Mean Reversion:** Se...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_confidence_40_60_zone"
+}

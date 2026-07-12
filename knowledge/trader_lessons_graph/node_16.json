@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Second Drive (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini\u2019s **\"second drive\" rule** is a foundational principle of his",
+        "methodology designed to avoid the traps of initial market volatility and ensure",
+        "he is \"reading\" rather than \"predicting\" the market [1, 2].",
+        "### The 'Second Drive' Rule Defined",
+        "The rule dictates that a trader should **never take the first breakout"
+    ],
+    "outcome": "attempt** (the first drive) from a range; instead, they must wait for the market to complete a breakout, undergo a retracement, and then initiate a second impulsive move in the same direction [3, 4]. Fabio explains that by forgoing the first drive, you are waiting for a **\"confirmed exit\"** where the market has clearly decided on its next directional phase [5]. ### Why Never Trade the First Breakout Attempt? *   **Risk of False Breakouts:** Fabio notes that the first drive is frequently a **\"fak...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_second_drive"
+}

@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Statistical Levels (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini\u2019s statistical algorithm is a proprietary model developed with",
+        "the Deep Charts team, designed to identify high-probability price targets based",
+        "on **Auction Market Theory** and **Initial Balance Breakouts (IVB)** [1, 2].",
+        "### **The 'Protection Levels' (TP1)**",
+        "The \"protection level\" is a specific price target, also referred to as **TP1**,"
+    ],
+    "outcome": "that the algorithm automatically plots on the chart once the market breaks out of its initial range (typically the first 30 or 60 minutes of the New York session) [3, 4]. *   **Definition:** It represents the **\"highest probable excursion\"** for a single trading session following a confirmed breakout [1, 4]. *   **Purpose:** It allows Fabio to remove discretionary guesswork regarding where to take profits. Once a breakout is confirmed, the algorithm provides an objective \"location\" for the first...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_statistical_levels"
+}

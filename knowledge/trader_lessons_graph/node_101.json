@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Confirmation Without Ibob (andrea)",
+    "trigger_conditions": [
+        "Answer:",
+        "In Andrea Cimi's methodology, a **Failed Auction** is a powerful confirmation",
+        "pattern that frequently occurs without requiring a clean candle close outside",
+        "the Initial Balance (IB). While the IBOB focuses on trend-following breakouts,",
+        "the Failed Auction is a **mean-reversion or reversal setup** based on \"effort"
+    ],
+    "outcome": "with no result\" [1-3]. ### **The \"Failed Auction\" Without an Outside Close** A Failed Auction is sufficient confirmation when the market makes a directional attempt (a \"poke\") that is immediately rejected and re-absorbed into the previous area of balance [4-6]. *   **When it is sufficient:** It is valid when you see **high volume on the breakout attempt** (the effort) but the very next candle responds by **re-entering the range with equally high or higher volume and strong initiative** (the resu...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_confirmation_without_ibob"
+}

@@ -1,0 +1,32 @@
+# .gitignore
+
+# Secrets
+.env
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Large data files (consider Git LFS)
+*.csv
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# Local workspace caches and DBs
+agent_memory/
+agent_memory_v1/
+dashboard/node_modules/
+database.db
+.claude/
+tmp_data/
+output/
+

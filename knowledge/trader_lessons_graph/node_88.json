@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Session Times (andrea)",
+    "trigger_conditions": [
+        "Andrea Cimi explicitly states that he is **not an NQ (NASDAQ) trader**, as he",
+        "has trained his eyes and auction analysis skills specifically for the **S&P 500",
+        "(ES)** contract [1], [2]. He finds the order flow on the ES to be much more",
+        "readable than the NASDAQ [2].",
+        "Regarding his active sessions and hours:"
+    ],
+    "outcome": "### **Active Trading Sessions** *   **New York Session (Cash Session/RTH):** This is his primary focus because it is where the **highest volume of money is traded** [3], [4]. He identifies the \"Regular Trading Hours\" as the most significant period for his breakout and volume profile strategies [3], [5]. *   **The New York Open (09:30 EST):** He is active at the open but typically **waits for the first 15 minutes** (until 09:45 EST) to see where the price is eventually going to go and to let the ...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_session_times"
+}

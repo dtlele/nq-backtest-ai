@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Partial Exits (fabio)",
+    "trigger_conditions": [
+        "Yes, Fabio Valentini **regularly takes partial profits** and utilizes a",
+        "**scaling-out approach** to manage his risk and lock in gains. He emphasizes",
+        "that \"you can never go bust by taking profit\" and frequently \"parzializza\"",
+        "(partials) his positions to ensure he remains \"risk-free\" as a move develops",
+        "[1-3]."
+    ],
+    "outcome": "### **Fabio\u2019s Scaling-Out Approach** Fabio\u2019s approach is designed to balance consistent \"base hits\" with the potential for \"home runs\" on directional days. *   **The 50/50 Rule:** On a typical trade, Fabio often takes out **50% of his position** at a primary profit target and leaves the remaining 50% as a **\"runner\"** to seek higher extensions [3, 4]. *   **The 75% Scale:** In some scenarios, especially when approaching a major structural resistance or the \"Protection Level\" (TP1) of his algorit...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_partial_exits"
+}

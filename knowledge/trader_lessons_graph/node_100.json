@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Best Setups Statistics (andrea)",
+    "trigger_conditions": [
+        "Andrea Cimi provides specific statistical edges and win rate descriptions for",
+        "several of his setups, though he emphasizes that a **win rate must always be",
+        "balanced against the risk-to-reward (R:R) ratio** [1].",
+        "### **Statistical Edges for Specific Setups**",
+        "*   **Gap Fill Strategy:** This setup has a documented **66% to 70% statistical"
+    ],
+    "outcome": "chance** of occurring [2, 3]. Andrea notes that while it is not a 100% win rate, it is a very reliable setup that he trades frequently because, in many 10-session samples, every trade resulted in a profit [3, 4]. *   **Iceberg Breakouts:** When an iceberg (a large hidden order) is eventually broken, Andrea states the breakout happens with a **60% to 70% probability** [5]. *   **Initial Balance Orderflow Breakout (IBOB):** This 15-minute opening range strategy is described as having a **\"very hig...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_best_setups_statistics"
+}

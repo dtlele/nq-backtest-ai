@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Entry Mechanics (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini\u2019s entry mechanics are a combination of strict algorithmic",
+        "triggers and discretionary timing based on real-time orderflow. He emphasizes",
+        "that he is **\"reading\" rather than \"predicting\"** the market, which dictates",
+        "how and when he executes a trade [1, 2].",
+        "### 1. Market Entry vs. Candle Close"
+    ],
+    "outcome": "Fabio\u2019s primary rule for a \"premium\" entry is waiting for a **full-body candle close** outside of a predefined range (such as the Initial Volume Breakout or a consolidation box) [3, 4]. ### 2. The Failed Auction \"Sweep Wait\" Protocol For setups at liquidity extremes (IB High/Low), Fabio requires a specific **Sweep Signature** before activating the Risk Box: *   **Exhaustion (Zero Prints)**: The absolute peak of the sweep must show 3 consecutive ticks with zero volume (exhaustion), indicating no ...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_entry_mechanics"
+}

@@ -1,0 +1,36 @@
+--- THEORETICAL AMT GLOSSARY & HISTORICAL SUGGESTIONS (FOR CONTEXT ONLY) ---
+
+[NOTE FOR THE AI AGENT]
+The following section contains general Auction Market Theory concepts and some historical observations from past trades.
+Do NOT treat these as strict, unbreakable rules. They are provided strictly as background context and suggestions.
+We are currently gathering statistical data (we need at least 100 trades before creating hard rules).
+You are free to evaluate the market as you see fit.
+
+1. MACRO TIMING SUGGESTIONS
+It has been observed that during the 09:45 EST and 10:00 EST macroeconomic news windows, Market Makers often pull passive liquidity. This creates a "liquidity void". During these windows, heavy delta might be artificial (the result of stop runs rather than true institutional absorption). You may want to be more cautious during these times, but it is not a hard rule.
+
+2. SURGICAL STOP PLACEMENT SUGGESTIONS
+Historically, placing a stop loss directly above/below the absolute extreme of a wick has exposed trades to the "retail liquidity pool", making them vulnerable to stop hunts. A safer theoretical approach is to hide the stop loss in the "belly" of the P-shape or b-shape volume profile (e.g., just behind a thick cluster of Big Trades).
+
+3. THE "SECOND DRIVE" CONCEPT
+In pure Auction Market Theory, the first test of a key level (First Drive) often acts as a probe to find passive liquidity. The Second Drive (re-testing the level after a pullback) provides a higher-probability confirmation of a Failed Auction. You may use this as a structural guideline.
+
+4. RESPONSE VS INITIATIVE (RNI PATTERN)
+Absorption (e.g., heavy negative delta on a bullish candle) represents the "Response" phase (a passive wall). True breakouts usually require the "Initiative" phase, where the delta aggressively flips direction to sweep the book. Front-running the absorption without waiting for the initiative carries higher risk.
+
+5. VOLUME PROFILE LEDGES
+Institutional defense walls are theoretically found at Low Volume Nodes (LVN) or near the Point of Control (POC), because institutions prefer to defend positions at discounted prices rather than chasing extremes.
+
+6. IBOB (Initial Balance Orderflow Breakout)
+A genuine structural breakout of the Initial Balance usually requires the candle body to close completely outside the IB range. A wick piercing the IB boundary often indicates a sweep/absorption rather than true price acceptance.
+
+[END OF SUGGESTIONS - USE AS CONTEXT ONLY]
+
+[AUCTION MARKET THEORY RECAP]
+Auction Market Theory (AMT) is a financial framework that views markets as an ongoing double-auction process. The primary purpose of the market is to facilitate trade between buyers and sellers. When buyers and sellers agree on a price, the market is in balance. When they disagree, the market moves directionally (imbalance) to find a new area where trade can be facilitated.
+Volume Profile is a visual representation of this auction over time, plotting volume executed at specific price levels rather than at specific times. The Point of Control (POC) is the price level with the highest volume for the session. The Value Area (VA) represents the price range where a specified percentage (usually 70%) of all volume was transacted.
+High Volume Nodes (HVNs) represent areas of high liquidity where the market previously found fair value. Low Volume Nodes (LVNs) represent areas of low liquidity where the market moved quickly, often acting as rejection zones or support/resistance.
+The Initial Balance (IB) is the price range established during the first hour of regular trading hours (RTH). Breakouts from the IB are critical indicators of session trend. 
+Delta is the net difference between buying volume (trades executed at the ask) and selling volume (trades executed at the bid). Positive delta indicates aggressive buying; negative delta indicates aggressive selling.
+Absorption occurs when aggressive market orders (delta) hit a passive limit-order wall without causing significant price movement. This is a classic "Effort vs No Result" scenario.
+Exhaustion occurs when there is simply no volume or interest at a price extreme, causing the market to reverse due to a lack of participants rather than an active defense.

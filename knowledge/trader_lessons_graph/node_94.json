@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Overnight Gaps (andrea)",
+    "trigger_conditions": [
+        "Andrea Cimi explicitly utilizes a **gap fill strategy** based on the",
+        "statistical relationship between the current session's open and the previous",
+        "New York (cash) session's close. He considers the interaction between the open",
+        "and the previous day's **Value Area** (VA) to be a primary determinant of his",
+        "daily trading bias."
+    ],
+    "outcome": "### **Overnight Gaps and Statistical Probability** Andrea defines a gap as the distance between the **close of the previous New York cash session** and the **open of the new cash session** [1, 2]. *   **The 70% Rule:** He states there is a **66% to 70% statistical chance** that this gap will be filled during the session [2]. *   **Directional Bias:** If the market gaps up, there is a 70% chance it will move down to fill the gap; if it gaps down, there is a 70% chance it will move up to fill it [...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_overnight_gaps"
+}

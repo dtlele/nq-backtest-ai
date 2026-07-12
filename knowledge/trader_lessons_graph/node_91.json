@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Lunch Effect (andrea)",
+    "trigger_conditions": [
+        "Based on the sources provided, there is **no explicit mention of the \"NY lunch\"",
+        "period or the specific 12:00\u201313:30 EST timeframe.** However, Andrea Cimi",
+        "provides clear principles regarding volume and participation that define how he",
+        "treats the middle of the trading day.",
+        "### **Market Behavior and Volume Distribution**"
+    ],
+    "outcome": "In Andrea's experience, the market follows a specific volume distribution where the **\"real fun begins\"** at the New York cash open [1]. He notes that the highest levels of institutional activity and volume occur during two primary windows: *   **The Opening Auction (09:30 EST):** This is when institutional orders that couldn't be filled during the overnight session are poured into the market [2]. *   **The Closing Auction (15:50\u201316:00 EST):** Andrea explains that the **last 10 minutes of the se...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_lunch_effect"
+}

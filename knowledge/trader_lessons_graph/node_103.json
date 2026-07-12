@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Andrea Vp Session Scope (andrea)",
+    "trigger_conditions": [
+        "In Andrea Cimi's system, the selection of a **Value Area (VA)** depends on the",
+        "specific timeframe and objective of the analysis. He primarily utilizes three",
+        "types: **yesterday's NY cash session (RTH) VA**, the **current developing",
+        "session VA**, and a **multi-day composite profile** [1-3].",
+        "### **1. Opening Gap Analysis**"
+    ],
+    "outcome": "For opening gap analysis, Andrea primarily uses **yesterday's NY cash session (RTH) VA** [4-6]. *   **The Logic:** He considers the previous session's VA to be the \"fair value\" where 70% of the money was traded [6, 7]. *   **Application:** If the market opens outside yesterday's VA, it is viewed as a **statistical anomaly** [8]. He looks to see if the market accepts these new prices or if it nervously returns to yesterday's fair value area, which signals that the gap is likely to be filled [5, 9...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_andrea_vp_session_scope"
+}

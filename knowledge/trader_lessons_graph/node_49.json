@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Trend Vs Mean Reversion Model (fabio)",
+    "trigger_conditions": [
+        "In Fabio Valentini\u2019s simplified model, the switch between the **Trend Following",
+        "(TF)** model and the **Mean Reversion (MR)** model is not based on the day type",
+        "alone, but on the real-time **acceptance or rejection** of price at structural",
+        "boundaries. While a day might be classified as \"Balance\" or \"Trend\" initially,",
+        "the model is dynamic, allowing the trader to adapt as the auction unfolds [1,"
+    ],
+    "outcome": "2]. ### **The Exact Conditions for Switching** The primary mechanical trigger for switching models is the **candle close** relative to the **Initial Volume Breakout (IVB)** range or Value Area (VA) edges: 1.  **Switch to Trend Following (The \"Acceptance\" Signal):** *   **Mechanical Trigger:** A **full-body candle close** occurs outside the IVB range (the high/low of the first 15\u201330 minutes) [3]. *   **Order Flow Confirmation:** \"Big Trade\" bubbles (30+ contracts on NQ) appear in the **body of th...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_trend_vs_mean_reversion_model"
+}

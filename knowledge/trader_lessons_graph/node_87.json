@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Trade Management (andrea)",
+    "trigger_conditions": [
+        "Andrea Cimi\u2019s trade management approach is centered on protecting capital and",
+        "reacting dynamically to real-time order flow data rather than just waiting for",
+        "a fixed target to be hit.",
+        "### **Moving to Break-even and Trailing**",
+        "Andrea frequently uses **break-even stops** to protect his positions once a"
+    ],
+    "outcome": "trade begins to move in his favor. *   **The \"Drift\" Rule:** As soon as the price \"drifts away\" from the entry level, he often moves the stop to break-even to remove risk from the trade [1]. *   **Contextual Usage:** He is more aggressive with break-even stops in specific environments, such as when trading near all-time highs where price action can be erratic [2]. He also mentions using a **\"stop in profit\"** approach\u2014manually moving the stop beyond break-even to lock in gains as the move mature...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_trade_management"
+}

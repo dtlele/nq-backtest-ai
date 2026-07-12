@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Squeeze Vs Failed Auction (fabio)",
+    "trigger_conditions": [
+        "Answer:",
+        "Fabio Valentini\u2019s **squeeze** setup and the **failed auction** are closely",
+        "related concepts within Auction Market Theory (AMT), but they are not the same",
+        "thing. In Valentini\u2019s methodology, a **failed auction is the catalyst or",
+        "\"trap\"** that sets the stage, while the **squeeze is the explosive momentum**"
+    ],
+    "outcome": "that occurs when that trap is sprung [1-3]. ### Relationship and Differences *   **The Failed Auction (The Trap):** A failed auction occurs when the market attempts to break out of a range (such as the Value Area or Initial Balance) but fails to find acceptance at the new prices [4, 5]. On a chart, this looks like a \"fake out\" or a wick that pokes outside a level and immediately returns [3, 6]. From an orderflow perspective, it is characterized by **absorption**, where aggressive participants \"p...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_squeeze_vs_failed_auction"
+}

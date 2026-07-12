@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Stop Placement All (andrea)",
+    "trigger_conditions": [
+        "For each of Andrea Cimi's setup types, the stop-loss placement is determined by",
+        "specific high-volume reference levels or the boundaries of the statistical",
+        "anomaly.",
+        "### **1. PBD-P Setup (Bullish Trend/Breakout)**",
+        "*   **Placement:** The stop-loss is placed **below the Point of Control (POC)**"
+    ],
+    "outcome": "of the current volume profile [1, 2]. *   **Reference Level:** Andrea emphasizes that for a 15-minute initial balance breakout, the ideal placement is under the **highest volume node** or the POC within that distribution [1, 3]. *   **Alternative:** For more conservative entries, it can be placed **below the entire opening range** or the main high-volume node of the preceding consolidation [3, 4]. ### **2. PBD-B Setup (Bearish Trend/Breakout)** *   **Placement:** The stop is placed **above the P...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_stop_placement_all"
+}

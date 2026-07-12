@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Cvd Divergence (andrea)",
+    "trigger_conditions": [
+        "In Andrea Cimi's system, CVD (Cumulative Volume Delta) divergences are used to",
+        "identify short-term shifts in market participation and potential reversals [1,",
+        "2].",
+        "### **Exhaustion Signals (User-Specified Examples)**",
+        "According to the sources, the specific scenarios you described are classified"
+    ],
+    "outcome": "as **exhaustion** signals, which occur when price breaks a level but lacks the aggressive volume (delta) to sustain the move [2, 3]. *   **Price Makes a New High + CVD Makes a Lower High:** This is a signal of **exhaustion in buying pressure** [2]. It indicates a lack of participation and aggressive interest in the bullish movement, suggesting that buyers are losing steam even as price edges higher [2, 3]. *   **Price Makes a New Low + CVD Makes a Higher Low:** This is a signal of **exhaustion i...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_cvd_divergence"
+}

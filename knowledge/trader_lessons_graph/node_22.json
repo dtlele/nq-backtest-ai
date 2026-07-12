@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Trailing Stop (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini utilizes an aggressive **orderflow-based and",
+        "price-structure-based approach** to trailing stops, prioritizing capital",
+        "protection over maximum extension [1, 2]. His trailing mechanics are designed",
+        "to \"zero the risk\" as quickly as possible\u2014often within **20 seconds**\u2014once",
+        "institutional momentum is confirmed [1, 3]."
+    ],
+    "outcome": "### How Fabio Trails His Stop Fabio\u2019s trailing process is reactive rather than fixed, triggered by specific market behaviors: *   **Momentum Acceleration (The \"Laser\"):** When the market proof rejects a level and initiates a rapid, \"laser-like\" move (often a squeeze), he immediately moves his stop to break-even or into profit to ensure he is \"swimming in the direction of the flow\" [1, 4]. *   **Leading Indicators (CVD):** He uses **Cumulative Volume Delta (CVD)** to gauge building pressure; if C...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_trailing_stop"
+}

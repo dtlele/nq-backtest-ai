@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Ibob Relaxed Conditions (andrea)",
+    "trigger_conditions": [
+        "Based on the provided sources, there is no evidence that Andrea Cimi relaxes",
+        "the **Initial Balance Orderflow Breakout (IBOB)** \"close-outside-range\"",
+        "requirement due to the strength of a secondary signal from Fabio Valentini.",
+        "The sources indicate that the IBOB is treated as a **strictly mechanical",
+        "strategy** with specific non-negotiable steps, while \"signal strength\" related"
+    ],
+    "outcome": "to massive walls or squeezes often points to a different setup entirely. ### **1. The Mechanical Nature of IBOB** Andrea presents the IBOB as a simplified, objective checklist designed to remove discretion [1, 2]. To qualify as a valid IBOB entry, the following must occur: *   **Establish the 15-minute Initial Balance (IB)** [2, 3]. *   **A candle must CLOSE outside the IB range.** Andrea explicitly states that a \"mere poke or wick through the level is not enough\" [2, 4]. *   **Institutional Ini...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_ibob_relaxed_conditions"
+}

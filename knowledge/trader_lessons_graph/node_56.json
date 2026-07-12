@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Setup Time Cutoff (fabio)",
+    "trigger_conditions": [
+        "In Fabio Valentini\u2019s model, while there isn't one universal \"hard cutoff\"",
+        "second, there are clear statistical and structural thresholds where setups",
+        "become significantly less reliable. He relies on Python-based data analysis to",
+        "define these windows, noting that **trading at the wrong time can destroy a",
+        "positive expectancy** [1, 2]."
+    ],
+    "outcome": "Based on the sources, here is the breakdown of his timing filters: ### **1. The 11:00 \u2013 11:30 ET Transition (Initial Balance Phase)** *   **The \"One and Done\" Threshold:** Fabio often views **11:30 AM ET** as a decision point. In live sessions, he has noted that once it approaches 11:30 AM ET and the market is stuck in the middle of its range, the probability of a clean breakout or trend resumption decreases [3]. *   **Bank Lunch:** He identifies the mid-day period as a time when **\"banks are at...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_setup_time_cutoff"
+}

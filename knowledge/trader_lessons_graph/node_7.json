@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Ib Extension Targets (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini\u2019s price targets following an **Initial Volume Breakout",
+        "(IVB)**\u2014his terminology for the Initial Balance\u2014are primarily derived from",
+        "statistical algorithms rather than simple fixed extensions like 1x or 2x the IB",
+        "range.",
+        "### Algorithmic Price Targets"
+    ],
+    "outcome": "Valentini uses a proprietary model (IVB Model) integrated into the Deep Charts platform that automatically plots targets based on historical volatility and session data: *   **Protection Level (TP1):** This is the primary target plotted by his algorithm upon a confirmed breakout. Valentini states there is a **65% to 70% statistical probability** that the market will reach this level once the initial 30-minute range is broken [1-3]. *   **Extended Average (TP2):** The model also plots a secondary...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_ib_extension_targets"
+}

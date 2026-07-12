@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Ivb Breakout Vs False Balance Apr30 (fabio)",
+    "trigger_conditions": [
+        "Answer:",
+        "On a balance day, Fabio Valentini\u2019s model assumes there is \"no edge\" unless the",
+        "market decisively transitions out of equilibrium or produces a high-confidence",
+        "rejection at the periphery [1, 2]. In the case of April 30th, the maximum",
+        "confidence of **52** fell short of the **65+ execution threshold**, likely"
+    ],
+    "outcome": "because the following filters for a \"valid\" move were not met. ### **1. Valid IVB Breakout vs. False Attempt** The primary filter for a valid breakout is **Acceptance**, which Valentini defines through specific mechanical and order flow signatures: *   **Mechanical Trigger (The Full-Body Close):** A valid breakout requires a full-body candle to close outside the IVB high or low [3-5]. If the price pierces the level but produces a **wick/shadow** and closes back inside, it is a **Failed Auction**...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_ivb_breakout_vs_false_balance_apr30"
+}

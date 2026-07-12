@@ -1,0 +1,13 @@
+{
+    "pattern_name": "#1: Iceberg Validation Framework",
+    "trigger_conditions": [
+        "**Estensione di AMT_CORE_15** con i 3 Pilastri",
+        "[AMT_CORE_16] (Topic: Iceberg Order Validation Framework)",
+        "Prima di considerare un muro DOM come segnale actionable,",
+        "verifica i 3 pilastri:",
+        "1. QUANTIT\u00c0: Almeno 2-3 iceberg consecutivi (non evento singolo)"
+    ],
+    "outcome": "-> ACTION: require_multi_confirmation",
+    "confidence": 0.95,
+    "graphify_node_link": "Node_#1:_Iceberg_Val"
+}

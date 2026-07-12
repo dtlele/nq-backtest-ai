@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Counter Trend Rules (fabio)",
+    "trigger_conditions": [
+        "Yes, Fabio Valentini does trade **counter-trend**, although he explicitly",
+        "identifies it as his **\"least profitable setup\"** compared to momentum-based",
+        "trend following [1]. He classifies these contrarian trades as **C setups** due",
+        "to their lower statistical probability [2, 3].",
+        "### 1. Acceptable Conditions for Counter-Trend Trades"
+    ],
+    "outcome": "Fabio only engages in counter-trend setups when the order flow provides a \"deep narrative\" of participant failure. The acceptable conditions include: *   **Trapped Participants (Absorption):** He looks for **trapped buyers at a high** or **trapped sellers at a low** [1, 4]. This occurs when aggressive participants \"punch the wall\" (high volume/effort) at a price extreme but meet a wall of passive limit orders that prevents further price movement (zero result) [5-7]. *   **Failed Auctions:** A co...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_counter_trend_rules"
+}

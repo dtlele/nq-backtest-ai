@@ -1,0 +1,266 @@
+import json
+from pathlib import Path
+from src import CandidateBar, FabioSignal, FABIO_NOTEBOOK_ID
+from src.agents.llm_client import llm_ask
+from src.signal_context import build_fabio_question
+from src.agents.topic_router import select_fabio_topics, build_tiered_knowledge, FABIO_CORE
+# Note: light_analyze is now fully deterministic (no LLM calls)
+
+KNOWLEDGE_FILE = Path(__file__).parent.parent.parent / 'knowledge' / 'fabio_distilled.json'
+
+_knowledge_cache = None
+
+def _load_knowledge_store() -> dict:
+    """Load and merge all Fabio knowledge into a single dict (cached)."""
+    global _knowledge_cache
+    if _knowledge_cache is not None:
+        return _knowledge_cache
+    with open(KNOWLEDGE_FILE, encoding='utf-8') as f:
+        data = json.load(f)
+    store = {}
+    store.update(data.get('knowledge_by_topic', {}))
+    store.update(data.get('simplified_strategy', {}))
+    _knowledge_cache = store
+    return store
+
+def _get_system_prompt() -> str:
+    prompt = "You are Fabio Valentini's PREDATORY trading methodology agent analyzing NQ futures (E-mini).\nYou follow a high-conviction institutional approach based on Volume Profile and Order Flow, aiming strictly for high-probability Triple A (A+) setups.\n\n"
+    
+    # Load Active Dynamic Rules (Live corrections)
+    try:
+        from src.agents.dynamic_rules_manager import get_active_rules
+        active_rules = get_active_rules()
+        if active_rules:
+            prompt += "ACTIVE LIVE CORRECTIONS / DYNAMIC RULES (MUST STRICTLY FOLLOW):\n"
+            for r in active_rules:
+                prompt += f"- [{r['rule_id']}] Topic: {r['topic']}\n"
+                prompt += f"  Description: {r['description']}\n"
+                prompt += f"  Required Action: {r['action']}\n"
+            prompt += "\n"
+    except Exception as e:
+        print(f"Error loading active dynamic rules: {e}")
+
+
+    # Load Core Setups
+    strategies_file = Path(__file__).parent.parent.parent / 'knowledge' / 'strategies.json'
+    if strategies_file.exists():
+        try:
+            with open(strategies_file, 'r', encoding='utf-8') as f:
+                strats = json.load(f).get('strategies', [])
+                if strats:
+                    prompt += "CORE SETUP CLASSIFICATIONS (TRIPLE A SETUPS):\n"
+                    for i, s in enumerate(strats, 1):
+                        prompt += f"{i}. {s['name']} ({s['description']}):\n"
+                        prompt += f"   - Trigger: {s['trigger']}\n"
+                        prompt += f"   - Confirmation: {s['confirmation']}\n"
+                    prompt += "\n"
+        except Exception as e:
+            print(f"Error loading strategies.json: {e}")
+
+    # Load Mechanics
+    mechanics_file = Path(__file__).parent.parent.parent / 'knowledge' / 'amt_mechanics.json'
+    if mechanics_file.exists():
+        try:
+            with open(mechanics_file, 'r', encoding='utf-8') as f:
+                mechs = json.load(f).get('mechanics', [])
+                for m in mechs:
+                    prompt += f"{m['topic']}:\n{m['description']}\n\n"
+        except Exception as e:
+            print(f"Error loading amt_mechanics.json: {e}")
+
+    # JSON Schema definition
+    prompt += """Respond ONLY with valid JSON matching this schema:
+{
+  "direction": "long" | "short" | "none",
+  "confidence": <int 0-100>,
+  "entry": <float or null>,
+  "stop": <float or null>,
+  "target": <float or null>,
+  "setup_type": "squeeze" | "reversal" | "ivb_breakout" | "exhaustion" | "imbalance_hunting" | "none",
+  "reasoning": "<MAX 100 WORDS. Provide a detailed Order Flow narrative. Explain exactly which side is trapped (Effort vs No Result), how the delta confirms the absorption or initiative, and justify the exact structural placement of the stop loss behind a verified volume node or Big Trade wall.>",
+  "market_narrative_update": "<Provide an evolving narrative of the trading session. CRITICAL: Review your previous reasonings (Session Context) against what the market actually did afterwards (Bars Since Last). If you were wrong or missed a move, explicitly acknowledge the mistake and adjust your current bias/logic. How has the macro context shifted?>"
+}"""
+    return prompt
+
+def light_analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> int:
+    """
+    DETERMINISTIC light pass — zero API calls.
+
+    Scoring logic (AMT + Fabio volume rules):
+      +30  wall_max_size >= 50 (strong institutional conviction)
+      +20  wall_max_size >= 30 (minimum institutional signal)
+      +60  setup_category == 'imbalance_hunting' (always evaluate M1 footprints outside IB)
+      +20  setup_category == 'momentum' (high-vol breakout)
+      +15  setup_category == 'reversal' (absorption at extreme)
+      +10  market_state == 'imbalance' (directional day)
+      +10  auction_type == 'initiative' (outside IB/prev VA)
+      +10  is_second_test == True (second drive / reload)
+      +10  poc_migration != 'flat' (VP shifting = trending)
+      -20  setup_category == 'pullback' AND wall_max_size < 20 (weak pullback)
+      -20  market_state == 'balance' AND auction_type == 'responsive' (chop inside value)
+
+    Returns score capped [0, 100].
+    """
+    from src.agents.llm_client import _get_provider
+    if _get_provider() == "human":
+        return 100  # Skip light pass for human operator
+
+    score = 0
+
+    # --- Volume / Wall strength ---
+    wms = candidate.wall_max_size
+    if wms >= 50:
+        score += 30
+    elif wms >= 30:
+        score += 20
+
+    # --- Setup category ---
+    cat = candidate.setup_category
+    if cat == 'imbalance_hunting':
+        score += 60
+    elif cat == 'momentum':
+        score += 20
+    elif cat == 'reversal':
+        score += 15
+
+    # --- AMT: market state ---
+    if candidate.market_state == 'imbalance':
+        score += 10
+
+    # --- AMT: auction type ---
+    if candidate.auction_type == 'initiative':
+        score += 10
+
+    # --- Second drive / reload ---
+    if candidate.is_second_test:
+        score += 10
+
+    # --- VP migration (trending day) ---
+    if candidate.poc_migration != 'flat':
+        score += 10
+
+    # --- Penalties ---
+    if cat == 'pullback' and wms < 20:
+        score -= 20
+    if candidate.market_state == 'balance' and candidate.auction_type == 'responsive':
+        score -= 20
+
+    return max(0, min(100, score))
+
+def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> FabioSignal:
+    store = _load_knowledge_store()
+    topics = select_fabio_topics(candidate, store)
+    rules_text, context_text = build_tiered_knowledge(topics, store)
+    question = build_fabio_question(candidate, session_context=session_context, m1_bars=m1_bars, market_narrative=market_narrative, bars_since_last=bars_since_last)
+    
+    # Bypass NotebookLM: inject distilled knowledge directly
+    user_msg = f"## TRADING RULES (DISTILLED KNOWLEDGE)\n{rules_text}\n{context_text}\n\n## TASK\n{question}\n\nAnalyze this setup using the Rules above. Respond with JSON only."
+    
+    raw = llm_ask(_get_system_prompt(), user_msg)
+    if raw.startswith('```'):
+        raw = raw.split('```')[1].lstrip('json').strip()
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return FabioSignal(
+            direction='none', confidence=0,
+            entry=None, stop=None, target=None,
+            setup_type='none',
+            reasoning=f'JSON parse error: {raw[:100]}',
+            nlm_answer="Bypassed",
+        )
+    return FabioSignal(
+        direction   = data.get('direction', 'none'),
+        confidence  = int(data.get('confidence', 0)),
+        entry       = data.get('entry'),
+        stop        = data.get('stop'),
+        target      = data.get('target'),
+        setup_type  = data.get('setup_type', 'none'),
+        reasoning   = data.get('reasoning', ''),
+        market_narrative_update = data.get('market_narrative_update', ''),
+        nlm_answer  = "Bypassed",
+    )
+
+def _get_management_system_prompt() -> str:
+    prompt_file = Path(__file__).parent / 'fabio_management_prompt.txt'
+    if not prompt_file.exists():
+        with open(prompt_file, 'w', encoding='utf-8') as f:
+            f.write(DEFAULT_MANAGEMENT_SYSTEM_PROMPT)
+    with open(prompt_file, 'r', encoding='utf-8') as f:
+        return f.read().strip()
+
+DEFAULT_MANAGEMENT_SYSTEM_PROMPT = """You are Fabio Valentini's active risk management agent managing an open NQ futures position.
+Your goal is to protect capital and maximize returns based on real-time Volume Profile and Order Flow.
+You must analyze the open trade details and the latest M5 candle/M1 footprint to choose one of these actions:
+1. "hold": Keep the position exactly as is.
+2. "trail": Move the stop loss structurally closer (trailing stop) behind a newly verified institutional big-trade wall or Volume Node (LVN/POC). Never move a stop further away (increasing risk).
+3. "early_exit": Exit the trade immediately at the market close of the current M5 candle because the setup has been structurally invalidated (e.g. buyers failed to hold a key wall).
+4. "reverse": Exit the current trade immediately and open the exact opposite position because a strong reverse institutional setup has formed (e.g. extreme absorption + delta flip).
+
+--- ACTIVE POSITION MANAGEMENT (APM) ---
+You are currently managing an OPEN trade. You must decide whether to HOLD, TRAIL, REVERSE, or EARLY_EXIT.
+Focus on identifying Reversal signatures and Trailing opportunities.
+
+1. REVERSAL SIGNATURES (Early Exit / Reverse):
+   - **Delta Divergence / Absorption**: If price moves aggressively AGAINST the delta (e.g., Delta is heavily negative, but the candle closes near its high), this means the aggressive side is being absorbed by passive limit orders. This is a massive reversal signal. EXIT EARLY or REVERSE.
+   - **Massive Ask/Bid Clusters**: If you see a cluster > 100 contracts on the opposite side of your trade near a structural level (e.g., `161 A@21450.0` while you are short), it is a major reversal wall. EXIT EARLY.
+
+2. TRAILING STOPS (Protecting Profits):
+   - The market is unforgiving. "Better a small profit than a stop loss, even a BE is good."
+   - If the trade is deeply in profit (e.g. > 40-50 points NQ), you MUST protect it. Output decision='trail' and provide a `new_stop` at least at Break-Even, or tighter (e.g., above the most recent M1 lower high for shorts).
+   - If the trade misses the target by a few points and then prints a reversal candle (e.g., positive delta at the lows for a short), DO NOT HOLD. Trail the stop aggressively or exit early.
+   - You can output `decision='trail'`, `new_stop=<price>` to adjust the stop loss dynamically.
+   - Only hold if the trend is strongly accelerating with confirming delta and no absorption.
+
+Make your decision purely based on the M1 order flow and these APM rules.
+
+Respond ONLY with valid JSON matching this schema:
+{
+  "decision": "hold" | "trail" | "early_exit" | "reverse",
+  "new_stop": <float or null (only if trailing)>,
+  "new_target": <float or null (optional)>,
+  "reasoning": "<MAX 80 WORDS. Explain why this management decision was made based on the order flow and institutional activity.>"
+}"""
+    return prompt
+
+def manage_active_trade(trade, candidate: CandidateBar, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> dict:
+    """Ask Fabio to manage the active trade based on the latest bar activity."""
+    store = _load_knowledge_store()
+    topics = select_fabio_topics(candidate, store)
+    rules_text, context_text = build_tiered_knowledge(topics, store)
+    question = build_fabio_question(candidate, session_context=session_context, m1_bars=m1_bars, market_narrative=market_narrative, bars_since_last=bars_since_last)
+    
+    # Inject active trade details
+    trade_context = (
+        f"\n\n## ACTIVE OPEN POSITION DETAILS:\n"
+        f"Direction: {trade.direction.upper()}\n"
+        f"Entry Price: {trade.entry:.2f}\n"
+        f"Current Stop Loss: {trade.stop:.2f}\n"
+        f"Current Target: {trade.target:.2f}\n"
+        f"Contracts: {trade.contracts}\n"
+        f"Entry Time: {trade.entry_bar.timestamp.strftime('%H:%M UTC')}\n"
+    )
+    
+    user_msg = f"## TRADING RULES (DISTILLED KNOWLEDGE)\n{rules_text}\n{context_text}\n{trade_context}\n\n## TASK\n{question}\n\nAnalyze this active position and choose one of the actions: 'hold', 'trail', 'early_exit', or 'reverse'. Respond with JSON only."
+    
+    raw = llm_ask(_get_management_system_prompt(), user_msg)
+    if raw.startswith('```'):
+        raw = raw.split('```')[1].lstrip('json').strip()
+        
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return {
+            "decision": "hold",
+            "new_stop": None,
+            "new_target": None,
+            "reasoning": f"JSON parse error: {raw[:100]}"
+        }
+        
+    return {
+        "decision": data.get("decision", "hold"),
+        "new_stop": data.get("new_stop"),
+        "new_target": data.get("new_target"),
+        "reasoning": data.get("reasoning", "")
+    }

@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Cvd As Leading Indicator (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini utilizes **Cumulative Volume Delta (CVD)** as a leading",
+        "indicator because it identifies the balance of forces in the market and",
+        "\"building pressure\" before the price actually breaks out [1, 2].",
+        "### How Fabio Uses CVD as a Leading Indicator",
+        "Valentini considers CVD a leading indicator because it tracks the intent and"
+    ],
+    "outcome": "aggression of market participants in real-time [3, 4]. While price action shows the *result* of a battle, CVD shows the *effort* being applied by aggressive buyers and sellers [4, 5]. By watching CVD, he can understand if the market is in a phase of **accumulation or distribution** while the price is still range-bound [3]. ### What 'Building Pressure' Looks Like \"Building pressure\" is a specific signature where the CVD line trends aggressively in one direction while the price remains compressed ...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_cvd_as_leading_indicator"
+}

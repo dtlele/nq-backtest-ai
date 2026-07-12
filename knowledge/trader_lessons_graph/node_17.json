@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Aplus Setup (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini utilizes a **dynamic risk management** framework where he",
+        "grades setups from A to C based on their statistical probability and confluence",
+        "of information [1, 2].",
+        "### **The A+ (Triple A) Setup**",
+        "An A+ or \"Triple A\" (AAA) setup represents the highest statistical edge Fabio"
+    ],
+    "outcome": "can find in the NASDAQ [2, 3]. It occurs when there is a complete alignment between the day\u2019s narrative, market location, and real-time execution data [2, 4]. #### **Required Confluences for an A+ Setup:** *   **Directional Bias Alignment:** The trade must align with the daily bias established by the **Initial Volume Breakout (IVB)**\u2014the first 30 minutes of the New York session\u2014or overall **Profile Framing** (identifying if the day is trending or rangebound) [4-6]. *   **Premium Location:** Pric...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_aplus_setup"
+}

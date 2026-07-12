@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Hvn Lvn (andrea)",
+    "trigger_conditions": [
+        "In Andrea Cimi's methodology, **High Volume Nodes (HVN)** and **Low Volume",
+        "Nodes (LVN)** are the primary components of the Volume Profile used to",
+        "understand where money is concentrated in the market [1, 2].",
+        "### **Definitions of HVN and LVN**",
+        "*   **High Volume Nodes (HVN):** These are the **\"peaks\"** in the Volume"
+    ],
+    "outcome": "Profile representing price levels where a significant amount of trading activity and contract exchange occurred [2, 3]. They indicate areas where both buyers and sellers agreed that the price was a **\"fair value,\"** leading to price spending more time in these ranges [3, 4]. *   **Low Volume Nodes (LVN):** These are the **\"valleys\"** or dips in the profile where very few trades took place [2, 3]. LVNs typically represent **\"directional sprints\"** or imbalances where price moved too quickly for t...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_hvn_lvn"
+}

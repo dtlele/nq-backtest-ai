@@ -1,0 +1,142 @@
+{
+    "case_a_baseline_optimized": {
+        "metrics": {
+            "N": 81,
+            "WR": 50.617283950617285,
+            "PF": 5.033333333333333,
+            "PnL": 14520.0,
+            "MaxDD": 741.0
+        },
+        "rules": {
+            "trend_long": {
+                "days": [
+                    "Monday",
+                    "Tuesday"
+                ],
+                "intervals": [
+                    "10:00-10:30",
+                    "15:00-15:30",
+                    "15:30-16:00",
+                    "11:30-12:00"
+                ],
+                "exclude_10am": false
+            },
+            "absorb_long": {
+                "days": [
+                    "Tuesday"
+                ],
+                "intervals": [
+                    "12:00-12:30",
+                    "15:30-16:00",
+                    "11:30-12:00"
+                ],
+                "exclude_10am": false
+            },
+            "trend_short": {
+                "days": [
+                    "Monday",
+                    "Wednesday",
+                    "Friday"
+                ],
+                "intervals": [
+                    "14:30-15:00",
+                    "14:00-14:30",
+                    "15:00-15:30"
+                ],
+                "exclude_10am": false
+            },
+            "absorb_short": {
+                "days": [
+                    "Thursday",
+                    "Friday"
+                ],
+                "intervals": [
+                    "14:00-14:30",
+                    "09:30-10:00",
+                    "12:30-13:00"
+                ],
+                "exclude_10am": true
+            }
+        }
+    },
+    "case_b_filtered_optimized": {
+        "metrics": {
+            "N": 80,
+            "WR": 38.75,
+            "PF": 2.498912097476066,
+            "PnL": 10333.5,
+            "MaxDD": 1363.5
+        },
+        "rules": {
+            "trend_long": {
+                "days": [
+                    "Monday",
+                    "Thursday",
+                    "Tuesday",
+                    "Friday"
+                ],
+                "intervals": [
+                    "13:00-13:30",
+                    "09:30-10:00",
+                    "14:30-15:00",
+                    "13:30-14:00",
+                    "10:00-10:30",
+                    "15:30-16:00",
+                    "11:30-12:00"
+                ],
+                "exclude_10am": false
+            },
+            "absorb_long": {
+                "days": [
+                    "Wednesday",
+                    "Thursday",
+                    "Tuesday",
+                    "Friday"
+                ],
+                "intervals": [
+                    "09:30-10:00",
+                    "14:30-15:00",
+                    "12:00-12:30",
+                    "11:00-11:30",
+                    "10:00-10:30",
+                    "15:30-16:00"
+                ],
+                "exclude_10am": true
+            },
+            "trend_short": {
+                "days": [
+                    "Monday",
+                    "Thursday",
+                    "Friday",
+                    "Tuesday",
+                    "Wednesday"
+                ],
+                "intervals": [
+                    "10:00-10:30",
+                    "12:00-12:30",
+                    "13:00-13:30",
+                    "09:30-10:00"
+                ],
+                "exclude_10am": false
+            },
+            "absorb_short": {
+                "days": [
+                    "Monday",
+                    "Wednesday",
+                    "Tuesday",
+                    "Friday"
+                ],
+                "intervals": [
+                    "13:00-13:30",
+                    "09:30-10:00",
+                    "15:30-16:00",
+                    "12:30-13:00",
+                    "11:00-11:30",
+                    "14:30-15:00",
+                    "10:30-11:00"
+                ],
+                "exclude_10am": false
+            }
+        }
+    }
+}

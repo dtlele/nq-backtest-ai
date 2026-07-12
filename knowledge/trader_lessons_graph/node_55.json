@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Target Selection Hierarchy (fabio)",
+    "trigger_conditions": [
+        "Based on Fabio Valentini\u2019s model, target selection is driven by **Auction",
+        "Market Theory (AMT)** and statistical probability, focusing on where the market",
+        "is most likely to seek equilibrium or \"Fair Value.\" He prioritizes \"base",
+        "hits\"\u2014high-probability exits\u2014over chasing low-probability \"home runs\" [1-3].",
+        "### **Priority Order of Targets**"
+    ],
+    "outcome": "While specific to the day type, the general hierarchy of targets is as follows: 1.  **Developing POC (Current Session):** The \"ultimate magnet\" and primary point of interest for any trade returning to balance [4, 5]. 2.  **IVB Protection Level (TP1):** The algorithmic target for breakouts, representing the highest probable excursion (65\u201370% probability) [6, 7]. 3.  **Opposite Value Area Edge:** Used for \"ping-pong\" strategies when an auction fails at one extreme [8, 9]. 4.  **Previous Day POC / ...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_target_selection_hierarchy"
+}

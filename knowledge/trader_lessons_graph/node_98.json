@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Multi Timeframe (andrea)",
+    "trigger_conditions": [
+        "Yes, Andrea Cimi utilizes a multi-layered approach involving **multiple",
+        "timeframes** to align long-term market structure with short-term order flow",
+        "execution. He typically divides his analysis into three distinct layers:",
+        "long-term bias, intraday context, and micro-entry timing [1, 2].",
+        "### **1. Timeframes Used**"
+    ],
+    "outcome": "*   **Long-Term (Macro):** He uses **90-day composite volume profiles** to establish a long-term bias based on where the market is currently distributing (P, B, or D shapes) [1, 2]. *   **Intraday Context (15-Minute / 30-Minute):** The **15-minute Opening Range** (Initial Balance) is used to define the session's boundaries [3, 4]. He also mentions that some traders use a 30-minute opening range for higher statistical efficiency [5]. *   **Strategic Overview (5-Minute):** This is his primary char...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_multi_timeframe"
+}

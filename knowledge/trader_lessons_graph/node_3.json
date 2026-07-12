@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Pre Explosion Pattern (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini\u2019s \"pre-explosion\" pattern is a specific orderflow signature",
+        "characterized by **building pressure during price compression**, which serves",
+        "as the preparation for a **squeeze** [1, 2]. This pattern occurs when the",
+        "market is in a balanced state but orderflow data indicates one side is winning",
+        "a \"battle\" before the price actually breaks out [3, 4]."
+    ],
+    "outcome": "The specific behaviors that precede the explosive move include: ### 1. Cumulative Volume Delta (CVD) Leading Price Valentini uses CVD as his primary **leading indicator** for an explosion [1]. *   **Divergence:** The most critical pre-explosion signature is when the **CVD shows huge directional pressure while price remains balanced or range-bound** [1]. *   **Preparation:** For an imminent long explosion, Valentini looks for CVD trending upward while price is still compressed, signaling that agg...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_pre_explosion_pattern"
+}

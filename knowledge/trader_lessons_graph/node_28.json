@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Risk Per Trade (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini utilizes a **dynamic risk management** framework where he",
+        "grades setups from A to C based on their statistical probability and the number",
+        "of order flow confluences present. He adjusts his monetary risk per trade",
+        "according to these grades:",
+        "### **Setup Risk Levels (Specific Numbers)**"
+    ],
+    "outcome": "*   **A Setup (Premium / \"Triple A\"):** This represents his highest statistical edge where every confluence (location, absorption, institutional presence) aligns. He risks **\u20ac2,500 to \u20ac3,000** per trade [1]. *   **B Setup (Moderate):** These are high-quality setups that might lack one layer of confluence. He risks a **maximum of \u20ac2,000** on these positions [1]. Fabio notes that B setups typically have a win rate of approximately **50%** [2]. *   **C Setup (Low Probability):** These are often cou...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_risk_per_trade"
+}

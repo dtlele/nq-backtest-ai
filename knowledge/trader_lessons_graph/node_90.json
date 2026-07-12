@@ -1,0 +1,13 @@
+{
+    "pattern_name": "No Trade Rules (andrea)",
+    "trigger_conditions": [
+        "Answer:",
+        "Based on the sources provided, Andrea Cimi defines several specific **no-trade",
+        "conditions** where market participants should stay on the sidelines or",
+        "significantly reduce risk. These range from macroeconomic events to specific",
+        "volume thresholds and psychological states."
+    ],
+    "outcome": "### **1. News and Macroeconomic Events** *   **Macro Data Releases:** The \"worst moment\" to be in the market is seconds **before and after major news** such as **NFP (Non-Farm Payrolls)** or **CPI (Consumer Price Index)** [1, 2]. *   **Withdrawal of Liquidity:** During these events, **market makers withdraw their orders**, leading to an empty order book and **\"toxic order flow\"** characterized by extreme, erratic volatility [1-3]. *   **Geopolitical Conflict:** In periods of global conflict or h...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_no_trade_rules"
+}

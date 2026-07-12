@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Composite Profile (andrea)",
+    "trigger_conditions": [
+        "Yes, Andrea Cimi utilizes a **multi-day composite volume profile** as a core",
+        "component of his market analysis [1], [2], [3].",
+        "### Duration of the Composite Profile",
+        "The specific number of days he loads into the composite profile varies",
+        "depending on the depth of the analysis:"
+    ],
+    "outcome": "*   **Standard Long-Term View:** He frequently loads **90 days** of market data to build a comprehensive distribution of current volume [1], [4]. *   **Short-Term Context:** In some specific trade breakdowns, he may load the last **10 days** to frame a more recent bias [5]. *   **Dynamic Usage:** The profile is often described as a \"Long-Term Volume Profile\" (LTVP) that encompasses the entirety of the volume distribution currently visible on the chart [2], [3]. ### Decisions Influenced by the Co...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_composite_profile"
+}

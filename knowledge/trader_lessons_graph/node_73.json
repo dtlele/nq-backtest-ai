@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Delta Thresholds (andrea)",
+    "trigger_conditions": [
+        "Andrea Cimi uses specific **delta percentage thresholds** to determine the",
+        "strength and intent of market participants within a candle:",
+        "*   **Initiative Candle (Valid Breakout):** A candle is considered the",
+        "beginning of a real new initiative when it has a **delta of at least 10%** [1,",
+        "2]. High-conviction initiative candles often display a delta of **26% or"
+    ],
+    "outcome": "higher**, signifying clear dominance by one side [3]. *   **Absorbed Candle (Stop Runs):** Absorption is identified when price fails to move significantly despite a **\"really high\" delta**, typically **above 25%** [4, 5]. In extreme scenarios like a **book sweep or stop run**, where aggressive orders are consumed by a \"wall\" of passive liquidity, the delta can exceed **50%** [5, 6]. *   **Not Meaningful (Balanced):** A delta of roughly **4% is classified as \"not really unbalanced\"** and is consi...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_delta_thresholds"
+}

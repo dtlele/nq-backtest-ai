@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Ivb 15 Vs 30 Minutes (fabio)",
+    "trigger_conditions": [
+        "In recent live sessions and videos, Fabio Valentini defines the **Initial",
+        "Volume Breakout (IVB)** range as variable, typically spanning the first **15 to",
+        "30 minutes** of the New York session, though it can extend up to **60 minutes**",
+        "depending on the trader's objectives [1-3].",
+        "### **15 vs. 30 Minute Definition**"
+    ],
+    "outcome": "Fabio uses different timeframes for the IVB based on the intended trading style: *   **15 Minutes:** Often used for **scalping** or more aggressive entries [1, 4]. In some live sessions, he explicitly monitors the \"range di apertura a 15 minuti\" composed of three 5-minute candles [5, 6]. *   **30 Minutes:** This is frequently highlighted in his \"Simplest Orderflow Trading Model\" walkthroughs. He notes that the market\u2019s direction for the day often becomes clear **15 to 30 minutes** after the open...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_ivb_15_vs_30_minutes"
+}

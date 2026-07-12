@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Absorption Vs Exhaustion (andrea)",
+    "trigger_conditions": [
+        "In Andrea Cimi's framework, the distinction between **absorption** and",
+        "**exhaustion** lies in whether a reversal is caused by a \"wall\" of passive",
+        "orders or a simple \"lack of interest\" from aggressive participants [1, 2].",
+        "### **Absorption vs. Exhaustion**",
+        "*   **Absorption:** This occurs when a large institutional player uses"
+    ],
+    "outcome": "**passive limit orders** (often hidden as an **Iceberg**) to soak up all aggressive market orders [1, 3]. Despite massive effort from one side (high volume and high delta), price cannot break through a specific level [2, 4]. It is essentially a \"war\" where the aggressive side loses to a passive wall [1, 5]. *   **Exhaustion:** This is a **lack of participation** [2]. It occurs when the aggressive pressure simply \"dries up\" because there are no more buyers or sellers interested in pushing the pri...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_andrea_absorption_vs_exhaustion"
+}

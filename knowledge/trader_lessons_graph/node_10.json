@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Punches To Wall (fabio)",
+    "trigger_conditions": [
+        "In Fabio Valentini\u2019s methodology, a **\"punch to the wall\"** (*colpo al muro*)",
+        "is a specific orderflow signature that identifies **absorption** at a",
+        "significant price level [1-3].",
+        "### 1. What is a \"Punch to the Wall\"?",
+        "A punch to the wall occurs when aggressive market participants (market orders)"
+    ],
+    "outcome": "strike a price level with high volume but meet a \"wall\" of passive participants (limit orders) [4, 5]. It is a practical application of the **Law of Effort and Results** from Volume Spread Analysis (VSA) [2, 6]: *   **The Effort:** A sudden surge of aggressive buy or sell orders hitting the bid or ask [7, 8]. *   **The Result:** Despite the high volume, the price fails to break through the level and produces no follow-through (no result), often leaving a long wick [4, 7]. *   **The Trap:** This ...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_punches_to_wall"
+}

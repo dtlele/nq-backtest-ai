@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Multi Timeframe (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini utilizes multiple timeframes, though his approach is not",
+        "traditional \"price action\" multi-timeframe analysis; rather, it is a nested",
+        "**Profile Framing** and **Order Flow** method [1, 2]. He uses higher timeframes",
+        "(HTF) to establish market context and identify sensitive locations, then shifts",
+        "to lower timeframes (LTF) for precision execution and real-time narrative"
+    ],
+    "outcome": "confirmation [3-5]. ### **Fabio's Timeframe Framework** *   **Higher Timeframes (Daily, 90-Day Composite, Session Profiles):** He uses these to define the \"State of the Market\" (Balance vs. Imbalance) and daily bias [2, 6-8]. *   **Execution Timeframes (5-Minute and 1-Minute):** The 5-minute timeframe is typically used to observe breakout candles and broader intra-session structure [9]. The 1-minute timeframe is his primary \"battlefield\" for reading institutional aggression and timing entries [1...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_multi_timeframe"
+}

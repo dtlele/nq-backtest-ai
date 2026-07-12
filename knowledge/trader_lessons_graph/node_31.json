@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Choppy Day Identification (fabio)",
+    "trigger_conditions": [
+        "Fabio Valentini identifies a \"choppy\" or \"balance\" day by analyzing the",
+        "market's state through **Auction Market Theory (AMT)** and specific order flow",
+        "signatures within the first 15 to 60 minutes of the New York session.",
+        "### Early Signals of a No-Trade or \"Choppy\" Day",
+        "Fabio looks for specific behaviors during the market open to determine if the"
+    ],
+    "outcome": "day lacks the \"steroids\" (momentum) required for his primary model: *   **The 10-Minute High/Low Liquidation:** A major red flag occurs when the market \"liquidates the high and low\" of the pre-market range within the first 10 minutes without establishing a trend [1]. He describes this as \"trying to catch a falling knife\" and avoids trading during this \"3:30 PM shakeout\" [2]. *   **The 30-Minute Range Test:** He waits for the first 30 minutes to complete to define the **Initial Volume Breakout (I...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_choppy_day_identification"
+}

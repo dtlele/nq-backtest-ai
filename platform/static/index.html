@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Forge | Volumetric Analysis Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=4">
+</head>
+<body class="deep-dark">
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-icon">⚡</div>
+                <h1>Agent Forge</h1>
+            </div>
+            <nav class="session-list" id="sessionList">
+                <!-- Days will be injected here -->
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top KPI Bar -->
+            <header class="kpi-bar">
+                <div class="kpi-card glass">
+                    <span class="kpi-label">CANDIDATES</span>
+                    <span class="kpi-value" id="kpiCandidates">0</span>
+                </div>
+                <div class="kpi-card glass">
+                    <span class="kpi-label">DAYS ANALYZED</span>
+                    <span class="kpi-value" id="kpiDays">0</span>
+                </div>
+                <div class="kpi-card glass win">
+                    <span class="kpi-label">WIN RATE</span>
+                    <span class="kpi-value" id="kpiWinRate">0%</span>
+                </div>
+                <div class="kpi-card glass pnl">
+                    <span class="kpi-label">TOTAL P&L</span>
+                    <span class="kpi-value" id="kpiPnL">$0</span>
+                </div>
+            </header>
+
+            <!-- Chart Section -->
+            <section class="chart-section">
+                <div class="chart-header">
+                    <div class="chart-info">
+                        <h2 id="currentDay">Select a Session</h2>
+                        <span id="currentStatus" class="status-tag">Ready</span>
+                    </div>
+                    <div class="chart-tools">
+                        <button class="tool-btn active">Footprint</button>
+                        <button class="tool-btn">Volume Profile</button>
+                    </div>
+                </div>
+                <div class="chart-main-container glass">
+                    <div id="mainChart" class="chart-canvas"></div>
+                    <div id="volumeProfile" class="vp-overlay"></div>
+                </div>
+                <div class="chart-delta-container glass">
+                    <div id="deltaChart" class="chart-canvas"></div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Right Panel: Agent Reasoning -->
+        <section class="reasoning-panel glass">
+            <div class="panel-header">
+                <h3>Agent Reasoning</h3>
+                <span class="bar-time" id="selectedBarTime">--:--</span>
+            </div>
+            <div class="reasoning-scroll" id="reasoningContent">
+                <div class="empty-state">
+                    <p>Select a candidate bar to view agent analysis</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="app.js?v=21"></script>
+</body>
+</html>

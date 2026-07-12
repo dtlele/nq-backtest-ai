@@ -1,0 +1,13 @@
+{
+    "pattern_name": "Acceptance Definition Exact (fabio)",
+    "trigger_conditions": [
+        "In Fabio Valentini\u2019s model, **acceptance** is a mechanical requirement used to",
+        "distinguish a true expansion from a \"fake out\" or failed auction. Based on the",
+        "sources, here is how he defines this condition:",
+        "### **(a) Body Position vs. Close Price**",
+        "A valid breakout requires a **full-body candle close** outside the established"
+    ],
+    "outcome": "range [1, 2]. *   **Body over Wick:** Acceptance is defined when the **candle body** (the rectangular portion) crosses the level [3]. If a wick pierces the high or low but the candle closes back inside the range, it is classified as a **failed auction** or a \"look above and fail\" rather than acceptance [1, 4]. *   **Body Content:** For high-confidence acceptance, \"Big Trade\" bubbles (filtered for 30+ contracts on NQ) should appear within the **body of the candle** during the breakout, signaling ...",
+    "confidence": 1.0,
+    "graphify_node_link": "Node_fabio_acceptance_definition_exact"
+}
