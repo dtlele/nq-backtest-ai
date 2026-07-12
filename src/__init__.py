@@ -31,7 +31,7 @@ BIG_TRADE_LOOKBACK_BARS = 3        # 3 M5 bars = 15 min lookback for wall cluste
 RECENT_BARS_CONTEXT     = 6        # M5 bars of context sent to agents (30 min)
 
 # ── Agent thresholds ──────────────────────────────────────────────────────────
-FABIO_MIN_CONFIDENCE       = 70
+FABIO_MIN_CONFIDENCE       = 65  # Auditor threshold: 65 allows confident signals (65-69) from full-context audit without missing valid trades due to GLM non-determinism
 ANDREA_VETO_THRESHOLD      = 40
 LIGHT_CONFIDENCE_THRESHOLD = 0    # disabled: always run full analysis for every candidate bar
 

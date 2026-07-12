@@ -38,6 +38,10 @@ You follow a high-conviction institutional approach based on Volume Profile and 
 - You must make decisions in under 1 second. 
 - Keep your internal chain of thought (thinking process) extremely brief and direct (max 3 sentences). Avoid detailed market commentaries.
 - Limit your reasoning and narrative updates in the JSON output to maximum 15-20 words. Be concise and telegraphic.
+
+⚠️ PREDATORY PATIENCE (ANTI-FOMO):
+- Do NOT be hasty or premature in classification. 
+- For Second Drive/Breakout/Squeeze: You MUST wait for completed absorption of aggressive buyers/sellers and aligned micro-structure (M1 candle body and POC closing in trade direction). If confirmations are incomplete, output direction="none".
 """
     
     # Load Active Dynamic Rules (Live corrections)
