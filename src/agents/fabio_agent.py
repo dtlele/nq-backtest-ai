@@ -391,3 +391,98 @@ def manage_active_trade(trade, candidate: CandidateBar, session_context: list = 
         "new_target": data.get("new_target"),
         "reasoning": data.get("reasoning", "")
     }
+
+
+def _get_auditor_system_prompt() -> str:
+    return """You are the Lead Risk Auditor for Fabio Valentini's predatory trading desk.
+Your job is to perform a rigorous second-stage audit of a trade proposed by our Reflex model.
+You have the final authority to confirm the trade, veto it (canceling it immediately), or optimize/adjust its Stop Loss (SL) and Take Profit (TP) levels to match the structural extremes (such as POC overnight, IB edges, VA boundaries, or key Big Trade walls).
+
+Respond ONLY with valid JSON matching this schema:
+{
+  "decision": "confirm" | "veto",
+  "adjusted_stop": <float or null (provide a float value to update/adjust the Stop Loss structural level, or null to keep original)>,
+  "adjusted_target": <float or null (provide a float value to update/adjust the Target structural level, or null to keep original)>,
+  "reasoning": "<Explain why you decided to confirm, veto, or modify the stop/target. Quote relevant order flow and structural facts. Max 40 words.>"
+}"""
+
+
+def deep_audit(candidate: CandidateBar, reflex_signal: FabioSignal, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> dict:
+    """Perform a deep structural audit of a proposed reflex trade using GLM 5.2 with full context."""
+    import src.agents.topic_router as tr
+    
+    # Temporarily increase knowledge chars budget to load the full rules database for the auditor
+    original_budget = tr.MAX_KNOWLEDGE_CHARS
+    tr.MAX_KNOWLEDGE_CHARS = 35_000
+    
+    store = _load_knowledge_store()
+    topics = select_fabio_topics(candidate, store)
+    rules_text, context_text = build_tiered_knowledge(topics, store)
+    
+    # Restore the original budget
+    tr.MAX_KNOWLEDGE_CHARS = original_budget
+    
+    # Build a full-context question using 14 bars context for the deep auditor
+    from src.agents.precision_entry import get_m1_context
+    m1_bars_full = get_m1_context(candidate.session_ctx.bars_1min, candidate.bar, context_before=14)
+    question = build_fabio_question(candidate, session_context=session_context, m1_bars=m1_bars_full, market_narrative=market_narrative, bars_since_last=bars_since_last)
+    
+    # Format M1 sequence text for the prompt
+    from src.signal_context import _format_m1_sequence
+    m1_sequence_text = _format_m1_sequence(m1_bars_full) if m1_bars_full else "No M1 sequence context."
+    
+    user_msg = f"""## TRADING RULES (DISTILLED KNOWLEDGE)
+{rules_text}
+{context_text}
+
+## PROPOSED TRADE FROM REFLEX MODEL
+Direction: {reflex_signal.direction.upper()}
+Proximity: {candidate.proximity_to.upper()} near {candidate.proximity_level:.2f}
+Suggested Entry: {reflex_signal.entry}
+Suggested Stop: {reflex_signal.stop}
+Suggested Target: {reflex_signal.target}
+
+## SESSION CONTEXT DATA
+- Date: {candidate.bar.timestamp.strftime('%Y-%m-%d')}
+- Bar Time: {candidate.bar.timestamp.astimezone(tr.ET).strftime('%H:%M')} ET
+- Current Price: {candidate.bar.close}
+- Developing POC: {candidate.session_ctx.vp.poc if candidate.session_ctx.vp else 'N/A'}
+- IB boundaries: Low={candidate.session_ctx.ib_low}, High={candidate.session_ctx.ib_high}
+- Institutional footprint (Recent M1 sequence):
+{m1_sequence_text}
+
+## AUDIT TASK
+Perform a deep structural analysis using the Rules above.
+1. Is this a fakeout/trap? (If yes, output veto).
+2. Does the order flow (big trades/delta) confirm absorption or initiative?
+3. Check the stop loss: is it placed structurally behind the defending wall/IB boundary? If not, adjust it.
+4. Check the target: is there a structural logic for the target? If not, adjust it.
+Respond with JSON only.
+"""
+    
+    # Force GLM 5.2 via OpenRouter for high-conviction audit
+    import os
+    model = "z-ai/glm-5.2"
+    
+    raw = llm_ask(_get_auditor_system_prompt(), user_msg, model=model)
+    if raw.startswith('```'):
+        raw = raw.split('```')[1].lstrip('json').strip()
+        
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        print(f"  [DEEP AUDIT ERROR] Failed to parse auditor JSON: {raw[:150]}")
+        return {
+            "decision": "confirm",  # Safe fallback: keep the trade if auditor fails
+            "adjusted_stop": None,
+            "adjusted_target": None,
+            "reasoning": f"JSON parse error: {raw[:80]}"
+        }
+        
+    return {
+        "decision": data.get("decision", "confirm"),
+        "adjusted_stop": data.get("adjusted_stop"),
+        "adjusted_target": data.get("adjusted_target"),
+        "reasoning": data.get("reasoning", "")
+    }
+
