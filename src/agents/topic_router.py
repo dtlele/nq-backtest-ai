@@ -14,8 +14,9 @@ A token budget ensures we never exceed ~8K tokens of knowledge per call.
 """
 from src import CandidateBar
 
-# Max chars of knowledge to inject (~8K tokens ≈ 32K chars, but we stay conservative)
-MAX_KNOWLEDGE_CHARS = 28_000
+# Max chars of knowledge to inject (~3K tokens ≈ 12K chars to cut prompt size and optimize performance)
+MAX_KNOWLEDGE_CHARS = 12_000
+
 
 
 # ─── FABIO ROUTING TABLE ─────────────────────────────────────────────────────
