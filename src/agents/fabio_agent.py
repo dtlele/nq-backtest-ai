@@ -428,6 +428,10 @@ def deep_audit(candidate: CandidateBar, reflex_signal: FabioSignal, session_cont
     from src.signal_context import _format_m1_sequence
     m1_sequence_text = _format_m1_sequence(m1_bars) if m1_bars else "No M1 sequence context."
     
+    # Session Context parameters
+    import pytz
+    ET = pytz.timezone('US/Eastern')
+    
     user_msg = f"""## TRADING RULES (DISTILLED KNOWLEDGE)
 {rules_text}
 {context_text}
@@ -441,7 +445,7 @@ Suggested Target: {reflex_signal.target}
 
 ## SESSION CONTEXT DATA
 - Date: {candidate.bar.timestamp.strftime('%Y-%m-%d')}
-- Bar Time: {candidate.bar.timestamp.astimezone(tr.ET).strftime('%H:%M')} ET
+- Bar Time: {candidate.bar.timestamp.astimezone(ET).strftime('%H:%M')} ET
 - Current Price: {candidate.bar.close}
 - Developing POC: {candidate.session_ctx.vp.poc if candidate.session_ctx.vp else 'N/A'}
 - IB boundaries: Low={candidate.session_ctx.ib_low}, High={candidate.session_ctx.ib_high}
