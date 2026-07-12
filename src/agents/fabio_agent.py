@@ -422,14 +422,11 @@ def deep_audit(candidate: CandidateBar, reflex_signal: FabioSignal, session_cont
     # Restore the original budget
     tr.MAX_KNOWLEDGE_CHARS = original_budget
     
-    # Build a full-context question using 14 bars context for the deep auditor
-    from src.agents.precision_entry import get_m1_context
-    m1_bars_full = get_m1_context(candidate.session_ctx.bars_1min, candidate.bar, context_before=14)
-    question = build_fabio_question(candidate, session_context=session_context, m1_bars=m1_bars_full, market_narrative=market_narrative, bars_since_last=bars_since_last)
+    question = build_fabio_question(candidate, session_context=session_context, m1_bars=m1_bars, market_narrative=market_narrative, bars_since_last=bars_since_last)
     
     # Format M1 sequence text for the prompt
     from src.signal_context import _format_m1_sequence
-    m1_sequence_text = _format_m1_sequence(m1_bars_full) if m1_bars_full else "No M1 sequence context."
+    m1_sequence_text = _format_m1_sequence(m1_bars) if m1_bars else "No M1 sequence context."
     
     user_msg = f"""## TRADING RULES (DISTILLED KNOWLEDGE)
 {rules_text}

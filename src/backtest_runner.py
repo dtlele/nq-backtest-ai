@@ -1631,7 +1631,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 audit_res = fabio_deep_audit(
                     candidate, fabio_signal, 
                     session_context=session_buffer, 
-                    m1_bars=m1_bars, 
+                    m1_bars=get_m1_context(bars_1min_ny, candidate.bar, context_before=14), 
                     market_narrative=market_narrative, 
                     bars_since_last=bars_since_last
                 )
