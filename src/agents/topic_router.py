@@ -14,8 +14,9 @@ A token budget ensures we never exceed ~8K tokens of knowledge per call.
 """
 from src import CandidateBar
 
-# Max chars of knowledge to inject (reverted to 28k to guarantee 100% rule precision, latency is optimized via output brevity)
-MAX_KNOWLEDGE_CHARS = 28_000
+# Max chars of knowledge to inject for Reflex stage (~2.5K tokens ≈ 10K chars to keep Stage 1 ultra-fast)
+MAX_KNOWLEDGE_CHARS = 10_000
+
 
 
 
