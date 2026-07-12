@@ -1624,6 +1624,43 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                     else:
                         consensus.target = round(consensus.entry - (_dist * 2.0), 2)
 
+            # STAGE 2: DEEP AUDIT (Full rules, full context revision)
+            if consensus.direction in ['long', 'short']:
+                print("  [DEEP AUDIT] Proposed trade found. Triggering GLM 5.2 full-context auditor...")
+                from src.agents.fabio_agent import deep_audit as fabio_deep_audit
+                audit_res = fabio_deep_audit(
+                    candidate, fabio_signal, 
+                    session_context=session_buffer, 
+                    m1_bars=m1_bars, 
+                    market_narrative=market_narrative, 
+                    bars_since_last=bars_since_last
+                )
+                
+                if audit_res['decision'] == 'veto':
+                    print(f"  [DEEP AUDIT VETO ❌] Auditor vetoed the trade! Reasoning: {audit_res['reasoning']}")
+                    consensus.direction = 'none'
+                    consensus.confidence = 0
+                    log_entry['decision'] = 'no_trade'
+                    log_entry['no_trade_reason'] = f"deep_audit_veto: {audit_res['reasoning']}"
+                    log_reasoning(log_entry)
+                    continue
+                else:
+                    print(f"  [DEEP AUDIT CONFIRM 👍] Auditor confirmed the trade! Reasoning: {audit_res['reasoning']}")
+                    if audit_res.get('adjusted_stop') is not None:
+                        try:
+                            new_stop = float(audit_res['adjusted_stop'])
+                            print(f"  [DEEP AUDIT ADJUST SL] Stop adjusted from {consensus.stop:.2f} -> {new_stop:.2f}")
+                            consensus.stop = new_stop
+                        except Exception as e:
+                            print(f"  [DEEP AUDIT ERROR] Failed to adjust stop: {e}")
+                    if audit_res.get('adjusted_target') is not None:
+                        try:
+                            new_target = float(audit_res['adjusted_target'])
+                            print(f"  [DEEP AUDIT ADJUST TP] Target adjusted from {consensus.target:.2f} -> {new_target:.2f}")
+                            consensus.target = new_target
+                        except Exception as e:
+                            print(f"  [DEEP AUDIT ERROR] Failed to adjust target: {e}")
+
             state = load_session()
             
             # Load dynamic parameters from strategy config
