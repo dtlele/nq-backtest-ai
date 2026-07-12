@@ -436,17 +436,17 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
     from src.session_context import get_session_memory_up_to
     struc_mem = get_session_memory_up_to(ctx, bar.timestamp)
     if struc_mem:
-        question += "\n\n### STRUCTURAL MEMORY ###\n"
-        question += "You must check how levels reacted earlier today to avoid traps (e.g. do not short a level that was strongly rejected twice already):\n"
-        question += "\n".join(f"- {line}" for line in struc_mem)
+        question += "\n\n### STRUCTURAL MEMORY (Recent Events) ###\n"
+        question += "You must check how levels reacted earlier today to avoid traps (showing max last 6 events):\n"
+        question += "\n".join(f"- {line}" for line in struc_mem[-6:])
 
     # Inject Liquidity Map History (Big Trade Nodes)
     if hasattr(ctx, 'active_walls') and ctx.active_walls:
-        question += "\n\n### LIQUIDITY MAP (BIG TRADE NODES) ###\n"
-        question += "These are the key institutional levels established so far today. Use them to link events (e.g. accumulation, defense, trapped participants).\n"
+        question += "\n\n### LIQUIDITY MAP (BIG TRADE NODES - Recent 6) ###\n"
+        question += "These are the key institutional levels established so far today. Use them to link events.\n"
         # Sort by time
         walls_sorted = sorted(ctx.active_walls, key=lambda w: w.timestamp)
-        for w in walls_sorted[-10:]: # Show max last 10 walls to save context
+        for w in walls_sorted[-6:]: # Show max last 6 walls to save context
             time_str = w.timestamp.astimezone(ET).strftime('%H:%M:%S')
             question += f"- {time_str} | {w.side} Wall at {w.price:.2f} | Size: {w.size} | Status: {w.status}\n"
 
