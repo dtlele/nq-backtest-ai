@@ -354,7 +354,8 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
             f"VAL={pvp.va_low:.2f} HVN={pvp.hvn_levels} LVN={pvp.lvn_levels}"
         )
     # Inject Inter-Day Memory (Telegram Analysis and End-of-Day Narrative)
-    if ctx.historical_days:
+    # To optimize performance and cache hits, we only inject full day reviews early in the day (before 09:45 ET)
+    if ctx.historical_days and time_val < 9.75:
         question += "\n\n### MULTI-DAY MEMORY & LESSONS LEARNED ###\n"
         question += "You must adapt your trading logic based on the feedback from the previous days below.\n\n"
         for i, h_day in enumerate(ctx.historical_days):
@@ -364,6 +365,10 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
                 question += f"Your Final Narrative on {day_label}:\n{h_day.market_narrative}\n\n"
             if h_day.telegram_analysis:
                 question += f"End of Day Performance Review on {day_label}:\n{h_day.telegram_analysis}\n\n"
+    elif ctx.historical_days:
+        # Keep a ultra-compact summary to prevent token bloat during active session
+        question += "\n\n### MULTI-DAY SUMMARY ###\n"
+        question += "Previous days dates: " + ", ".join(f"T-{i+1} ({h.date})" for i, h in enumerate(ctx.historical_days)) + "\n"
         
     # Inject VWAP Intraday Status
     price = bar.close
