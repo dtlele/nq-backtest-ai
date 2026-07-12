@@ -141,9 +141,9 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
     if not hasattr(trade, 'bars_stalling_vs_poc') or trade.bars_stalling_vs_poc is None:
         trade.bars_stalling_vs_poc = 0
         
-    POC_TRAIL_BUFFER_TICKS = 3 # 3 ticks = 0.75pts below POC for long stop
+    POC_TRAIL_BUFFER_TICKS = 16 # 16 ticks = 4.0pts below POC for structural protection on NQ
     MAX_STALL_BARS = 5         # exit after 5 consecutive M1 bars stalling under POC
-    MIN_RR_FOR_POC_TRAIL = 0.5 # only activate POC trailing once we're 0.5 R:R in profit
+    MIN_RR_FOR_POC_TRAIL = 1.0 # only activate POC trailing once we're 1.0 R:R in profit to prevent premature tight trail
     poc_trail_active = False
     
     for i, bar in enumerate(bars):
