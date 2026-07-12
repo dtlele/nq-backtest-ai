@@ -981,7 +981,38 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
             continue
         # ─────────────────────────────────────────────────────────────────────
 
+        # STAGE 1: REFLEX (Lightweight & Fast Trigger Check using optimized 10k context)
         fabio_signal = fabio_analyze(candidate, session_context=session_buffer, m1_bars=m1_bars, market_narrative=current_narrative, bars_since_last=bars_since_last)
+        
+        # STAGE 2: INDEPENDENT DEEP AUDITOR (Triggered only when Reflex indicates trading interest)
+        # Threshold: direction in ['long', 'short'] and confidence >= 55.
+        # This prevents running the slow, full-context model on 90%+ of the bars, saving latency.
+        if fabio_signal.direction in ['long', 'short'] and fabio_signal.confidence >= 55:
+            print(f"  [DEEP AUDIT TRIGGERED 🎯] Reflex proposed {fabio_signal.direction} (Conf: {fabio_signal.confidence}). Calling GLM 5.2 Deep Auditor...")
+            
+            # Temporarily override topic budget to 35k to load the full rules database
+            import src.agents.topic_router as tr
+            original_budget = tr.MAX_KNOWLEDGE_CHARS
+            tr.MAX_KNOWLEDGE_CHARS = 35_000
+            
+            # Load the complete 14-bar M1 context for the deep auditor
+            m1_bars_full = get_m1_context(bars_1min_ny, candidate.bar, context_before=14)
+            
+            # Query the deep auditor from scratch (unbiased blind test)
+            deep_signal = fabio_analyze(
+                candidate, 
+                session_context=session_buffer, 
+                m1_bars=m1_bars_full, 
+                market_narrative=current_narrative, 
+                bars_since_last=bars_since_last
+            )
+            
+            # Restore the original budget
+            tr.MAX_KNOWLEDGE_CHARS = original_budget
+            
+            # Override reflex signal with the auditor's final decision
+            fabio_signal = deep_signal
+            print(f"  [DEEP AUDIT DONE] Auditor final decision: direction={fabio_signal.direction} conf={fabio_signal.confidence}")
 
         # STOP BUFFER: 0.5 points (2 ticks) — minimal spread protection only.
         # Statistical insight: buffer 0-1pt → WR 41.7% (+$905). Buffer 3-6pt → WR 23.1% (-$309).
@@ -1623,43 +1654,6 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                         consensus.target = round(consensus.entry + (_dist * 2.0), 2)
                     else:
                         consensus.target = round(consensus.entry - (_dist * 2.0), 2)
-
-            # STAGE 2: DEEP AUDIT (Full rules, full context revision)
-            if consensus.direction in ['long', 'short']:
-                print("  [DEEP AUDIT] Proposed trade found. Triggering GLM 5.2 full-context auditor...")
-                from src.agents.fabio_agent import deep_audit as fabio_deep_audit
-                audit_res = fabio_deep_audit(
-                    candidate, fabio_signal, 
-                    session_context=session_buffer, 
-                    m1_bars=get_m1_context(bars_1min_ny, candidate.bar, context_before=14), 
-                    market_narrative=market_narrative, 
-                    bars_since_last=bars_since_last
-                )
-                
-                if audit_res['decision'] == 'veto':
-                    print(f"  [DEEP AUDIT VETO ❌] Auditor vetoed the trade! Reasoning: {audit_res['reasoning']}")
-                    consensus.direction = 'none'
-                    consensus.confidence = 0
-                    log_entry['decision'] = 'no_trade'
-                    log_entry['no_trade_reason'] = f"deep_audit_veto: {audit_res['reasoning']}"
-                    log_reasoning(log_entry)
-                    continue
-                else:
-                    print(f"  [DEEP AUDIT CONFIRM 👍] Auditor confirmed the trade! Reasoning: {audit_res['reasoning']}")
-                    if audit_res.get('adjusted_stop') is not None:
-                        try:
-                            new_stop = float(audit_res['adjusted_stop'])
-                            print(f"  [DEEP AUDIT ADJUST SL] Stop adjusted from {consensus.stop:.2f} -> {new_stop:.2f}")
-                            consensus.stop = new_stop
-                        except Exception as e:
-                            print(f"  [DEEP AUDIT ERROR] Failed to adjust stop: {e}")
-                    if audit_res.get('adjusted_target') is not None:
-                        try:
-                            new_target = float(audit_res['adjusted_target'])
-                            print(f"  [DEEP AUDIT ADJUST TP] Target adjusted from {consensus.target:.2f} -> {new_target:.2f}")
-                            consensus.target = new_target
-                        except Exception as e:
-                            print(f"  [DEEP AUDIT ERROR] Failed to adjust target: {e}")
 
             state = load_session()
             
