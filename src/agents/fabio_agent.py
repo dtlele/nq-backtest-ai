@@ -147,17 +147,17 @@ STOP LOSS & TARGET STRUCTURAL MAPPING:
     import os as _os2
     _l = _os2.environ.get('BACKTEST_LANG', '').lower().strip()
     if _l == 'zh':
-        _reasoning_instr = '<中文，详细构建流畅的推导过程。详细分析大单、Delta及市场结构（吸收与主动）。如果建议交易（多/空），请从结构上论证止损（放在HVN/大单墙后）和目标位（朝向LVN或对侧边界）。如果方向为"none"，请详细解释为什么当前背景缺乏高置信度设置。>'
+        _reasoning_instr = '<中文，详细构建流畅的推导过程。详细分析大单、Delta及市场结构（吸收与主动）。如果建议交易（多/空），请从结构上论证止损（放在HVN/大单墙后）和目标位（朝向LVN或对侧边界）。CRITICAL: 如果方向为"none"，请勿写长篇大论，仅用1-2句简明扼要的话解释为什么当前背景缺乏高置信度设置，以最大程度减少输出延迟。>'
         _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% （明确计算5个因素的百分比）'
-        _narrative_instr = '<中文，详细构建流畅的盘面叙述，描述盘面流向、POC迁移以及M5 and M1之间的成交量流向一致性。>'
+        _narrative_instr = '<中文，详细描述盘面流向、POC迁移以及M5 and M1之间的流向一致性。CRITICAL: 如果方向为"none"，仅用1-2句简明扼要的话概括 session 状态，以减少输出延迟。>'
     elif _l == 'en':
-        _reasoning_instr = '<EXTENDED THOUGHT. Detail your step-by-step reasoning in a discursive, narrative style about delta, big trades, and market structure (absorption vs initiative). If proposing a trade (long/short), justify the Stop Loss structurally (behind HVN/wall) and the Target (projected towards LVN or opposite extremes). If direction is "none", explain in detail why the current context lacks a high-conviction setup.>'
+        _reasoning_instr = '<EXTENDED THOUGHT. Detail your step-by-step reasoning in a discursive, narrative style about delta, big trades, and market structure (absorption vs initiative). If proposing a trade (long/short), justify the Stop Loss structurally (behind HVN/wall) and the Target (projected towards LVN or opposite extremes). CRITICAL: If direction is "none", do not write a long paragraph; instead, summarize in exactly 1-2 concise sentences why the setup lacks conviction to minimize output latency.>'
         _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% (calculate percentages for all 5 factors)'
-        _narrative_instr = '<EXTENDED NARRATIVE. Describe the session flow, POC migration, and volume flow alignment between M5 and M1 in detail.>'
+        _narrative_instr = '<EXTENDED NARRATIVE. Describe the session flow, POC migration, and volume flow alignment between M5 and M1 in detail. CRITICAL: If direction is "none", summarize the session state in exactly 1-2 concise sentences to minimize output latency.>'
     else:  # default: Italian
-        _reasoning_instr = '<PENSIERO ESTESO. Spiega dettagliatamente e in modo discorsivo il tuo ragionamento su delta, big trades e struttura di mercato (assorbimento vs iniziativa). Se proponi un\'entrata (long/short), giustifica matematicamente e strutturalmente lo Stop Loss (dietro HVN/muro) e il Target (proiettato verso LVN o estremi opposti). Se la direzione è "none", spiega in dettaglio perché il contesto corrente non offre un setup valido.>'
+        _reasoning_instr = '<PENSIERO ESTESO. Spiega dettagliatamente e in modo discorsivo il tuo ragionamento su delta, big trades e struttura di mercato (assorbimento vs iniziativa). Se proponi un\'entrata (long/short), giustifica lo Stop Loss (dietro HVN/muro) e il Target (proiettato verso LVN o estremi). CRITICAL: Se la direzione è "none", NON scrivere un paragrafo lungo; riassumi in esattamente 1-2 frasi concise il motivo per cui manca la convinzione per minimizzare la latenza di output.>'
         _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% (calcola le percentuali per i 5 fattori)'
-        _narrative_instr = '<NARRATIVA ESTESA. Descrivi dettagliatamente l\'andamento della sessione, la migrazione del POC, e l\'allineamento dei flussi volumetrici tra M5 e M1.>'
+        _narrative_instr = '<NARRATIVA ESTESA. Descrivi l\'andamento della sessione, la migrazione del POC e l\'allineamento M5-M1 in dettaglio. CRITICAL: Se la direzione è "none", riassumi lo stato della sessione in esattamente 1-2 frasi concise per minimizzare la latenza di output.>'
     
     _speed_rule = ''
 
