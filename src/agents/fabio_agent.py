@@ -137,25 +137,25 @@ TEMPORAL AUDIT (0-100%):
 - q2: Outside 10:15-10:30 ET Kill Zone (unless overridden by fresh strong breakout).
 - q3: Clear initiative/momentum. Expansive delta aligned with price, or clear absorption.
 - q4: Trend-aligned OR premium Reversal at major extremes (Overnight H/L, IB edges, VAH/VAL) with clear wicks >=35% and absorption (score q4: 70-90%, setup_type='reversal').
-- q5: Entry precision at major structures (IB boundaries, Nodes, Big Trade walls). Rejection delta divergence is allowed.
+- q5: Entry precision at major structure.
 
-STOP LOSS & TARGET LIQUIDITY MAPPING:
-- Stop Loss: Must be placed structurally behind the closest High Volume Node (HVN) or the defending Big Trade absorption wall. It should sit 2-3 ticks behind the wall/node extreme to minimize risk (standard 10-20 ticks distance, absolute max 120 ticks).
-- Take Profit: Must be projected into Low Volume Node (LVN) liquidity voids where price travels fast.
+STOP LOSS & TARGET STRUCTURAL MAPPING:
+- Stop Loss: Place structurally behind the closest High Volume Node (HVN) or the defending Big Trade absorption wall. Standard placement is 2-3 ticks behind the node/wall extreme (standard 10-20 ticks, absolute max 120 ticks).
+- Take Profit: Project targets prioritizing Low Volume Node (LVN) liquidity voids or towards opposite Value Area / Initial Balance extremes where price travels fast.
 """
     # Language-aware schema instructions
     import os as _os2
     _l = _os2.environ.get('BACKTEST_LANG', '').lower().strip()
     if _l == 'zh':
-        _reasoning_instr = '<中文，详细的推导过程，解释大单分析（吸收与主动）、为什么止损结构性放在HVN或大单墙后面、以及为什么止盈目标设在LVN流动性真空区。>'
+        _reasoning_instr = '<中文，详细构建流畅的推导过程。详细分析大单、Delta及市场结构（吸收与主动）。如果建议交易（多/空），请从结构上论证止损（放在HVN/大单墙后）和目标位（朝向LVN或对侧边界）。如果方向为"none"，请详细解释为什么当前背景缺乏高置信度设置。>'
         _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% （明确计算5个因素的百分比）'
         _narrative_instr = '<中文，详细构建流畅的盘面叙述，描述盘面流向、POC迁移以及M5 and M1之间的成交量流向一致性。>'
     elif _l == 'en':
-        _reasoning_instr = '<EXTENDED THOUGHT. Detail your step-by-step reasoning on: 1. Delta and Big Trades (absorption vs initiative), 2. Why the Stop Loss is structurally protected behind the HVN or Big Trade wall, 3. Why the Take Profit target is projected into the LVN liquidity void. Show all logical and mathematical steps.>'
+        _reasoning_instr = '<EXTENDED THOUGHT. Detail your step-by-step reasoning in a discursive, narrative style about delta, big trades, and market structure (absorption vs initiative). If proposing a trade (long/short), justify the Stop Loss structurally (behind HVN/wall) and the Target (projected towards LVN or opposite extremes). If direction is "none", explain in detail why the current context lacks a high-conviction setup.>'
         _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% (calculate percentages for all 5 factors)'
         _narrative_instr = '<EXTENDED NARRATIVE. Describe the session flow, POC migration, and volume flow alignment between M5 and M1 in detail.>'
     else:  # default: Italian
-        _reasoning_instr = '<PENSIERO ESTESO. Spiega dettagliatamente il tuo ragionamento su: 1. Delta e Big Trades (assorbimento vs iniziativa), 2. Perché lo Stop Loss è posizionato strutturalmente dietro l\'HVN o il muro di Big Trades, 3. Perché il Target è proiettato nel vuoto di liquidità LVN. Mostra tutti i passaggi matematici e logici.>'
+        _reasoning_instr = '<PENSIERO ESTESO. Spiega dettagliatamente e in modo discorsivo il tuo ragionamento su delta, big trades e struttura di mercato (assorbimento vs iniziativa). Se proponi un\'entrata (long/short), giustifica matematicamente e strutturalmente lo Stop Loss (dietro HVN/muro) e il Target (proiettato verso LVN o estremi opposti). Se la direzione è "none", spiega in dettaglio perché il contesto corrente non offre un setup valido.>'
         _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% (calcola le percentuali per i 5 fattori)'
         _narrative_instr = '<NARRATIVA ESTESA. Descrivi dettagliatamente l\'andamento della sessione, la migrazione del POC, e l\'allineamento dei flussi volumetrici tra M5 e M1.>'
     
