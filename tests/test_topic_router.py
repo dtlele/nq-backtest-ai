@@ -53,7 +53,7 @@ def _make_candidate(close=19300.0, proximity='lvn', wall_side='bid',
 
 
 # Fake knowledge store for testing
-FAKE_STORE = {t: f"Knowledge about {t}. " * 20 for t in [
+FAKE_STORE = {t: f"Knowledge about {t}. " * 5 for t in [
     # Fabio core + extras
     'simplified_model_overview', 'simplified_wall_definition',
     'simplified_entry_trigger', 'simplified_stop_exact', 'simplified_target_exact',

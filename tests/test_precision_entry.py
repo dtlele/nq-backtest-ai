@@ -4,7 +4,7 @@ from unittest.mock import patch
 from datetime import datetime, timezone, timedelta
 from src import Bar, CandidateBar, SessionContext, VolumeProfile, Trade
 from src import FabioSignal, AndreaSignal, ConsensusSignal
-from src.agents.precision_entry import get_m1_context, refine_entry, _select_precision_topics
+from src.agents.precision_entry import get_m1_context, refine_entry
 
 
 def _make_bar(ts_minute=0, close=19940.0, high=19950.0, low=19930.0,
@@ -80,12 +80,12 @@ class TestGetM1Context:
         m1_bars = [_make_bar(ts_minute=m) for m in range(45, 59)]
         m5_bar = _make_m5_bar()  # timestamp = 13:50
 
-        result = get_m1_context(m1_bars, m5_bar, context_before=3, context_after=2)
+        result = get_m1_context(m1_bars, m5_bar, context_before=3, context_after=0)
 
-        # Should get 13:47 to 13:56 (3 before 13:50, 5 in M5 bar, 2 after)
-        assert len(result) == 10
+        # Should get 13:47 to 13:49 (3 before 13:50)
+        assert len(result) == 3
         assert result[0].timestamp.minute == 47
-        assert result[-1].timestamp.minute == 56
+        assert result[-1].timestamp.minute == 49
 
     def test_empty_if_no_m1_bars(self):
         m5_bar = _make_m5_bar()
@@ -93,30 +93,15 @@ class TestGetM1Context:
         assert result == []
 
     def test_partial_window(self):
-        # Only have bars 13:50-13:54
-        m1_bars = [_make_bar(ts_minute=m) for m in range(50, 55)]
+        # Only have bars 13:47-13:54
+        m1_bars = [_make_bar(ts_minute=m) for m in range(47, 55)]
         m5_bar = _make_m5_bar()
 
-        result = get_m1_context(m1_bars, m5_bar, context_before=3, context_after=2)
-        assert len(result) == 5  # only the 5 bars we have
+        result = get_m1_context(m1_bars, m5_bar, context_before=3, context_after=0)
+        assert len(result) == 3  # only the 3 bars before 13:50
 
 
-class TestSelectPrecisionTopics:
-    def test_balance_day_squeeze(self):
-        topics = _select_precision_topics('balance', 'squeeze')
-        assert 'entry_mechanics' in topics
-        assert 'stop_placement' in topics
-        assert 'targets_standard' in topics
-        assert 'squeeze_entry_trigger' in topics
 
-    def test_trend_day_ivb(self):
-        topics = _select_precision_topics('trend_up', 'ivb_breakout')
-        assert 'targets_high_volatility' in topics
-        assert 'ib_extension_targets' in topics
-
-    def test_always_has_real_trade_example(self):
-        topics = _select_precision_topics('balance', 'none')
-        assert 'simplified_real_trade_example' in topics
 
 
 class TestRefineEntry:

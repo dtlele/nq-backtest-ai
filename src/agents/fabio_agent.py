@@ -3,25 +3,59 @@ from pathlib import Path
 from src import CandidateBar, FabioSignal, FABIO_NOTEBOOK_ID
 from src.agents.llm_client import llm_ask
 from src.signal_context import build_fabio_question
-from src.agents.topic_router import select_fabio_topics, build_tiered_knowledge, FABIO_CORE
 # Note: light_analyze is now fully deterministic (no LLM calls)
 
-KNOWLEDGE_FILE = Path(__file__).parent.parent.parent / 'knowledge' / 'fabio_distilled.json'
+KNOWLEDGE_FILE = Path(__file__).parent.parent.parent / 'knowledge' / 'fabio_core_rules.json'
 
-_knowledge_cache = None
-
-def _load_knowledge_store() -> dict:
-    """Load and merge all Fabio knowledge into a single dict (cached)."""
-    global _knowledge_cache
-    if _knowledge_cache is not None:
-        return _knowledge_cache
-    with open(KNOWLEDGE_FILE, encoding='utf-8') as f:
-        data = json.load(f)
-    store = {}
-    store.update(data.get('knowledge_by_topic', {}))
-    store.update(data.get('simplified_strategy', {}))
-    _knowledge_cache = store
-    return store
+def get_formatted_rules() -> str:
+    """Load and format fabio_core_rules.json into a Markdown string."""
+    try:
+        with open(KNOWLEDGE_FILE, 'r', encoding='utf-8') as f:
+            rules = json.load(f)
+        
+        md = []
+        # System Overview
+        sys = rules.get("system_overview", {})
+        md.append("### SYSTEM OVERVIEW")
+        md.append(f"- **Model Overview**: {sys.get('model_overview', '')}")
+        md.append(f"- **IB Structure**: {sys.get('ib_structure', '')}")
+        md.append(f"- **Day Types**: {sys.get('day_types', '')}")
+        
+        lq = sys.get("liquidity_mapping_rules", {})
+        md.append("- **Liquidity Mapping Rules**:")
+        md.append(f"  - Stop Loss Placement: {lq.get('stop_loss_placement', '')}")
+        md.append(f"  - Take Profit Placement: {lq.get('take_profit_placement', '')}")
+        md.append("")
+        
+        # Execution Rules
+        exec_r = rules.get("execution_rules", {})
+        md.append("### EXECUTION RULES")
+        md.append(f"- **Trigger & Timing**: {exec_r.get('trigger_and_timing', '')}")
+        md.append(f"- **Predatory Execution**: {exec_r.get('predatory_execution', '')}")
+        md.append(f"- **Big Trades Filter**: {exec_r.get('big_trades_filter', '')}")
+        md.append(f"- **Coherence**: {exec_r.get('coherence', '')}")
+        md.append(f"- **Counter Trend**: {exec_r.get('counter_trend', '')}")
+        md.append("")
+        
+        # Strategies
+        md.append("### CORE SETUP CLASSIFICATIONS")
+        for i, s in enumerate(rules.get("strategies", []), 1):
+            md.append(f"{i}. {s.get('name', '')} ({s.get('description', '')}):")
+            md.append(f"   - Trigger: {s.get('trigger', '')}")
+            md.append(f"   - Confirmation: {s.get('confirmation', '')}")
+        md.append("")
+        
+        # Market Mechanics
+        mech = rules.get("market_mechanics", {})
+        md.append("### MARKET MECHANICS")
+        md.append(f"- **Punch In The Wall**: {mech.get('punch_in_the_wall', '')}")
+        md.append(f"- **Imbalance Hunting**: {mech.get('imbalance_hunting', '')}")
+        md.append(f"- **Initiative vs Absorption**: {mech.get('initiative_vs_absorption', '')}")
+        
+        return "\n".join(md)
+    except Exception as e:
+        print(f"Error reading or formatting {KNOWLEDGE_FILE}: {e}")
+        return "Error loading trading rules."
 
 import os as _os
 
@@ -59,12 +93,14 @@ You follow a high-conviction institutional approach based on Volume Profile and 
         print(f"Error loading active dynamic rules: {e}")
 
 
-    # Load Core Setups
-    strategies_file = Path(__file__).parent.parent.parent / 'knowledge' / 'strategies.json'
-    if strategies_file.exists():
+    # Load Core Rules from fabio_core_rules.json
+    if KNOWLEDGE_FILE.exists():
         try:
-            with open(strategies_file, 'r', encoding='utf-8') as f:
-                strats = json.load(f).get('strategies', [])
+            with open(KNOWLEDGE_FILE, 'r', encoding='utf-8') as f:
+                rules = json.load(f)
+                
+                # Strategies
+                strats = rules.get('strategies', [])
                 if strats:
                     prompt += "CORE SETUP CLASSIFICATIONS (TRIPLE A SETUPS):\n"
                     for i, s in enumerate(strats, 1):
@@ -72,19 +108,23 @@ You follow a high-conviction institutional approach based on Volume Profile and 
                         prompt += f"   - Trigger: {s['trigger']}\n"
                         prompt += f"   - Confirmation: {s['confirmation']}\n"
                     prompt += "\n"
+                
+                # Mechanics & Overview
+                sys = rules.get('system_overview', {})
+                prompt += f"SYSTEM OVERVIEW:\n- Model: {sys.get('model_overview', '')}\n- IB Structure: {sys.get('ib_structure', '')}\n- Day Types: {sys.get('day_types', '')}\n"
+                lq = sys.get('liquidity_mapping_rules', {})
+                prompt += f"- Stop Loss Placement: {lq.get('stop_loss_placement', '')}\n- Take Profit Placement: {lq.get('take_profit_placement', '')}\n\n"
+                
+                exec_r = rules.get('execution_rules', {})
+                prompt += f"EXECUTION RULES:\n- Trigger & Timing: {exec_r.get('trigger_and_timing', '')}\n- Predatory Execution: {exec_r.get('predatory_execution', '')}\n- Big Trades Filter: {exec_r.get('big_trades_filter', '')}\n- Coherence: {exec_r.get('coherence', '')}\n- Counter Trend: {exec_r.get('counter_trend', '')}\n\n"
+                
+                mechs = rules.get('market_mechanics', {})
+                prompt += "MARKET MECHANICS:\n"
+                for topic, desc in mechs.items():
+                    prompt += f"- {topic.upper()}: {desc}\n"
+                prompt += "\n"
         except Exception as e:
-            print(f"Error loading strategies.json: {e}")
-
-    # Load Mechanics
-    mechanics_file = Path(__file__).parent.parent.parent / 'knowledge' / 'amt_mechanics.json'
-    if mechanics_file.exists():
-        try:
-            with open(mechanics_file, 'r', encoding='utf-8') as f:
-                mechs = json.load(f).get('mechanics', [])
-                for m in mechs:
-                    prompt += f"{m['topic']}:\n{m['description']}\n\n"
-        except Exception as e:
-            print(f"Error loading amt_mechanics.json: {e}")
+            print(f"Error loading fabio_core_rules.json in system prompt: {e}")
 
     # Statistical calibration hints (derived from 549 backtested trades)
     prompt += """BACKTEST CONVICTION PRIORS:
@@ -216,14 +256,12 @@ def light_analyze(candidate: CandidateBar, session_context: list = None, m1_bars
     return max(0, min(100, score))
 
 def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> FabioSignal:
-    store = _load_knowledge_store()
-    topics = select_fabio_topics(candidate, store)
-    rules_text, context_text = build_tiered_knowledge(topics, store)
+    rules_text = get_formatted_rules()
     question = build_fabio_question(candidate, session_context=session_context, m1_bars=m1_bars, market_narrative=market_narrative, bars_since_last=bars_since_last)
     
     # Bypass NotebookLM: inject distilled knowledge directly
-    base_user_msg = f"## TRADING RULES (DISTILLED KNOWLEDGE)\n{rules_text}\n{context_text}\n\n## TASK\n{question}\n\nAnalyze this setup using the Rules above. Respond with JSON only."
-
+    base_user_msg = f"## TRADING RULES (DISTILLED KNOWLEDGE)\n{rules_text}\n\n## TASK\n{question}\n\nAnalyze this setup using the Rules above. Respond with JSON only."
+    
     # Inject language instruction at END of user message (model follows last instruction)
     _lang = _os.environ.get('BACKTEST_LANG', '').lower().strip()
     lang_suffix = _LANG_SUFFIX.get(_lang, '')
@@ -352,9 +390,7 @@ Respond ONLY with valid JSON matching this schema:
 
 def manage_active_trade(trade, candidate: CandidateBar, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> dict:
     """Ask Fabio to manage the active trade based on the latest bar activity."""
-    store = _load_knowledge_store()
-    topics = select_fabio_topics(candidate, store)
-    rules_text, context_text = build_tiered_knowledge(topics, store)
+    rules_text = get_formatted_rules()
     question = build_fabio_question(candidate, session_context=session_context, m1_bars=m1_bars, market_narrative=market_narrative, bars_since_last=bars_since_last)
     
     # Inject active trade details
@@ -368,7 +404,7 @@ def manage_active_trade(trade, candidate: CandidateBar, session_context: list = 
         f"Entry Time: {trade.entry_bar.timestamp.strftime('%H:%M UTC')}\n"
     )
     
-    user_msg = f"## TRADING RULES (DISTILLED KNOWLEDGE)\n{rules_text}\n{context_text}\n{trade_context}\n\n## TASK\n{question}\n\nAnalyze this active position and choose one of the actions: 'hold', 'trail', 'early_exit', or 'reverse'. Respond with JSON only."
+    user_msg = f"## TRADING RULES (DISTILLED KNOWLEDGE)\n{rules_text}\n{trade_context}\n\n## TASK\n{question}\n\nAnalyze this active position and choose one of the actions: 'hold', 'trail', 'early_exit', or 'reverse'. Respond with JSON only."
     
     raw = llm_ask(_get_management_system_prompt(), user_msg)
     if raw.startswith('```'):
@@ -408,19 +444,7 @@ Respond ONLY with valid JSON matching this schema:
 
 def deep_audit(candidate: CandidateBar, reflex_signal: FabioSignal, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> dict:
     """Perform a deep structural audit of a proposed reflex trade using GLM 5.2 with full context."""
-    import src.agents.topic_router as tr
-    
-    # Temporarily increase knowledge chars budget to load the full rules database for the auditor
-    original_budget = tr.MAX_KNOWLEDGE_CHARS
-    tr.MAX_KNOWLEDGE_CHARS = 35_000
-    
-    store = _load_knowledge_store()
-    topics = select_fabio_topics(candidate, store)
-    rules_text, context_text = build_tiered_knowledge(topics, store)
-    
-    # Restore the original budget
-    tr.MAX_KNOWLEDGE_CHARS = original_budget
-    
+    rules_text = get_formatted_rules()
     question = build_fabio_question(candidate, session_context=session_context, m1_bars=m1_bars, market_narrative=market_narrative, bars_since_last=bars_since_last)
     
     # Format M1 sequence text for the prompt
@@ -433,7 +457,6 @@ def deep_audit(candidate: CandidateBar, reflex_signal: FabioSignal, session_cont
     
     user_msg = f"""## TRADING RULES (DISTILLED KNOWLEDGE)
 {rules_text}
-{context_text}
 
 ## PROPOSED TRADE FROM REFLEX MODEL
 Direction: {reflex_signal.direction.upper()}

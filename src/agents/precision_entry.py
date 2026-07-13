@@ -14,49 +14,7 @@ from pathlib import Path
 from src import (Bar, CandidateBar, ConsensusSignal, SessionContext,
                  NQ_BIG_TRADE_THRESHOLD, NQ_TICK_SIZE)
 from src.agents.llm_client import llm_ask
-from src.agents.topic_router import build_knowledge_text
-
-KNOWLEDGE_FILE = Path(__file__).parent.parent.parent / 'knowledge' / 'fabio_distilled.json'
-
-_knowledge_cache = None
-
-def _load_knowledge_store() -> dict:
-    global _knowledge_cache
-    if _knowledge_cache is not None:
-        return _knowledge_cache
-    with open(KNOWLEDGE_FILE, encoding='utf-8') as f:
-        data = json.load(f)
-    store = {}
-    store.update(data.get('knowledge_by_topic', {}))
-    store.update(data.get('simplified_strategy', {}))
-    _knowledge_cache = store
-    return store
-
-
-# Topics selected for precision entry — focused on micro execution
-def _select_precision_topics(day_type: str, setup_type: str) -> list[str]:
-    """Select knowledge topics relevant to precision entry/stop/target."""
-    topics = [
-        'entry_mechanics',
-        'stop_placement',
-    ]
-    # Target selection based on day type
-    if day_type in ('trend_up', 'trend_down'):
-        topics.append('targets_high_volatility')
-    else:
-        topics.append('targets_standard')
-
-    # Setup-specific micro knowledge
-    if setup_type == 'squeeze':
-        topics.extend(['squeeze_entry_trigger', 'trapped_buyers', 'trapped_sellers'])
-    elif setup_type == 'ivb_breakout':
-        topics.extend(['ib_extension_targets', 'second_drive'])
-    elif setup_type == 'failed_auction':
-        topics.extend(['squeeze_vs_failed_auction', 'pre_explosion_pattern'])
-
-    # Always include the real trade example for calibration
-    topics.append('simplified_real_trade_example')
-    return topics
+from src.agents.fabio_agent import get_formatted_rules
 
 
 SYSTEM_PROMPT = """You are a precision execution agent for NQ futures, applying Fabio Valentini's methodology at the 1-minute level.
@@ -120,12 +78,7 @@ def refine_entry(candidate: CandidateBar,
         dict with keys: entry, stop, target, abort, entry_reasoning,
         stop_reasoning, target_reasoning. If abort=True, trade should be skipped.
     """
-    store = _load_knowledge_store()
-    topics = _select_precision_topics(
-        candidate.session_ctx.day_type,
-        consensus.fabio.setup_type,
-    )
-    knowledge = build_knowledge_text(topics, store)
+    knowledge = get_formatted_rules()
 
     ctx = candidate.session_ctx
     vp = ctx.vp

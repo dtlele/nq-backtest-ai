@@ -990,11 +990,6 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         if fabio_signal.direction in ['long', 'short'] and fabio_signal.confidence >= 55:
             print(f"  [DEEP AUDIT TRIGGERED 🎯] Reflex proposed {fabio_signal.direction} (Conf: {fabio_signal.confidence}). Calling GLM 5.2 Deep Auditor...")
             
-            # Temporarily override topic budget to 35k to load the full rules database
-            import src.agents.topic_router as tr
-            original_budget = tr.MAX_KNOWLEDGE_CHARS
-            tr.MAX_KNOWLEDGE_CHARS = 35_000
-            
             # Load the complete 14-bar M1 context for the deep auditor
             m1_bars_full = get_m1_context(bars_1min_ny, candidate.bar, context_before=14)
             
@@ -1006,9 +1001,6 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 market_narrative=current_narrative, 
                 bars_since_last=bars_since_last
             )
-            
-            # Restore the original budget
-            tr.MAX_KNOWLEDGE_CHARS = original_budget
             
             # Override reflex signal with the auditor's final decision
             fabio_signal = deep_signal
