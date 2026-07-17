@@ -41,5 +41,5 @@ class FabioAgent(dspy.Module):
         )
 
 # Ensure DSPy uses our custom wrapper
-lm = CustomOpenRouterLM(model="deepseek/deepseek-chat")
+lm = CustomOpenRouterLM(model="z-ai/glm-5.2")
 dspy.settings.configure(lm=lm)

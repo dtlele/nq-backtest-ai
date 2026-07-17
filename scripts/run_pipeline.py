@@ -30,7 +30,7 @@ GRAPHIFY_ENV = {
     **os.environ,
     "OPENAI_API_KEY":  os.environ.get("OPENROUTER_API_KEY", ""),
     "OPENAI_BASE_URL": "https://openrouter.ai/api/v1",
-    "OPENAI_MODEL":    "deepseek/deepseek-chat",
+    "OPENAI_MODEL":    "z-ai/glm-5.2",
 }
 
 MD_NARR_DIR = BASE / "knowledge" / "trader_lessons_graph" / "graphify-out" / "sequences" / "md_narrative"
@@ -97,13 +97,13 @@ def main():
     if not args.skip_graphify:
         print("\n[STEP 6] Graphify semantic extraction...")
         run([py, "-m", "graphify", "extract", str(MD_NARR_DIR),
-             "--backend", "openai", "--model", "deepseek/deepseek-chat",
+             "--backend", "openai", "--model", "z-ai/glm-5.2",
              "--token-budget", "20000", "--max-concurrency", "1"],
             env=GRAPHIFY_ENV)
 
         print("\n[STEP 7] Graphify clustering + community naming...")
         run([py, "-m", "graphify", "cluster-only", str(MD_NARR_DIR),
-             "--backend", "openai", "--model", "deepseek/deepseek-chat"],
+             "--backend", "openai", "--model", "z-ai/glm-5.2"],
             env=GRAPHIFY_ENV)
     else:
         print("\n[STEP 6-7] Skipped (--skip-graphify)")

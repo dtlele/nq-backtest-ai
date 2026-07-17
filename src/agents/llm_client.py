@@ -270,7 +270,7 @@ def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None, m
         http_client=httpx.Client(timeout=120.0)
     )
     if not model:
-        model = os.environ.get("OPENROUTER_MODEL", "deepseek/deepseek-chat")
+        model = os.environ.get("OPENROUTER_MODEL", "z-ai/glm-5.2")
     
     # Format messages based on whether video_path is provided
     if video_path and os.path.exists(video_path):
@@ -387,7 +387,10 @@ def llm_ask(system_prompt: str, user_msg: str, timeout: int = 120,
     if use_cache:
         cache = _load_cache()
         if key in cache:
+            print(f"  [CACHE HIT] Key: {key[:8]}...", flush=True)
             return cache[key]
+        else:
+            print(f"  [CACHE MISS] Key: {key[:8]}...", flush=True)
 
     if provider == "claude":
         response = _ask_claude(system_prompt, user_msg, timeout)

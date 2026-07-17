@@ -63,7 +63,7 @@ def optimize_agent():
     # We will use just a small subset for quick training (e.g., 20 examples)
     trainset = trainset[:20]
 
-    lm = CustomOpenRouterLM(model="deepseek/deepseek-chat")
+    lm = CustomOpenRouterLM(model="z-ai/glm-5.2")
     dspy.settings.configure(lm=lm)
     
     agent = FabioAgent()

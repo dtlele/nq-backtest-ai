@@ -1,8 +1,9 @@
 import json
+import os
 from pathlib import Path
 from datetime import datetime, timezone
 
-MEMORY_DIR = Path(__file__).parent.parent / 'agent_memory'
+MEMORY_DIR = Path(os.environ.get('AGENT_MEMORY_DIR', str(Path(__file__).parent.parent / 'agent_memory')))
 MEMORY_DIR.mkdir(parents=True, exist_ok=True)
 SESSION_FILE  = MEMORY_DIR / 'session_state.json'
 PATTERN_FILE  = MEMORY_DIR / 'pattern_memory.json'
@@ -84,6 +85,10 @@ def log_trade_result(closed_trade) -> None:
         'andrea_reasoning': closed_trade.andrea_reasoning,
         'contracts': closed_trade.contracts,
         'news_flag': getattr(closed_trade, "news_flag", "none"),
+        'context_fingerprint': getattr(closed_trade, "context_fingerprint", ""),
+        'entry_type': getattr(closed_trade, "entry_type", "market"),
+        'signal_bar_time': closed_trade.signal_bar_time.isoformat() if getattr(closed_trade, 'signal_bar_time', None) else None,
+        'signal_time': closed_trade.signal_time.isoformat() if getattr(closed_trade, 'signal_time', None) else None,
         'amt_day_profile': getattr(closed_trade, "amt_day_profile", None),
         'macro_regime': getattr(closed_trade, "macro_regime", None),
         'trapped_info': getattr(closed_trade, "trapped_info", None),

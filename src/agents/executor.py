@@ -32,7 +32,7 @@ class TradingSignal(BaseModel):
 # Creazione dell'Agente PydanticAI
 # Usa il modello specificato, o gpt-4o-mini di default. 
 executor_agent = Agent(
-    model='openai:deepseek/deepseek-chat', # Usiamo DeepSeek tramite OpenRouter
+    model='openai:z-ai/glm-5.2', # Usiamo DeepSeek tramite OpenRouter
     output_type=TradingSignal,
     system_prompt=(
         "Sei il 'Cervello Esecutore' per il trading ad alta precisione sul Nasdaq (NQ). "

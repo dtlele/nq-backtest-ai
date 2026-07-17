@@ -127,6 +127,40 @@ def update_day_type(ctx: SessionContext, bars: list) -> str:
     
     return new_type
 
+def compute_5day_atr(date_str: str) -> float:
+    from pathlib import Path
+    import bisect
+    import pandas as pd
+    import numpy as np
+
+    date_clean = date_str.replace("-", "")
+    cache_dir = Path(__file__).parent.parent / 'cache_ohlc'
+    if not cache_dir.exists():
+        return 180.0
+    
+    csv_files = sorted([f.stem for f in cache_dir.glob("*.csv")])
+    if not csv_files:
+        return 180.0
+        
+    idx = bisect.bisect_left(csv_files, date_clean)
+    prev_dates = csv_files[max(0, idx - 5):idx]
+    if len(prev_dates) < 5:
+        return 180.0
+        
+    ranges = []
+    for d in prev_dates:
+        fpath = cache_dir / f"{d}.csv"
+        if fpath.exists():
+            try:
+                df = pd.read_csv(fpath)
+                if not df.empty:
+                    ranges.append(df['high'].max() - df['low'].min())
+            except Exception:
+                pass
+    if len(ranges) >= 3:
+        return float(np.mean(ranges))
+    return 180.0
+
 def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None, historical_days=None) -> SessionContext:
     ib_high, ib_low = compute_ib(bars)
     initial_day_type = classify_day_type(bars)
@@ -157,10 +191,10 @@ def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None, histo
         prev_day_vp=prev_day_vp,
         historical_days=historical_days or [],
         day_type=initial_day_type,
-        # initialize history list
         day_type_history=[initial_day_type],
         session_memory=[],
         profile_shape=profile_shape,
+        atr_5day=compute_5day_atr(date_str),
     )
     # Internal trackers for session memory filters
     ctx._last_level_test = {}

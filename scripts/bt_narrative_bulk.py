@@ -96,7 +96,7 @@ def call_llm(client: OpenAI, batch: list[dict]) -> list[str] | None:
 
     try:
         resp = client.chat.completions.create(
-            model=os.getenv("OPENAI_MODEL", "deepseek/deepseek-chat"),
+            model=os.getenv("OPENAI_MODEL", "z-ai/glm-5.2"),
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user",   "content": user_content},

@@ -6,7 +6,7 @@ class CustomOpenRouterLM(dspy.LM):
     A custom DSPy LM wrapper that uses our existing `llm_ask` from llm_client.py.
     This preserves our prefix-caching padding optimization and hardcoded fast-forward rules.
     """
-    def __init__(self, model="deepseek/deepseek-chat", **kwargs):
+    def __init__(self, model="z-ai/glm-5.2", **kwargs):
         super().__init__(model=model, **kwargs)
         self.provider = "openrouter"
         self.kwargs = {

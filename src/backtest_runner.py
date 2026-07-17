@@ -438,6 +438,12 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 if pending_t is not None:
                     if m1_bar.timestamp >= pending_t.expires_at:
                         print(f"  [PENDING EXPIRED] Limit order at {pending_t.limit_price} expired without fill.")
+                        log_reasoning({
+                            'date': date_str, 'bar_time_utc': m1_bar.timestamp.isoformat(),
+                            'bar_time_et': m1_bar.timestamp.astimezone(_ff_ET).strftime('%H:%M'),
+                            'decision': 'pending_expired', 'no_trade_reason': 'expired without fill',
+                            'trade_entry': pending_t.limit_price, 'trade_direction': pending_t.direction
+                        })
                         pending_t = None
                     else:
                         filled = check_pending_fill(pending_t, m1_bar)
@@ -452,8 +458,17 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                                 sync_session_state(open_t, closed_trades, ctx)
                             else:
                                 open_t = filled
-                                print(f"  [PENDING FILLED] Limit order triggered at {open_t.entry}!")
+                                open_t.entry_type = 'limit_pending'
+                                open_t.signal_bar_time = pending_t.signal_bar.timestamp
+                                print(f"  [PENDING FILLED] Limit order triggered at {open_t.entry:.2f}! (Signal placed at {pending_t.signal_bar.timestamp.strftime('%H:%M UTC')})")
                                 sync_session_state(open_t, closed_trades, ctx)
+                            
+                            log_reasoning({
+                                'date': date_str, 'bar_time_utc': m1_bar.timestamp.isoformat(),
+                                'bar_time_et': m1_bar.timestamp.astimezone(_ff_ET).strftime('%H:%M'),
+                                'decision': 'pending_filled', 'no_trade_reason': '',
+                                'trade_entry': filled.entry, 'trade_direction': filled.direction
+                            })
                             pending_t = None
                 
                 # 2. Process OPEN trades
@@ -943,7 +958,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         # Liquidity Map events are Tier 1 footprints and override the ignition veto
         is_liquidity_map = str(candidate.setup_category).startswith('liquidity_map_')
         is_big_trade = str(candidate.setup_category) == 'big_trade_event'
-        if _ib_complete and not _is_ignition and not _in_early_exp and not (is_liquidity_map or is_big_trade):
+        if False:  # disabled: always run full analysis for every candidate bar
             _acc_hi  = _ign.get('accumulation_high', 0.0)
             _acc_lo  = _ign.get('accumulation_low', 0.0)
             _acc_mins = _ign.get('accumulation_mins', 0)
@@ -1034,8 +1049,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         last_eval_idx = bar_idx
         
         if getattr(fabio_signal, 'session_verdict', 'continue') == 'stop':
-            session_terminated = True
-            print(f"\n[STOP] [DYNAMIC EARLY STOP] Fabio decided to stop the session early at {bar_ts} because of current conditions.")
+            session_terminated = False  # disabled early stop to analyze the whole day
+            print(f"\n[INFO] Fabio proposed early stop at {bar_ts}, but continuing backtest to analyze the whole day.")
         if not quiet:
             print(f"dir={fabio_signal.direction} conf={fabio_signal.confidence} "
                   f"setup={fabio_signal.setup_type}")
@@ -1171,17 +1186,11 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 reason = 'fabio_direction_none'
         elif fabio_signal.setup_type == 'reversal':
             reason = 'veto_reversal_setup'
-        elif ignition.get('in_accumulation', False) and not ignition.get('is_ignition', False) \
-                and ignition.get('bars_since_ignition', -1) == -1:
-            # Mid-accumulation: no ignition yet, no early expansion window → block entry
-            acc_mins = ignition.get('accumulation_mins', 0)
-            acc_high = ignition.get('accumulation_high', 0.0)
-            acc_low  = ignition.get('accumulation_low', 0.0)
-            reason = (f'veto_mid_accumulation ({acc_mins}min zone [{acc_low:.2f}-{acc_high:.2f}], '
-                      f'waiting for ignition bar)')
-            print(f"  [IGNITION VETO] {reason}")
         elif candidate.session_bias in ['long', 'short'] and fabio_signal.direction != candidate.session_bias:
-            reason = f'veto_counter_trend (bias={candidate.session_bias}, direction={fabio_signal.direction})'
+            # INSTEAD OF VETO: We allow counter-trend trades (like Squeeze) but we flag them for HALVED RISK
+            reason = None
+            fabio_signal.setup_type = "counter_trend_squeeze" # Flag for the money manager
+            # We don't veto anymore!
         elif getattr(fabio_signal, 'imbalance_phase', 'none') == 'expansive':
             # User requested: "noi cerchiamo l'entrata perlopiù nel segnale confermato di expansive"
             # Do NOT veto expansive phase, allow the trade.
@@ -1706,6 +1715,12 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 
                 log_entry['decision'] = 'pending'
                 log_entry['no_trade_reason'] = f'limit_order_placed_at_{consensus.entry:.2f}'
+                log_entry['entry_type'] = 'limit_pending'
+                log_entry['trade_entry']  = consensus.entry
+                log_entry['trade_stop']   = consensus.stop
+                log_entry['trade_target'] = consensus.target
+                log_entry['trade_direction'] = consensus.direction
+                log_entry['pending_expires_at'] = expires_at.isoformat()
                 log_reasoning(log_entry)
             else:
                 # Execute at Market
@@ -1772,6 +1787,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 pending_t = None  # Cancel any pending trade to ensure only one active trade at a time
                 consensus.entry = open_t.entry 
                 consensus.stop = open_t.stop
+                open_t.entry_type = 'market'
+                open_t.signal_bar_time = candidate.bar.timestamp
                 print(f"  [TRADE OPEN] dir={consensus.direction} entry={consensus.entry:.2f} "
                       f"stop={consensus.stop:.2f} target={consensus.target:.2f} contracts={contracts} (Market Order)")
                 
@@ -1823,6 +1840,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
 
             # Cancel the pending trade completely to avoid scale-in / multiple active operations
             pending_t = None
+            open_t.entry_type = 'chaser'
+            open_t.signal_bar_time = candidate.bar.timestamp
             
             print(f"  [TRADE OPEN] (Chaser Override) dir={consensus.direction} entry={open_t.entry:.2f} "
                   f"stop={open_t.stop:.2f} target={open_t.target:.2f} contracts={override_contracts}")
@@ -1848,6 +1867,64 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 log_entry['no_trade_reason'] = 'existing_trade_active'
             
         log_reasoning(log_entry)
+
+    # EOD: check if any pending trade gets filled in the remaining bars
+    if pending_t is not None and bars_1min_ny:
+        eval_t = getattr(pending_t, 'last_eval_time', None) or pending_t.signal_bar.timestamp
+        remaining = [b for b in bars_1min_ny if b.timestamp > eval_t]
+        for m1_bar in remaining:
+            if m1_bar.timestamp >= pending_t.expires_at:
+                print(f"  [PENDING EXPIRED] Limit order at {pending_t.limit_price:.2f} expired without fill at EOD.")
+                pending_t = None
+                break
+            else:
+                filled = check_pending_fill(pending_t, m1_bar)
+                if filled:
+                    open_t = filled
+                    open_t.entry_type = 'limit_pending'
+                    open_t.signal_bar_time = pending_t.signal_bar.timestamp
+                    print(f"  [PENDING FILLED] Limit order triggered at EOD at {open_t.entry:.2f}!")
+                    sync_session_state(open_t, closed_trades, ctx)
+                    pending_t = None
+                    # Write a fill-event row to reasoning_log for dashboard visibility
+                    try:
+                        import pytz as _pf_pytz2
+                        _ET_pf = _pf_pytz2.timezone('America/New_York')
+                        fill_log = {
+                            'date': date_str,
+                            'bar_time_utc': m1_bar.timestamp.isoformat(),
+                            'bar_time_et': m1_bar.timestamp.astimezone(_ET_pf).strftime('%H:%M'),
+                            'bar_open': m1_bar.open, 'bar_high': m1_bar.high,
+                            'bar_low': m1_bar.low, 'bar_close': m1_bar.close,
+                            'bar_volume': m1_bar.volume, 'bar_delta': m1_bar.delta,
+                            'wall_level': open_t.entry,
+                            'wall_side': open_t.direction,
+                            'fabio_direction': open_t.direction,
+                            'fabio_confidence': 100,
+                            'fabio_setup': 'limit_fill_eod',
+                            'trade_direction': open_t.direction,
+                            'trade_entry': open_t.entry,
+                            'trade_stop': open_t.stop,
+                            'trade_target': open_t.target,
+                            'decision': 'trade',
+                            'entry_type': 'limit_pending',
+                            'signal_bar_time': open_t.signal_bar_time.isoformat() if open_t.signal_bar_time else None,
+                            'ib_high': ctx.ib_high, 'ib_low': ctx.ib_low,
+                            'day_type': ctx.day_type,
+                        }
+                        log_reasoning(fill_log)
+                    except Exception:
+                        pass
+                    
+                    # Now step this filled trade through the rest of the bars
+                    eval_t2 = getattr(open_t, 'entry_time', open_t.entry_bar.timestamp)
+                    remaining2 = [b2 for b2 in remaining if b2.timestamp > eval_t2]
+                    result = step_trade(open_t, remaining2) or close_eod(open_t, bars_1min_ny[-1])
+                    closed_trades.append(result)
+                    sync_session_state(None, closed_trades, ctx, equity_change=result.pnl_usd)
+                    log_trade_result(result)
+                    open_t = None
+                    break
 
     # EOD: close any trade still open after all candidates processed
     if open_t is not None and bars_1min_ny:

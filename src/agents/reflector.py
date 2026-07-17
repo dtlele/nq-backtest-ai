@@ -14,7 +14,7 @@ class LessonLearned(BaseModel):
 
 # Agente Riflessivo per l'apprendimento continuo
 reflector_agent = Agent(
-    model='openai:deepseek/deepseek-chat', # Usiamo DeepSeek
+    model='openai:z-ai/glm-5.2', # Usiamo DeepSeek
     output_type=LessonLearned,
     system_prompt=(
         "Sei il 'Cervello Riflessivo' di un Agente di Trading sul Nasdaq. "

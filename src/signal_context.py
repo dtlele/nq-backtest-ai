@@ -257,6 +257,61 @@ def build_amt_narrative(ctx: SessionContext, candidate: CandidateBar, ignition_i
 
     return "\n".join(narrative)
 
+def find_similar_trades(setup_category: str, direction: str, day_type: str) -> str:
+    from pathlib import Path
+    import json
+    
+    trades_path = Path(__file__).parent.parent / 'agent_memory' / 'trades_log.jsonl'
+    if not trades_path.exists():
+        return ""
+        
+    similar_trades = []
+    try:
+        with open(trades_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                trade = json.loads(line)
+                
+                score = 0
+                if str(trade.get('setup_type', '')).lower() == str(setup_category).lower():
+                    score += 3
+                if str(trade.get('direction', '')).lower() == str(direction).lower():
+                    score += 2
+                if str(trade.get('day_type', '')).lower() == str(day_type).lower():
+                    score += 1
+                    
+                if score >= 2:
+                    similar_trades.append((score, trade))
+    except Exception:
+        pass
+        
+    if not similar_trades:
+        return ""
+        
+    similar_trades.sort(key=lambda x: x[0], reverse=True)
+    top_trades = similar_trades[:3]
+    
+    lines = ["## HISTORICAL SIMILAR TRADES MEMORY (Few-Shot Context)"]
+    for score, t in top_trades:
+        entry_t = t.get('entry_time', '')
+        if 'T' in entry_t:
+            entry_t = entry_t.split('T')[0]
+        pnl = t.get('pnl_usd', 0.0)
+        pnl_ticks = t.get('pnl_ticks', 0.0)
+        exit_r = t.get('exit_reason', 'unknown')
+        
+        # Safe string slicing
+        fab_reas = str(t.get('fabio_reasoning', ''))
+        fab_reas_trunc = fab_reas[:150] + "..." if len(fab_reas) > 150 else fab_reas
+        
+        lines.append(
+            f"- Date: {entry_t} | Setup: {t.get('setup_type')} | Direction: {t.get('direction').upper()} | "
+            f"Result: {exit_r.upper()} (PnL: ${pnl:.2f}, {pnl_ticks:.1f} ticks) | "
+            f"Fabio's reasoning: {fab_reas_trunc}"
+        )
+    return "\n".join(lines)
+
 def build_fabio_question(candidate: CandidateBar, session_context: list = None, m1_bars: list[Bar] = None, market_narrative: str = "", bars_since_last: list[Bar] = None) -> str:
     templates = _load_templates()
     bar = candidate.bar
@@ -308,6 +363,7 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
                 suggested = 'short'  # below IB → downtrend → short continuation bias
             # inside IB: wall_side is the correct hint (no IB directional bias)
     
+    print(f"DEBUG_SUGGESTED: time={bar.timestamp} category={candidate.setup_category} ib_pos={ib_pos} wall_side={candidate.wall_side} suggested={suggested}")
     candidate.session_bias = suggested
     
     m5_sequence = _format_m5_sequence(candidate.recent_bars) if candidate.recent_bars else ""
@@ -497,40 +553,7 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
     if getattr(candidate, 'upcoming_news', None):
         question += f"\n\n## UPCOMING MACROECONOMIC NEWS CALENDAR\n{candidate.upcoming_news}\n"
 
-    # --- TRINITY TRIGGER CONTEXT ---
-    def get_bar_poc(b: Bar) -> float:
-        if not b.footprint:
-            return (b.high + b.low) / 2.0
-        best_p = 0.0
-        max_v = -1
-        for p_str, vols in b.footprint.items():
-            try:
-                v = vols.get('bid', 0) + vols.get('ask', 0)
-                if v > max_v:
-                    max_v = v
-                    best_p = float(p_str)
-            except Exception:
-                pass
-        return best_p if best_p > 0 else (b.high + b.low) / 2.0
 
-    if m1_bars and len(m1_bars) >= 3:
-        b0 = m1_bars[-1]
-        b1 = m1_bars[-2]
-        b2 = m1_bars[-3]
-        poc0 = get_bar_poc(b0)
-        poc1 = get_bar_poc(b1)
-        poc2 = get_bar_poc(b2)
-        
-        trinity_context = (
-            "## TRINITY TRIGGER CONTEXT (M1 Micro-structure)\n"
-            "Evaluate if the current M1 bar provides a valid Trinity Trigger entry confirmation:\n"
-            f"- Current M1 Body: Open={b0.open}, Close={b0.close} -> {'Bearish' if b0.close < b0.open else 'Bullish' if b0.close > b0.open else 'Doji'}\n"
-            f"- Current M1 Delta: {b0.delta}\n"
-            f"- POC sequence (Current vs Prev 2): {poc0} vs {poc1}, {poc2} -> "
-            f"({'Engulfing DOWN' if poc0 < poc1 and poc0 < poc2 else 'Engulfing UP' if poc0 > poc1 and poc0 > poc2 else 'Mixed/Choppy'})\n"
-            "REQUIREMENT: For a precision entry, the M1 candle must ideally have the body aligned with the trade, an expansive delta, and an engulfing POC. If the micro-structure is completely misaligned, it may be a fakeout. You must reason about this before entering.\n"
-        )
-        question += f"\n\n{trinity_context}"
 
     # --- POST-LOSS WARNING ---
     if ctx.session_memory:
@@ -552,6 +575,79 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
                         )
                         question += f"\n\n{post_loss_warning}"
                 break  # Only care about the most recent closed trade
+
+    # ── 1. 5-DAY ATR VOLATILITY CONTEXT ──
+    atr_5d = getattr(ctx, 'atr_5day', 180.0)
+    question += f"\n\n## 5-DAY ATR VOLATILITY CONTEXT\n"
+    question += f"The 5-day daily ATR is currently: {atr_5d:.2f} points.\n"
+    question += "CRITICAL: You MUST scale your Stop Loss and Profit Target based on this volatility. For NQ, a standard Stop Loss is approximately 0.25 * ATR, and a standard Profit Target is approximately 0.6 * ATR. Do not place micro-stops (below 20 points) in high ATR regimes.\n"
+
+    # ── 2. NEWS COUNTDOWN ALERT ──
+    if getattr(candidate, 'upcoming_news', None) and "HIGH IMPACT NEWS:" in candidate.upcoming_news:
+        question += f"\n\n🚨 [NEWS COUNTDOWN ALERT] 🚨\n"
+        question += f"{candidate.upcoming_news}\n"
+        question += "WARNING: High-impact economic releases generate unpredictable, toxic volatility. If the release is less than 10 minutes away (or occurred less than 5 minutes ago), you must EXPLICITLY justify if you want to take a trade, or veto/skip it (by outputting direction='none' or confidence < 65).\n"
+
+    # ── 3. AUTOMATED TEMPORAL AUDIT SCORE ──
+    h_m_et = t_et.hour * 60 + t_et.minute
+    if 12*60 <= h_m_et < 13*60 + 30:
+        q1 = 20
+    elif h_m_et >= 15*60: # PM session late
+        q1 = 50
+    else:
+        q1 = 95
+        
+    if 10*60 + 15 <= h_m_et < 10*60 + 30:
+        q2 = 20
+    else:
+        q2 = 95
+        
+    # q3: Delta alignment or Absorption conviction
+    is_absorption = (
+        candidate.setup_category == 'reversal' or 
+        'absorb' in str(candidate.setup_category).lower() or
+        'trapped' in str(candidate.setup_category).lower() or
+        'liquidity_map' in str(candidate.setup_category).lower()
+    )
+    if is_absorption:
+        if (suggested == 'long' and bar.delta < 0) or (suggested == 'short' and bar.delta > 0):
+            q3 = 90
+        else:
+            q3 = 50
+    else:
+        if (suggested == 'long' and bar.delta > 0) or (suggested == 'short' and bar.delta < 0):
+            q3 = 90
+        else:
+            q3 = 50
+        
+    # q4: Trend alignment or Reversal extremes
+    is_trend_aligned = False
+    if suggested in ['long', 'short']:
+        is_trend_aligned = True
+        
+    wick_ratio = getattr(candidate, 'bottom_wick_ratio', 0.0) if suggested == 'long' else getattr(candidate, 'top_wick_ratio', 0.0)
+    if is_trend_aligned:
+        q4 = 95
+    elif candidate.setup_category == 'reversal' and wick_ratio >= 0.35:
+        q4 = 90
+    else:
+        q4 = 40
+        
+    prox_dist = abs(bar.close - candidate.proximity_level) if candidate.proximity_level else 999.0
+    if prox_dist <= 3.0: # 12 ticks
+        q5 = 90
+    else:
+        q5 = 30
+
+    temporal_audit_str = f"q1:{q1}%, q2:{q2}%, q3:{q3}%, q4:{q4}%, q5:{q5}%"
+    question += f"\n\n## SYSTEM-COMPUTED TEMPORAL AUDIT SCORE\n"
+    question += f"{temporal_audit_str}\n"
+    question += "CRITICAL: The above percentages are calculated mathematically by the system. You MUST output this exact string in your 'temporal_audit' JSON field, and you MUST align your 'confidence' and 'direction' logic with these scores. If two or more scores are below 50%, your confidence must be below 65%.\n"
+
+    # ── 4. HISTORICAL SIMILAR TRADES MEMORY (Few-Shot Context) ──
+    similar_trades_str = find_similar_trades(candidate.setup_category, suggested, ctx.day_type)
+    if similar_trades_str:
+        question += f"\n\n{similar_trades_str}\n"
 
     return question
 

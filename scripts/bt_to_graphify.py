@@ -152,7 +152,7 @@ def main():
             f.write(md)
 
     print(f"Written to {MD_OUT_DIR}")
-    print(f"Next step: python -m graphify extract {MD_OUT_DIR} --backend openai --model deepseek/deepseek-chat")
+    print(f"Next step: python -m graphify extract {MD_OUT_DIR} --backend openai --model z-ai/glm-5.2")
 
 if __name__ == "__main__":
     main()

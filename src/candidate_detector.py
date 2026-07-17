@@ -428,17 +428,43 @@ def detect_m1_candidates(m1_bar, m5_recent: list, ctx: SessionContext, m1_histor
         candidates.append(cand)
         return candidates
         
-    # 2. NEW LOGIC: Trigger purely on Big Trades, regardless of being inside/outside IB
-    # We only pass M1 candidates that contain at least one Big Trade to avoid spam
-    if not m1_bar.big_trades:
-        return candidates
+    cand = None
+    if m1_bar.big_trades:
+        cand = generate_m1_candidate(m1_bar, m5_recent, ctx, m1_history=m1_history)
+        cand.setup_category = "big_trade_event"
+        cand.proximity_to = "big_trade_node"
+    else:
+        # Smart Filter: Check if price is testing a key level (lack of participation / absorption without big trades)
+        levels = _get_vp_levels(ctx)
+        is_testing_level = False
+        tested_level_name = "none"
+        
+        # Define interaction zone: e.g., 4 points (16 ticks) around a level
+        buffer = 4.0
+        for lvl, name in levels:
+            # If the bar's range intersects the level's buffer zone
+            if (m1_bar.low - buffer) <= lvl <= (m1_bar.high + buffer):
+                is_testing_level = True
+                tested_level_name = name
+                break
+                
+        # Check if structural breakout just occurred
+        is_breakout = False
+        if ctx.session_memory and ctx.session_memory[-1]['timestamp'] == m1_bar.timestamp:
+            if "BREAKOUT" in ctx.session_memory[-1]['text']:
+                is_breakout = True
+                
+        if is_breakout:
+            cand = generate_m1_candidate(m1_bar, m5_recent, ctx, m1_history=m1_history)
+            cand.setup_category = "structural_breakout"
+            cand.proximity_to = "none"
+        elif is_testing_level:
+            cand = generate_m1_candidate(m1_bar, m5_recent, ctx, m1_history=m1_history)
+            cand.setup_category = f"level_retest_{tested_level_name}"
+            cand.proximity_to = "key_level"
+            
+    if cand is not None:
+        candidates.append(cand)
 
-    cand = generate_m1_candidate(m1_bar, m5_recent, ctx, m1_history=m1_history)
-    
-    # Override setup_category and proximity_to to match new event-driven format
-    cand.setup_category = "big_trade_event"
-    cand.proximity_to = "big_trade_node"
-    
-    candidates.append(cand)
     return candidates
 

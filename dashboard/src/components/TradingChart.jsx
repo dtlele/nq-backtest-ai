@@ -681,6 +681,32 @@ export default function TradingChart({ trades = [], proposals = [], reasonings =
 
         if (entryTimeMs <= maxTimeMs) {
           const overlayId = `system_trade_${t0.entry_time}`;
+          // Extra marker: if this trade was filled from a pending, draw a line from signal bar to fill bar
+          const isPending = t0.entry_type === 'limit_pending' && t0.signal_bar_time;
+          if (isPending) {
+            const signalTimeMs = new Date(t0.signal_bar_time).getTime();
+            const fillTimeMs = entryTimeMs;
+            let snappedSignalTime = signalTimeMs;
+            if (formattedCandles.length) {
+              const sigs = formattedCandles.map(c => ({ c, diff: Math.abs(c.timestamp - signalTimeMs) }));
+              sigs.sort((a, b) => a.diff - b.diff);
+              snappedSignalTime = sigs[0].c.timestamp;
+            }
+            if (snappedSignalTime <= maxTimeMs) {
+              chart.createOverlay({
+                id: `system_pending_signal_${t0.entry_time}`,
+                name: 'labeledHLine',
+                points: [{ timestamp: snappedSignalTime, value: Number(t0.entry) }],
+                styles: {
+                  lineColor: t0.direction === 'short' ? 'rgba(255,120,120,0.7)' : 'rgba(120,255,120,0.7)',
+                  label: `⏳ PENDING ${(t0.direction||'').toUpperCase()} @${Number(t0.entry).toFixed(2)}`,
+                  lineStyle: 'dotted',
+                  lineWidth: 1.5,
+                },
+                lock: true,
+              });
+            }
+          }
           chart.createOverlay({
             id: overlayId,
             name: directionLong ? 'longPosition' : 'shortPosition',
@@ -694,6 +720,50 @@ export default function TradingChart({ trades = [], proposals = [], reasonings =
           });
         }
       });
+    }
+
+    // 5b. Render PENDING EXPIRED markers from reasonings
+    if (layers.trades && reasonings && reasonings.length && candles.length) {
+      reasonings
+        .filter(r => r.decision?.toLowerCase() === 'pending' && r.trade_entry && r.bar_time_utc)
+        .forEach((r, idx) => {
+          let rTimeMs = null;
+          if (r.bar_time_utc.includes('T')) {
+            rTimeMs = new Date(r.bar_time_utc).getTime();
+          } else {
+            rTimeMs = new Date(r.date + 'T' + r.bar_time_utc + ':00Z').getTime();
+          }
+          if (!rTimeMs || rTimeMs > maxTimeMs) return;
+
+          let snappedTime = rTimeMs;
+          if (formattedCandles.length) {
+            const diffs = formattedCandles.map(c => ({ c, diff: Math.abs(c.timestamp - rTimeMs) }));
+            diffs.sort((a, b) => a.diff - b.diff);
+            if (diffs[0].diff < 300000) snappedTime = diffs[0].c.timestamp;
+          }
+
+          // Only draw if no matching filled trade was spawned (check by entry price match)
+          const alreadyFilled = trades.some(t =>
+            t.entry_type === 'limit_pending' &&
+            Math.abs(Number(t.entry) - Number(r.trade_entry)) < 1.0 &&
+            Math.abs(new Date(t.signal_bar_time || t.entry_time).getTime() - rTimeMs) < 5 * 60 * 1000
+          );
+          if (alreadyFilled) return; // the fill overlay handles this one
+
+          const color = r.trade_direction === 'short' ? 'rgba(255,100,100,0.55)' : 'rgba(100,255,100,0.55)';
+          chart.createOverlay({
+            id: `system_pending_expired_${idx}`,
+            name: 'labeledHLine',
+            points: [{ timestamp: snappedTime, value: Number(r.trade_entry) }],
+            styles: {
+              lineColor: color,
+              label: `⏳ PENDING ${(r.trade_direction || '').toUpperCase()} @${Number(r.trade_entry).toFixed(2)} (expired)`,
+              lineStyle: 'dotted',
+              lineWidth: 1,
+            },
+            lock: true,
+          });
+        });
     }
 
 

@@ -49,6 +49,7 @@ def open_trade(consensus: ConsensusSignal, entry_bar: Bar, contracts: float = 1.
         consensus  = consensus,
         contracts  = contracts,
         entry_time = entry_time or entry_bar.timestamp,
+        signal_time = entry_bar.timestamp,
         last_eval_time = entry_time or entry_bar.timestamp,
         news_flag  = getattr(consensus, 'news_flag', 'none')
     )
@@ -65,6 +66,7 @@ def check_pending_fill(pending: PendingTrade, bar: Bar) -> OpenTrade | None:
             consensus=pending.consensus,
             contracts=pending.contracts,
             entry_time=bar.timestamp,
+            signal_time=getattr(pending, 'signal_time', bar.timestamp),
             news_flag=getattr(pending.consensus, 'news_flag', 'none')
         )
     elif pending.direction == 'short' and bar.high >= pending.limit_price:
@@ -77,6 +79,7 @@ def check_pending_fill(pending: PendingTrade, bar: Bar) -> OpenTrade | None:
             consensus=pending.consensus,
             contracts=pending.contracts,
             entry_time=bar.timestamp,
+            signal_time=getattr(pending, 'signal_time', bar.timestamp),
             news_flag=getattr(pending.consensus, 'news_flag', 'none')
         )
     return None
@@ -103,6 +106,7 @@ def _close(trade: OpenTrade, exit_price: float,
         pnl_ticks        = pnl_ticks,
         pnl_usd          = net_pnl_usd,  # Log Net PnL
         entry_time       = getattr(trade, 'entry_time', trade.entry_bar.timestamp),
+        signal_time      = getattr(trade, 'signal_time', None),
         exit_time        = exit_bar.timestamp,
         fabio_reasoning  = trade.consensus.fabio.reasoning,
         andrea_reasoning = trade.consensus.andrea.reasoning,
@@ -111,7 +115,9 @@ def _close(trade: OpenTrade, exit_price: float,
         r_ratio          = trade.consensus.r_ratio,
         contracts        = trade.contracts, # Log contracts used
         news_flag        = getattr(trade, 'news_flag', 'none'),
-        context_fingerprint = getattr(trade.consensus, 'context_fingerprint', '')
+        context_fingerprint = getattr(trade.consensus, 'context_fingerprint', ''),
+        entry_type       = getattr(trade, 'entry_type', 'market'),
+        signal_bar_time  = getattr(trade, 'signal_bar_time', None),
     )
     closed_t.amt_day_profile = getattr(trade, 'amt_day_profile', None)
     closed_t.macro_regime = getattr(trade, 'macro_regime', None)

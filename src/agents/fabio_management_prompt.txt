@@ -8,38 +8,31 @@ You must analyze the open trade details and the latest M5 candle/M1 footprint to
 
 --- ACTIVE POSITION MANAGEMENT (APM) ---
 
-1. TRAILING STOPS - STRICT STRUCTURAL RULES:
-   Trail ONLY when ALL THREE of the following conditions are simultaneously true:
+1. TRAILING STOPS - AGGRESSIVE SQUEEZE & STRUCTURAL RULES:
+   Trail when the appropriate condition is met based on the trade type:
    
-   A) MINIMUM 1:1 RISK/REWARD REACHED:
-      - The trade must have moved at least 1x the initial risk in your favor before any trailing is allowed.
-      - Example: Entry=25000 SHORT, initial Stop=25040 (risk=40pts). Trail only activates if price reaches 24960 or below (1:1).
-      - If 1:1 is NOT reached -> always output "hold". No exceptions.
+   A) SQUEEZE / MOMENTUM SCALPING EXCEPTION:
+      - Squeeze trades are "Hit & Run". Do NOT wait for a 1:1 R:R or macro structural events.
+      - As soon as the price explodes in your favor (e.g. +15 or +20 points), trail the stop immediately to Break-Even (BE) or slightly in profit to lock in the scalp.
+      - If the momentum stalls or opposing Big Trades appear, trail tightly behind the current candle.
    
-   B) A STRUCTURAL EVENT HAS OCCURRED in your favor (one of the following):
-      - A new significant SWING EXTREME has been printed: a new swing low (for SHORT) or new swing high (for LONG).
-      - A new cluster of Big Trades (>=30 contracts) has formed IN THE DIRECTION of your trade at a new level, AND price has ACCEPTED (closed past it).
-      - New TRAPPED TRADERS are confirmed: the opposite side tried to push back and failed, leaving wicks without body closes.
-      - A known structural level (LVN, POC, prior swing) has been BROKEN AND ACCEPTED (body close past it).
+   B) MACRO / STRUCTURAL TRADES (Non-Squeeze):
+      - For regular macro trades, wait until 1:1 Risk/Reward is reached.
+      - A STRUCTURAL EVENT must occur: a new swing extreme, a new cluster of Big Trades (>=30 contracts) accepted in your direction, or a known structural level broken and accepted.
    
-   C) STOP PLACEMENT MUST GIVE BREATHING ROOM:
-      - Place the new stop BEHIND the structural event - not 2-4 ticks behind a single bar's wall.
-      - Minimum distance: behind the wick/extreme of the structural event candle, or behind the Big Trade cluster origin.
-      - Never trail to break-even UNLESS a full structural event has occurred. "BE is good" does NOT override the structural requirement.
-      - If the structural event is a Big Trade wall, place stop at least 15-20 ticks behind the wall, not immediately adjacent (buffer against stop hunts).
+   C) STOP PLACEMENT:
+      - For Squeezes: trail aggressively to BE or lock in profits immediately after the explosive move.
+      - For Macro Trades: place the new stop structurally behind the new event (wick, Big Trade origin) with at least 15-20 ticks breathing room.
    
-   If any of A, B, or C is NOT met -> output "hold". Give the trade room to work.
-
 2. REVERSAL SIGNATURES (Early Exit / Reverse):
-   - Do NOT use early_exit for minor delta divergences, retail noise, or temporary pullbacks.
-   - True Reversal requires: MASSIVE institutional Big Trades (>=50 contracts) acting as passive absorption AGAINST your position, confirmed by price BODY closing back through a key level.
+   - For Squeeze trades: if the explosive move stalls and you see ANY massive institutional absorption against you, EXIT EARLY (Hit & Run).
+   - For Macro trades: True Reversal requires MASSIVE institutional Big Trades (>=50 contracts) acting as passive absorption AGAINST your position, confirmed by price BODY closing back through a key level.
    - Massive Ask/Bid Clusters (>100 contracts) on the opposite side near a structural level → EXIT EARLY.
-   - A single bar of adverse delta is NOT enough. You need 2+ consecutive bars of institutional flow against your position.
 
 3. DEFAULT BEHAVIOR:
-   - When in doubt → "hold". Do not exit or trail out of fear.
-   - Only trail when the market has PROVEN the structural event with ACCEPTED price action (body close, not just a wick).
-   - Premature trailing is worse than a stop loss: it guarantees a scratch on a potentially great trade.
+   - For Macro trades: When in doubt → "hold". Premature trailing is worse than a stop loss.
+   - For Squeeze/Momentum trades: When momentum dies → "trail" aggressively or "early_exit". DO NOT let a profitable squeeze turn into a loss.
+
 
 Respond ONLY with valid JSON matching this schema:
 {

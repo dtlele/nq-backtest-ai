@@ -26,8 +26,9 @@ def _load_knowledge_store() -> dict:
 import os as _os
 
 _LANG_SUFFIX = {
-    'zh': '\n\n⚠️ 重要：你的所有回答必须完全使用中文（普通话）。请用中文回答以上所有内容。',
+    'zh': '\n\n⚠️ 重要：你的所有回答 must be in Chinese.',
     'en': '\n\n⚠️ IMPORTANT: Your entire response MUST be in English only. Respond in English.',
+    'it': '\n\n⚠️ IMPORTANTE: La tua intera risposta deve essere scritta esclusivamente in lingua italiana. Rispondi in italiano.',
 }
 
 def _get_system_prompt() -> str:
@@ -89,7 +90,7 @@ You follow a high-conviction institutional approach based on Volume Profile and 
     # Statistical calibration hints (derived from 549 backtested trades)
     prompt += """BACKTEST CONVICTION PRIORS:
 1. IB + VA convergence is premium (59% WR). VAL/VAH alone without IB = weak (-15 conf).
-2. Big Trade size >= 1000 = strong. High volume but small Big Trade = retail trap (-10 conf).
+2. Big Trade size >= 150 = strong institutional activity. High volume but small Big Trade = retail trap (-10 conf).
 3. |Delta| >= 600 = directional commitment. |Delta| < 300 = chop (-10 conf).
 
 TEMPORAL AUDIT (0-100%):
@@ -397,6 +398,11 @@ def _get_auditor_system_prompt() -> str:
 Your job is to perform a rigorous second-stage audit of a trade proposed by our Reflex model.
 You have the final authority to confirm the trade, veto it (canceling it immediately), or optimize/adjust its Stop Loss (SL) and Take Profit (TP) levels to match the structural extremes (such as POC overnight, IB edges, VA boundaries, or key Big Trade walls).
 
+⚠️ CRITICAL AUDIT GUIDELINES:
+1. TREND DAYS ARE POWERFUL: On clear Trend Days (TREND_UP or TREND_DOWN), do NOT veto breakout or trend-continuation entries just because the price has already run ("hyper-extended") or because of small pullbacks. The trend is your friend. Confirm these setups.
+2. VETO SPAN LIMITS: Veto ONLY if there is a massive counter-trend block (e.g., >1500 contracts opposing) directly blocking the path, or if the price has clearly returned inside the IB range (indicating a fakeout).
+3. OPTIMIZE, DON'T VETO: If you feel the stop loss or target suggested by the Reflex model is slightly off but the direction is correct, do NOT veto. Instead, select "confirm" and provide the "adjusted_stop" and "adjusted_target" values.
+
 Respond ONLY with valid JSON matching this schema:
 {
   "decision": "confirm" | "veto",
@@ -427,11 +433,27 @@ def deep_audit(candidate: CandidateBar, reflex_signal: FabioSignal, session_cont
     from src.signal_context import _format_m1_sequence
     m1_sequence_text = _format_m1_sequence(m1_bars) if m1_bars else "No M1 sequence context."
     
+    # Load Active Dynamic Rules (Live corrections)
+    active_rules_str = ""
+    try:
+        from src.agents.dynamic_rules_manager import get_active_rules
+        active_rules = get_active_rules()
+        if active_rules:
+            active_rules_str += "## ACTIVE LIVE CORRECTIONS / DYNAMIC RULES (MUST STRICTLY FOLLOW):\n"
+            for r in active_rules:
+                active_rules_str += f"- [{r['rule_id']}] Topic: {r['topic']}\n"
+                active_rules_str += f"  Description: {r['description']}\n"
+                active_rules_str += f"  Required Action: {r['action']}\n"
+            active_rules_str += "\n"
+    except Exception as e:
+        print(f"Error loading active dynamic rules for auditor: {e}")
+
     # Session Context parameters
     import pytz
     ET = pytz.timezone('US/Eastern')
     
     user_msg = f"""## TRADING RULES (DISTILLED KNOWLEDGE)
+{active_rules_str}
 {rules_text}
 {context_text}
 
@@ -460,9 +482,9 @@ Perform a deep structural analysis using the Rules above.
 Respond with JSON only.
 """
     
-    # Force GLM 5.2 via OpenRouter for high-conviction audit
+    # Force DeepSeek via OpenRouter for high-conviction audit
     import os
-    model = "z-ai/glm-5.2"
+    model = "deepseek/deepseek-chat"
     
     raw = llm_ask(_get_auditor_system_prompt(), user_msg, model=model)
     if raw.startswith('```'):

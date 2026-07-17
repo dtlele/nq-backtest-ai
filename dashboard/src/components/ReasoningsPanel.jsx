@@ -39,10 +39,12 @@ export default function ReasoningsPanel({ reasonings = [], activeReasoning, onSe
       r.bar_time_et?.includes(searchTerm);
     
     const isApm = r.market_state === 'active_trade_mgmt' || r.fabio_setup === 'apm' || r.entry_type === 'apm';
+    const isPending = r.decision?.toLowerCase() === 'pending';
     if (filterType === 'all') return matchesSearch;
     if (filterType === 'apm') return matchesSearch && isApm;
-    if (filterType === 'trade') return matchesSearch && !isApm && r.decision?.toLowerCase() === 'trade';
+    if (filterType === 'trade') return matchesSearch && !isApm && (r.decision?.toLowerCase() === 'trade' || r.entry_type === 'limit_pending');
     if (filterType === 'no_trade') return matchesSearch && !isApm && r.decision?.toLowerCase() === 'no_trade';
+    if (filterType === 'pending') return matchesSearch && isPending;
     if (filterType === 'prefiltered') return matchesSearch && !isApm && r.decision?.toLowerCase() === 'prefiltered';
     return matchesSearch;
   });
@@ -50,12 +52,18 @@ export default function ReasoningsPanel({ reasonings = [], activeReasoning, onSe
   const getDecisionBadgeClass = (d) => {
     if (d?.toLowerCase() === 'trade') return 'tag-win';
     if (d?.toLowerCase() === 'no_trade') return 'tag-nav';
+    if (d?.toLowerCase() === 'pending') return 'tag-hold';
     return 'tag-hold';
   };
 
   const getDecisionLabel = (r) => {
     if (r.decision?.toLowerCase() === 'trade') {
+      const isLimitFill = r.entry_type === 'limit_pending' || r.fabio_setup === 'limit_fill' || r.fabio_setup === 'limit_fill_eod';
+      if (isLimitFill) return `✅ LIMIT FILL ${(r.fabio_direction||'').toUpperCase()}`;
       return r.direction?.toUpperCase() === 'LONG' ? '🟩 LONG TRADE' : '🟥 SHORT TRADE';
+    }
+    if (r.decision?.toLowerCase() === 'pending') {
+      return `⏳ PENDING ${(r.trade_direction || r.fabio_direction || '').toUpperCase()} @${r.trade_entry ? Number(r.trade_entry).toFixed(2) : ''}`;
     }
     if (r.decision?.toLowerCase() === 'no_trade') return '🚫 NO TRADE';
     return '⚡ SKIPPED';
@@ -82,7 +90,7 @@ export default function ReasoningsPanel({ reasonings = [], activeReasoning, onSe
           }}
         />
         <div style={{ display: 'flex', gap: 4 }}>
-          {['all', 'apm', 'trade', 'no_trade', 'prefiltered'].map(type => (
+          {['all', 'apm', 'trade', 'pending', 'no_trade', 'prefiltered'].map(type => (
             <button
               key={type}
               onClick={() => setFilterType(type)}

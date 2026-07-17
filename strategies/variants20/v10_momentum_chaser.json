@@ -1,0 +1,13 @@
+{
+  "strategy_id": "v10_momentum_chaser",
+  "target_mode": "structural",
+  "max_risk_buffer_pct": 0.05,
+  "cooldown_minutes": 15,
+  "no_trade_conditions": [
+    "bar volume < 3000",
+    "bar time < 09:40 ET",
+    "already in open trade"
+  ],
+  "fabio_nlm_question_template": "Date: {date}. Bar at {bar_time_et} ET. Price: {close}.\n\n{amt_narrative}\n\n[DATI TECNICI]\nIVB: {ib_high}-{ib_low} ({ib_range} pts). POC: {poc}, VA: {va_high}-{va_low}. LVNs: {lvn_levels}. Big trades: {wall_trade_count} trades, {wall_total_size} contracts at ~{wall_level}, side: {wall_side}. Vol: {bar_volume}, delta: {bar_delta}, pos: {ib_position}. MS: {market_structure}. Phase: {temporal_phase}. Day: {day_type}.\n\n[DECISIONE]\nCRITICAL RULE: Ignore walls. If MS is BREAKOUT UP and delta > 500, buy market immediately. Speed rule: MAX 2 SENTENCES. Direction={suggested_direction}. Conf 0-100.",
+  "fabio_imbalance_question_template": "Date: {date}. Bar at {bar_time_et} ET. Price: {close}.\n\n{amt_narrative}\n\n[DATI TECNICI]\nIVB: {ib_high}-{ib_low} ({ib_range} pts). POC: {poc}, VA: {va_high}-{va_low}. LVNs: {lvn_levels}. Big trades: {wall_trade_count} trades, {wall_total_size} contracts at ~{wall_level}, side: {wall_side}. Vol: {bar_volume}, delta: {bar_delta}, pos: {ib_position}. MS: {market_structure}. Phase: {temporal_phase}. Day: {day_type}.\n\n[DECISIONE]\nCRITICAL RULE: Ignore walls. If MS is BREAKOUT UP and delta > 500, buy market immediately. Speed rule: MAX 2 SENTENCES. Direction={suggested_direction}. Conf 0-100."
+}

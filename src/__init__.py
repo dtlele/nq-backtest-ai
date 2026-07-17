@@ -15,8 +15,8 @@ TICK_BUCKET_SIZE        = 0.25
 # ── Session / Timing (ET = America/New_York) ──────────────────────────────────
 NY_WINDOW_START_H       = 9
 NY_WINDOW_START_M       = 25
-NY_WINDOW_END_H         = 12
-NY_WINDOW_END_M         = 30
+NY_WINDOW_END_H         = 16
+NY_WINDOW_END_M         = 0
 FABIO_ACTIVE_H          = 9
 FABIO_ACTIVE_M          = 55       # Trade attivi da 09:55 ET (pochi minuti prima che IVB sia completa)
 IB_DURATION_MIN         = 30       # IVB = prima mezz'ora RTH (09:30 - 10:00 ET)
@@ -31,7 +31,7 @@ BIG_TRADE_LOOKBACK_BARS = 3        # 3 M5 bars = 15 min lookback for wall cluste
 RECENT_BARS_CONTEXT     = 6        # M5 bars of context sent to agents (30 min)
 
 # ── Agent thresholds ──────────────────────────────────────────────────────────
-FABIO_MIN_CONFIDENCE       = 65  # Auditor threshold: 65 allows confident signals (65-69) from full-context audit without missing valid trades due to GLM non-determinism
+FABIO_MIN_CONFIDENCE       = 70  # Auditor threshold: 70 aligned with reference run baseline
 ANDREA_VETO_THRESHOLD      = 40
 LIGHT_CONFIDENCE_THRESHOLD = 0    # disabled: always run full analysis for every candidate bar
 
@@ -105,6 +105,7 @@ class SessionContext:
     ib_breakouts_count: int = 0          # How many times IB has been broken this session
     ib_first_breakout_dir: str = 'none'  # 'long'|'short'|'none' — direction of the FIRST IB breakout
     active_walls: List['LiquidityWall'] = field(default_factory=list) # Permanent liquidity map nodes
+    atr_5day: float = 180.0
 
 @dataclass
 class CandidateBar:
@@ -191,13 +192,16 @@ class OpenTrade:
     target: float
     entry_bar: Bar
     consensus: ConsensusSignal
-    contracts: float = 1.0         # NEW: Dynamic position size
+    contracts: int = 1         # NEW: Dynamic position size
     news_flag: str = "none"
+    signal_time: Optional[datetime] = None
     partial_taken: bool = False
     entry_time: Optional[datetime] = None
     last_eval_time: Optional[datetime] = None
     bars_seen: list = field(default_factory=list)
     bars_stalling_vs_poc: int = 0
+    entry_type: str = "market"       # 'market' | 'limit_pending' | 'chaser'
+    signal_bar_time: Optional[datetime] = None  # when the original signal was generated (for pending orders)
 
 @dataclass
 class PendingTrade:
@@ -228,6 +232,9 @@ class ClosedTrade:
     setup_type: str
     final_confidence: int
     r_ratio: float
-    contracts: float = 1.0         # NEW: Contracts used for this trade
+    contracts: int = 1         # NEW: Contracts used for this trade
     news_flag: str = "none"
+    signal_time: Optional[datetime] = None
     context_fingerprint: str = ""
+    entry_type: str = "market"       # 'market' | 'limit_pending' | 'chaser'
+    signal_bar_time: Optional[datetime] = None  # when the original signal was generated (for pending orders)
