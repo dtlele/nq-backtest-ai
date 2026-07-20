@@ -85,10 +85,13 @@ def _get_system_prompt() -> str:
 
 
     # JSON Schema definition
-    prompt += """Respond ONLY with valid JSON matching this schema:
+    prompt += """You are now the CHIEF PORTFOLIO MANAGER (Fabio). You will receive reports from your 3 Expert Analysts (AMT, Order Flow, Technical).
+Your job is to synthesize their reports, resolve any conflicting bias, and make the final trading decision.
+
+Respond ONLY with valid JSON matching this schema:
 {
-  "reasoning": "<MAX 100 WORDS. Provide a detailed Order Flow narrative. Explain exactly which side is trapped (Effort vs No Result), how the delta confirms the absorption or initiative, and justify the exact structural placement of the stop loss behind a verified volume node or Big Trade wall. ALWAYS ADD AN EXTRA 10 TICKS BUFFER BEHIND THE STRUCTURAL LEVEL TO PREVENT STOP RUNS.>",
-  "market_narrative_update": "<Provide an evolving narrative of the trading session. CRITICAL: Review your previous reasonings (Session Context) against what the market actually did afterwards (Bars Since Last). If you were wrong or missed a move, explicitly acknowledge the mistake and adjust your current bias/logic. How has the macro context shifted?>",
+  "reasoning": "<MAX 100 WORDS. Synthesize the reports. Explain the final bias, which side is trapped, and justify the structural placement of the stop loss. ALWAYS ADD AN EXTRA 10 TICKS BUFFER BEHIND THE STRUCTURAL LEVEL.>",
+  "market_narrative_update": "<Provide an evolving narrative of the trading session based on the reports.>",
   "setup_type": "squeeze" | "reversal" | "ivb_breakout" | "exhaustion" | "imbalance_hunting" | "none",
   "direction": "long" | "short" | "none",
   "confidence": <int 0-100>,
@@ -169,14 +172,31 @@ def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list
     rules_text, context_text = build_tiered_knowledge(topics, store)
     question = build_fabio_question(candidate, session_context=session_context, m1_bars=m1_bars, market_narrative=market_narrative, bars_since_last=bars_since_last)
     
-    # Bypass NotebookLM: inject distilled knowledge directly
-    base_user_msg = f"## TRADING RULES (DISTILLED KNOWLEDGE)\n{rules_text}\n{context_text}\n\n## TASK\n{question}\n\nAnalyze this setup using the Rules above. Respond with JSON only."
+    # Base user msg containing all context
+    base_user_msg = f"## TRADING RULES (DISTILLED KNOWLEDGE)\n{rules_text}\n{context_text}\n\n## TASK\n{question}\n\n"
     
-    user_msg = base_user_msg
+    # 1. AMT Analyst
+    amt_prompt = "You are the AMT (Auction Market Theory) Analyst. Focus on Value Area High/Low, POC, Initial Balance, and Single Prints. Are we in balance (acceptance) or imbalance (exploration)? Respond with a concise paragraph summarizing your bias (Long/Short/Neutral) and the key AMT levels."
+    amt_report = llm_ask(amt_prompt, base_user_msg + "Analyze the setup strictly from an AMT perspective.")
+    
+    # 2. Footprint/Order Flow Analyst
+    flow_prompt = "You are the Order Flow & Footprint Analyst. Focus on Delta, imbalances, trapped traders, and volume walls. Who has control at the micro level? Respond with a concise paragraph summarizing your bias (Long/Short/Neutral) and the key order flow dynamics."
+    flow_report = llm_ask(flow_prompt, base_user_msg + "Analyze the setup strictly from an Order Flow perspective.")
+    
+    # 3. Technical Analyst
+    tech_prompt = "You are the Technical Structure Analyst. Focus on VWAP, standard deviations, moving averages, and general price action setups. Respond with a concise paragraph summarizing your bias (Long/Short/Neutral) and the structural logic."
+    tech_report = llm_ask(tech_prompt, base_user_msg + "Analyze the setup strictly from a Technical Structure perspective.")
+    
+    # 4. Chief / Portfolio Manager
+    chief_prompt = _get_system_prompt()
+    chief_msg = base_user_msg + f"## EXPERT REPORTS\n\n### AMT Analyst Report\n{amt_report}\n\n### Order Flow Analyst Report\n{flow_report}\n\n### Technical Analyst Report\n{tech_report}\n\n"
+    chief_msg += "You are the Chief Portfolio Manager. Read the expert reports above, evaluate any divergences, and make the final trading decision. Respond with JSON only."
+    
+    user_msg = chief_msg
     last_error = ""
     
     for attempt in range(3):
-        raw = llm_ask(_get_system_prompt(), user_msg)
+        raw = llm_ask(chief_prompt, user_msg)
         if raw.startswith('```'):
             raw = raw.split('```')[1].lstrip('json').strip()
 
@@ -190,16 +210,18 @@ def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list
             if direction == 'long' and entry is not None and stop is not None:
                 if stop >= entry:
                     last_error = f"ERROR: You generated a backward stop for a LONG trade. Stop ({stop}) must be BELOW Entry ({entry}). Please recalculate and output valid JSON."
-                    user_msg = base_user_msg + f"\n\n{last_error}"
+                    user_msg = chief_msg + f"\n\n{last_error}"
                     continue
                     
             if direction == 'short' and entry is not None and stop is not None:
                 if stop <= entry:
                     last_error = f"ERROR: You generated a backward stop for a SHORT trade. Stop ({stop}) must be ABOVE Entry ({entry}). Please recalculate and output valid JSON."
-                    user_msg = base_user_msg + f"\n\n{last_error}"
+                    user_msg = chief_msg + f"\n\n{last_error}"
                     continue
                     
             # If we get here, it's valid
+            # We also attach the sub-reports inside the reasoning or as a side-note for auditing.
+            combined_reasoning = data.get('reasoning', '') + f" [AMT Bias: {amt_report[:50]}... | Flow: {flow_report[:50]}...]"
             return FabioSignal(
                 direction   = direction,
                 confidence  = int(data.get('confidence', 0)),
@@ -207,14 +229,14 @@ def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list
                 stop        = stop,
                 target      = data.get('target'),
                 setup_type  = data.get('setup_type', 'none'),
-                reasoning   = data.get('reasoning', ''),
+                reasoning   = combined_reasoning,
                 market_narrative_update = data.get('market_narrative_update', ''),
-                nlm_answer  = "Bypassed",
+                nlm_answer  = "Multi-Agent Synthesis",
             )
             
         except json.JSONDecodeError as e:
             last_error = f"JSON parse error: {e}"
-            user_msg = base_user_msg + f"\n\nERROR: {last_error}. Please output strictly valid JSON."
+            user_msg = chief_msg + f"\n\nERROR: {last_error}. Please output strictly valid JSON."
 
     # If it fails 3 times, return none
     return FabioSignal(
@@ -222,7 +244,7 @@ def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list
         entry=None, stop=None, target=None,
         setup_type='none',
         reasoning=f'Failed after 3 attempts. Last error: {last_error}',
-        nlm_answer="Bypassed",
+        nlm_answer="Failed Synthesis",
     )
 
 def _get_management_system_prompt() -> str:
