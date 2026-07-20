@@ -130,6 +130,16 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
         day_type        = ctx.day_type,
         suggested_direction = suggested,
     )
+    # Append GEX options structure context
+    gex_info = (
+        f"\n\n## OPTIONS MARKET STRUCTURE (GEX DATA)\n"
+        f"- Current GEX Regime: {ctx.gex_regime.upper()} (Volatility expectation: "
+        f"{'Chop/Mean-Reversion' if ctx.gex_regime == 'positive' else 'Trend/Expansion'})\n"
+        f"- Zero Gamma Flip Level: {ctx.zero_gamma_level:.2f}\n"
+        f"- Call Wall (Major Option Resistance): {ctx.call_wall:.2f}\n"
+        f"- Put Wall (Major Option Support): {ctx.put_wall:.2f}"
+    )
+    question += gex_info
     # Add previous day VP context for reference levels
     if ctx.prev_day_vp:
         pvp = ctx.prev_day_vp
@@ -200,6 +210,15 @@ def build_andrea_question(candidate: CandidateBar,
         wall_side       = candidate.wall_side,
         wall_trade_count= candidate.wall_trade_count,
     )
+    # Append GEX options structure context
+    gex_info = (
+        f"\n\n## OPTIONS MARKET STRUCTURE (GEX DATA)\n"
+        f"- Current GEX Regime: {ctx.gex_regime.upper()}\n"
+        f"- Zero Gamma Flip Level: {ctx.zero_gamma_level:.2f}\n"
+        f"- Call Wall: {ctx.call_wall:.2f}\n"
+        f"- Put Wall: {ctx.put_wall:.2f}"
+    )
+    question += gex_info
     if ctx.prev_day_vp:
         pvp = ctx.prev_day_vp
         question += (

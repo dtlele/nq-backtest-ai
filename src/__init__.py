@@ -81,6 +81,10 @@ class SessionContext:
     prev_day_vp: Optional[VolumeProfile] = None  # yesterday's session VP
     day_type: str = 'unknown'  # 'trend_up'|'trend_down'|'balance'|'unknown'
     day_type_history: List[str] = field(default_factory=list)  # history of day_type over session
+    gex_regime: str = "positive"  # 'positive' | 'negative'
+    zero_gamma_level: float = 0.0
+    call_wall: float = 0.0
+    put_wall: float = 0.0
 
 @dataclass
 class CandidateBar:
@@ -146,6 +150,8 @@ class OpenTrade:
     consensus: ConsensusSignal
     contracts: int = 1         # NEW: Dynamic position size
     news_flag: str = "none"
+    signal_time: Optional[datetime] = None
+
 
 @dataclass
 class PendingTrade:
@@ -178,3 +184,5 @@ class ClosedTrade:
     r_ratio: float
     contracts: int = 1         # NEW: Contracts used for this trade
     news_flag: str = "none"
+    signal_time: Optional[datetime] = None
+

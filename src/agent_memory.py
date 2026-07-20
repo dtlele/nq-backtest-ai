@@ -84,6 +84,7 @@ def log_trade_result(closed_trade) -> None:
         'andrea_reasoning': closed_trade.andrea_reasoning,
         'contracts': closed_trade.contracts,
         'news_flag': getattr(closed_trade, "news_flag", "none"),
+        'signal_time': closed_trade.signal_time.isoformat() if closed_trade.signal_time else None,
         'logged_at': datetime.now(timezone.utc).isoformat(),
     }
     with open(TRADES_FILE, 'a', encoding='utf-8') as f:

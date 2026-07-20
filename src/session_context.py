@@ -89,8 +89,13 @@ def update_day_type(ctx: SessionContext, bars: list) -> str:
     return new_type
 
 def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None) -> SessionContext:
+    from src.gex_manager import load_gex_for_date
     ib_high, ib_low = compute_ib(bars)
     initial_day_type = classify_day_type(bars)
+    
+    opening_price = bars[0].open if bars else None
+    gex_metrics = load_gex_for_date(date_str, overnight_vp=vp, opening_price=opening_price)
+
     ctx = SessionContext(
         date=date_str,
         ib_high=ib_high,
@@ -102,5 +107,9 @@ def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None) -> Se
         day_type=initial_day_type,
         # initialize history list
         day_type_history=[initial_day_type],
+        gex_regime=gex_metrics["gex_regime"],
+        zero_gamma_level=gex_metrics["zero_gamma_level"],
+        call_wall=gex_metrics["call_wall"],
+        put_wall=gex_metrics["put_wall"],
     )
     return ctx

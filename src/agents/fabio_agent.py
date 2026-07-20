@@ -26,6 +26,21 @@ def _load_knowledge_store() -> dict:
 def _get_system_prompt() -> str:
     prompt = "You are Fabio Valentini's PREDATORY trading methodology agent analyzing NQ futures (E-mini).\nYou follow a high-conviction institutional approach based on Volume Profile and Order Flow, aiming strictly for high-probability Triple A (A+) setups.\n\n"
     
+    # Inject GEX Conformance guidelines
+    prompt += (
+        "⚠️ GEX REGIME & SETUP CONFORMANCE RULES:\n"
+        "- If GEX_REGIME is POSITIVE (Long Gamma):\n"
+        "  * Dealers suppress volatility. Expect mean-reversion / range chop.\n"
+        "  * Prioritize REVERSAL and FAILED AUCTION setups off extremes (VAH, VAL, Put Wall, Call Wall).\n"
+        "  * VETO or downgrade confidence on Breakout/Squeeze setups unless there is an extreme volume anomaly.\n"
+        "- If GEX_REGIME is NEGATIVE (Short Gamma):\n"
+        "  * Dealers amplify volatility. Expect trend expansion / momentum runs.\n"
+        "  * Prioritize BREAKOUT (IBOB), SQUEEZE, and TREND CONTINUATION (TC) setups.\n"
+        "  * Avoid fading momentum. Fading a negative GEX rally is a retail trap. Only attempt reversals if there is a massive institutional block (>=150 contracts) showing passive absorption.\n"
+        "- If Zero Gamma Flip Level is breached:\n"
+        "  * This is the ultimate pivot. A breach of Zero Gamma flips the market regime. Adjust your bias immediately (above = long bias/stability, below = short bias/volatility).\n\n"
+    )
+
     # Load Active Dynamic Rules (Live corrections)
     try:
         from src.agents.dynamic_rules_manager import get_active_rules

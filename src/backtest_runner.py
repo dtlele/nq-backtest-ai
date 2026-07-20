@@ -220,6 +220,12 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
                 if pending_t is not None:
                     if m1_bar.timestamp >= pending_t.expires_at:
                         print(f"  [PENDING EXPIRED] Limit order at {pending_t.limit_price} expired without fill.")
+                        log_reasoning({
+                            'date': date_str, 'bar_time_utc': m1_bar.timestamp.isoformat(),
+                            'bar_time_et': m1_bar.timestamp.astimezone(_ff_ET).strftime('%H:%M'),
+                            'decision': 'pending_expired', 'no_trade_reason': 'expired without fill',
+                            'trade_entry': pending_t.limit_price, 'trade_direction': pending_t.direction
+                        })
                         pending_t = None
                     else:
                         filled = check_pending_fill(pending_t, m1_bar)
@@ -234,6 +240,13 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
                             else:
                                 open_t = filled
                                 print(f"  [PENDING FILLED] Limit order triggered at {open_t.entry}!")
+                            
+                            log_reasoning({
+                                'date': date_str, 'bar_time_utc': m1_bar.timestamp.isoformat(),
+                                'bar_time_et': m1_bar.timestamp.astimezone(_ff_ET).strftime('%H:%M'),
+                                'decision': 'pending_filled', 'no_trade_reason': '',
+                                'trade_entry': filled.entry, 'trade_direction': filled.direction
+                            })
                             pending_t = None
                 
                 # 2. Process OPEN trades
@@ -719,6 +732,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, fabio_onl
                     expires_at=candidate.bar.timestamp + timedelta(minutes=15)
                 )
                 print(f"  [PENDING] Limit order placed at {limit_price} (waiting for pullback). Expires at {pending_t.expires_at.strftime('%H:%M UTC')}")
+                log_entry['decision'] = 'pending'
             else:
                 open_t        = open_trade(consensus, candidate.bar, contracts=contracts)
                 print(f"  [TRADE OPEN] dir={consensus.direction} entry={consensus.entry} "

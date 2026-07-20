@@ -6,7 +6,7 @@ from src.risk_manager import calculate_commissions
 INSTRUMENT = 'MNQ'
 TICK_VALUE = 0.50 # MNQ ($0.50 per tick)
 
-def open_trade(consensus: ConsensusSignal, entry_bar: Bar, contracts: int = 1) -> OpenTrade:
+def open_trade(consensus: ConsensusSignal, entry_bar: Bar, contracts: int = 1, signal_time = None) -> OpenTrade:
     return OpenTrade(
         direction  = consensus.direction,
         entry      = consensus.entry,
@@ -15,6 +15,7 @@ def open_trade(consensus: ConsensusSignal, entry_bar: Bar, contracts: int = 1) -
         entry_bar  = entry_bar,
         consensus  = consensus,
         contracts  = contracts,  # NEW: Store number of contracts
+        signal_time = signal_time if signal_time else entry_bar.timestamp
     )
 
 def check_pending_fill(pending: PendingTrade, bar: Bar) -> OpenTrade | None:
@@ -27,7 +28,8 @@ def check_pending_fill(pending: PendingTrade, bar: Bar) -> OpenTrade | None:
             target=pending.target,
             entry_bar=bar,
             consensus=pending.consensus,
-            contracts=pending.contracts
+            contracts=pending.contracts,
+            signal_time=pending.signal_bar.timestamp
         )
     elif pending.direction == 'short' and bar.high >= pending.limit_price:
         return OpenTrade(
@@ -37,7 +39,8 @@ def check_pending_fill(pending: PendingTrade, bar: Bar) -> OpenTrade | None:
             target=pending.target,
             entry_bar=bar,
             consensus=pending.consensus,
-            contracts=pending.contracts
+            contracts=pending.contracts,
+            signal_time=pending.signal_bar.timestamp
         )
     return None
 
@@ -70,6 +73,7 @@ def _close(trade: OpenTrade, exit_price: float,
         final_confidence = trade.consensus.final_confidence,
         r_ratio          = trade.consensus.r_ratio,
         contracts        = trade.contracts, # Log contracts used
+        signal_time      = trade.signal_time,
     )
 
 def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False) -> 'ClosedTrade | None':
