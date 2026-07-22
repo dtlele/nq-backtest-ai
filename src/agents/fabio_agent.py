@@ -322,6 +322,23 @@ def _fmt_bars_recent(candidate: CandidateBar, max_bars: int = 6) -> str:
     return "\n".join(lines)
 
 
+def _fmt_big_trades_recent(candidate: CandidateBar, direction: str = None, lookback: int = 6) -> str:
+    """Big Trades dalle ultime N barre, opzionalmente filtrati per lato.
+    Usa sia recent_bars che eventuali raw_bars sul candidate.
+    Ritorna lista compatta: ts price size is_buy"""
+    bars = (candidate.recent_bars or [])[-lookback:]
+    big_trades = []
+    for b in bars:
+        for bt in getattr(b, 'big_trades', []) or []:
+            # bt: oggetto con .price .size .is_buy (ordinefootprint)
+            ts = getattr(b, 'timestamp', None)
+            hhmm = ts.strftime('%H:%M') if ts else '??'
+            big_trades.append(f"{hhmm} @ {bt.price:.2f} size={bt.size} {'BUY' if getattr(bt, 'is_buy', None) else 'SELL'}")
+    if not big_trades:
+        return "(no significant Big Trades in recent bars)"
+    return "\n".join(big_trades[-15:])  # max 15 per non esplodere il prompt
+
+
 def _build_snapshot(candidate: CandidateBar, market_narrative: str,
                     session_context: list = None) -> str:
     """Snapshot strutturato COMPLETO per gli esperti LLM.
@@ -373,6 +390,9 @@ ATR5: {ctx.atr_5day} | News: {candidate.upcoming_news}
 
 ## RECENT BARS (M5, ultimi {6})
 {_fmt_bars_recent(candidate)}
+
+## BIG TRADES (ultimi 6 bar M5, lato corretto del trade proposto)
+{_fmt_big_trades_recent(candidate, direction=None)}
 
 ## EVOLVING NARRATIVE
 {market_narrative or '(none)'}
