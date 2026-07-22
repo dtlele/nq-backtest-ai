@@ -19,6 +19,19 @@ def _last_confirmed_swing(bars: list, direction: str, lookback: int = 40, k: int
     return swings[-1] if swings else None
 
 
+def _donchian_trail_stop(trade, lookback: int = 20, tick: float = 0.25):
+    """Trailing stop da range Donchian (stile Turtle): finestra max 40 barre,
+    uscita asimmetrica sul canale corto a 20 barre. O(1) per barra — zero LLM.
+    Long: minimo delle ultime 20 barre - 1 tick. Short: massimo + 1 tick."""
+    bars = (trade.bars_seen or [])[-40:]
+    if len(bars) < 5:
+        return None
+    win = bars[-lookback:] if len(bars) > lookback else bars
+    if trade.direction == 'long':
+        return min(b.low for b in win) - tick
+    return max(b.high for b in win) + tick
+
+
 def _structural_stop_after_partial(trade, buffer: float = 0.5) -> float:
     """Stop post-partial: MAI semplice breakeven. Dietro l'ultimo swing
     confermato (40-bar window); se lo swing e' sopra l'entry, e' profit locked.
@@ -225,16 +238,20 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
             if bar.high >= trade.target:
                 return _close(trade, trade.target, 'target', bar)
             
-            # --- 4. SWING TRAILING strutturale (LONG) — finestra 40 M1 ---
-            # Sostituisce il vecchio micro-POC trail + stall-exit che soffocava
-            # il runner. Lo stop segue gli swing low confermati, mai il rumore.
+            # --- 4. RANGE TRAIL 40-BAR (Donchian) + SWING (LONG) ---
+            # Gestione post-partial: il runner segue il minimo a 20 barre del
+            # range a 40 (Turtle) combinato con gli swing low confermati.
+            # Prende il piu' stretto dei due — mai sopra il prezzo, mai allarga.
             if risk_points > 0 and trade.partial_taken and len(trade.bars_seen) >= 7:
-                swing = _last_confirmed_swing(trade.bars_seen, 'long')
-                if swing is not None:
-                    swing_stop = swing - 0.5
-                    if swing_stop > trade.stop and swing_stop < bar.close:
-                        print(f"  [SWING TRAIL] swing low={swing:.2f}. Stop UP: {trade.stop:.2f} -> {swing_stop:.2f}")
-                        trade.stop = swing_stop
+                d_stop = _donchian_trail_stop(trade, lookback=20)
+                s_swing = _last_confirmed_swing(trade.bars_seen, 'long')
+                swing_stop = (s_swing - 0.5) if s_swing is not None else None
+                cands = [s for s in (d_stop, swing_stop) if s is not None]
+                if cands:
+                    best = max(cands)
+                    if best > trade.stop and best < bar.close:
+                        print(f"  [RANGE TRAIL] donchian20={d_stop} swing={swing_stop}. Stop UP: {trade.stop:.2f} -> {best:.2f}")
+                        trade.stop = best
                 
             # --- 5. Check Stop Loss Hit ---
             if bar.low <= trade.stop:
@@ -284,14 +301,17 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
             if bar.low <= trade.target:
                 return _close(trade, trade.target, 'target', bar)
             
-            # --- 4. SWING TRAILING strutturale (SHORT) — finestra 40 M1 ---
+            # --- 4. RANGE TRAIL 40-BAR (Donchian) + SWING (SHORT) ---
             if risk_points > 0 and trade.partial_taken and len(trade.bars_seen) >= 7:
-                swing = _last_confirmed_swing(trade.bars_seen, 'short')
-                if swing is not None:
-                    swing_stop = swing + 0.5
-                    if swing_stop < trade.stop and swing_stop > bar.close:
-                        print(f"  [SWING TRAIL] swing high={swing:.2f}. Stop DOWN: {trade.stop:.2f} -> {swing_stop:.2f}")
-                        trade.stop = swing_stop
+                d_stop = _donchian_trail_stop(trade, lookback=20)
+                s_swing = _last_confirmed_swing(trade.bars_seen, 'short')
+                swing_stop = (s_swing + 0.5) if s_swing is not None else None
+                cands = [s for s in (d_stop, swing_stop) if s is not None]
+                if cands:
+                    best = min(cands)
+                    if best < trade.stop and best > bar.close:
+                        print(f"  [RANGE TRAIL] donchian20={d_stop} swing={swing_stop}. Stop DOWN: {trade.stop:.2f} -> {best:.2f}")
+                        trade.stop = best
                 
             # --- 5. Check Stop Loss Hit ---
             if bar.high >= trade.stop:

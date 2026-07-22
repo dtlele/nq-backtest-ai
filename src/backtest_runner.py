@@ -1532,6 +1532,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
 
             # Enforce Minimax R:R constraint (minimum 1.8 R:R to avoid overtrading/chasing)
             MIN_ACCEPTABLE_RR = 1.8
+            _measured_move = False
             if consensus.r_ratio < MIN_ACCEPTABLE_RR and risk_points > 0:
                 print(f"  [TARGET OPTIMIZATION] Structural R:R ({consensus.r_ratio}) is too tight (< {MIN_ACCEPTABLE_RR}). Finding next valid structural level...")
                 
@@ -1589,15 +1590,34 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                     consensus.r_ratio = round(abs(consensus.target - consensus.entry) / risk_points, 2)
                     print(f"  [TARGET ADJUSTED] Target updated to {consensus.target:.2f} to achieve a better R:R of {consensus.r_ratio}")
                 else:
-                    if consensus.direction == 'long':
-                        consensus.target = consensus.entry + (risk_points * MIN_ACCEPTABLE_RR)
+                    # NESSUN LIVELLO STRUTTURALE: il vecchio fallback FABRICAVA un
+                    # target a 1.8R fisso nel vuoto. Dottrina desk: il gate R:R sta
+                    # all'ENTRY. Senza struttura davanti, o sei in price discovery
+                    # (drive regime → measured move = estensione range IB) oppure
+                    # il trade non va preso.
+                    from src.agents.institutional_bias import compute_institutional_bias
+                    _b = compute_institutional_bias(candidate)
+                    _drive_aligned = (_b.regime == 'drive_up' and consensus.direction == 'long') or \
+                                     (_b.regime == 'drive_down' and consensus.direction == 'short')
+                    _ib_rng = getattr(ctx, 'ib_range', 0) or 0
+                    if _drive_aligned and _ib_rng > 0:
+                        consensus.target = (consensus.entry + _ib_rng) if consensus.direction == 'long' \
+                                           else (consensus.entry - _ib_rng)
+                        consensus.r_ratio = round(abs(consensus.target - consensus.entry) / risk_points, 2)
+                        _measured_move = True
+                        print(f"  [TARGET MEASURED MOVE] {_b.regime}: price discovery, nessuna struttura. "
+                              f"Target = estensione IB ({_ib_rng:.0f}pt) -> {consensus.target:.2f} (R:R {consensus.r_ratio})")
                     else:
-                        consensus.target = consensus.entry - (risk_points * MIN_ACCEPTABLE_RR)
-                    consensus.r_ratio = MIN_ACCEPTABLE_RR
-                    print(f"  [TARGET FALLBACK] No structural level found. Enforcing fixed R:R of {MIN_ACCEPTABLE_RR} -> Target: {consensus.target:.2f}")
-                
-            # Final R:R Veto check
-            if consensus.r_ratio < MIN_ACCEPTABLE_RR:
+                        print(f"  [VETO] Nessun target strutturale (R:R {consensus.r_ratio:.2f}) e non siamo in drive: "
+                              f"location senza obiettivo reale, il gate R:R appartiene all'entry.")
+                        log_entry['decision'] = 'no_trade'
+                        log_entry['no_trade_reason'] = f'no_structural_target (rr={consensus.r_ratio:.2f}, regime={_b.regime})'
+                        log_reasoning(log_entry)
+                        continue
+            
+            # Final R:R Veto check (measured-move in drive: accetta >= 1.2, il trail gestisce il resto)
+            _min_rr_final = 1.2 if locals().get('_measured_move') else MIN_ACCEPTABLE_RR
+            if consensus.r_ratio < _min_rr_final:
                 print(f"  [VETO] Target R:R ({consensus.r_ratio}) is too tight (< {MIN_ACCEPTABLE_RR}). Vetoing trade to avoid chasing/hyper-extended risk.")
                 log_entry['decision'] = 'no_trade'
                 log_entry['no_trade_reason'] = f'rr_too_tight_{consensus.r_ratio:.2f}_lt_{MIN_ACCEPTABLE_RR}'
