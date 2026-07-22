@@ -530,7 +530,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                         
                     if m1_bar.timestamp > getattr(open_t, 'entry_time', open_t.entry_bar.timestamp) and should_run_apm:
                         print(f"  [MANAGEMENT] Active {open_t.direction.upper()} trade open at {m1_bar.timestamp.strftime('%H:%M UTC')}. Consulting Fabio APM...")
-                        m1_context = get_m1_context(bars_1min_ny, m1_bar)
+                        m1_context = get_m1_context(bars_1min_ny, m1_bar, context_before=40)  # finestra 40 barre M1
                         
                         from src import CandidateBar
                         dummy_cand = CandidateBar(bar=m1_bar, session_ctx=ctx, wall_level=open_t.entry, wall_side='none', wall_trade_count=0, wall_max_size=0, proximity_to='none', proximity_level=0, bars_in_session=0, is_second_test=False)
@@ -1224,16 +1224,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
             # per 15min. Il mercato ti sta mitragliando: non rientrare uguale.
             reason = f'cooldown_2loss_hard ({cooldown_block_dir})'
         elif fabio_signal.setup_type == 'reversal':
-            # Non piu' veto cieco: il reversal e' valutato a merito rispetto alla
-            # bias istituzionale. Contro un drive/lean forte = veto; allineato
-            # o in regime rotational = consentito (fix audit 3.4).
-            from src.agents.institutional_bias import compute_institutional_bias
-            _bias = compute_institutional_bias(candidate)
-            if _bias.opposes(fabio_signal.direction) and abs(_bias.score) >= 25:
-                reason = (f'reversal_against_bias (dir={fabio_signal.direction} vs '
-                          f'bias={_bias.direction} score={_bias.score:+.0f} regime={_bias.regime})')
-            else:
-                reason = None  # REVERSAL APPROVATO (bias allineata o rotational)
+            reason = 'reversal_disabled'  # sospesi: loss sistematici (2/2 nella run scalper)
         elif candidate.session_bias in ['long', 'short'] and fabio_signal.direction != candidate.session_bias:
             # INSTEAD OF VETO: We allow counter-trend trades (like Squeeze) but we flag them for HALVED RISK
             reason = None

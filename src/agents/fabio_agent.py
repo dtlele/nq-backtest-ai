@@ -240,6 +240,11 @@ def validate_narrative_decision(direction: str, conviction: str, reasoning: str,
        - auction initiative + poc_migration contro + setup reversal/pullback
          → veto 'counter_initiative'.
     """
+    # 0) REVERSAL DISABILITATI (evidenza empirica: tutti i loss della run
+    #    scalper sono reversal a conviction med; i pullback con-bias pagano 3/3)
+    if candidate.setup_category == 'reversal':
+        return False, "VETO: reversal_disabled (setup reversal sospesi: loss sistematici a conf med)", conviction
+
     # 1) coerenza testo↔direzione
     if direction in ('long', 'short') and _reasoning_contradicts(direction, reasoning):
         return False, f"VETO: narrative_contradiction (reasoning descrive scenario opposto a {direction})", conviction
@@ -550,15 +555,53 @@ def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list
     return _finalize_decision(data, flow_report, candidate, levels, raw)
 
 def _get_management_system_prompt() -> str:
-    return "You are Fabio Valentini's active risk management agent.\nRespond in JSON: {\"decision\": \"hold|trail|early_exit\", \"new_stop\": float|null}"
+    return """You are the trade-management desk for an NQ orderflow scalper.
+You manage an OPEN position using a 40-bar M1 window: swing highs/lows, delta
+evolution, walls, VWAP position.
+
+MANAGEMENT DOCTRINE (a real desk lets winners breathe):
+- 'hold' while the trade structure is INTACT: higher lows (long) / lower highs
+  (short), delta not flipping against you, price on the right side of VWAP.
+- 'trail' ONLY when a NEW confirmed swing forms: set new_stop just beyond that
+  swing (below swing low for long, above swing high for short). NEVER widen.
+- 'early_exit' ONLY on clear invalidation: delta flip + break of the last
+  swing, or failed auction back through entry. A pullback to a higher low is
+  NOT invalidation — do not scratch winners.
+Respond in JSON: {"decision": "hold|trail|early_exit", "new_stop": float|null, "reason": "<max 20 words>"}"""
+
+def _fmt_m1_window(m1_bars: list, max_bars: int = 40) -> str:
+    bars = (m1_bars or [])[-max_bars:]
+    if not bars:
+        return "(no M1 context)"
+    lines = []
+    for b in bars:
+        ts = getattr(b, 'timestamp', None)
+        hhmm = ts.strftime('%H:%M') if ts else '??'
+        lines.append(f"{hhmm} O={b.open:.2f} H={b.high:.2f} L={b.low:.2f} C={b.close:.2f} V={b.volume} D={b.delta:+d}")
+    return "\n".join(lines)
 
 def manage_active_trade(trade, candidate: CandidateBar, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> dict:
-    trade_context = f"\nDir: {trade.direction}, Entry: {trade.entry}, Stop: {trade.stop}, Price: {candidate.bar.close}"
-    msg = f"{trade_context}\nAnalyze and decide."
-    raw = llm_ask(_get_management_system_prompt(), msg)
+    risk = abs(trade.entry - trade.stop)
+    cur = candidate.bar.close
+    pnl = (cur - trade.entry) if trade.direction == 'long' else (trade.entry - cur)
+    rr = pnl / risk if risk > 0 else 0
+    trade_context = (f"OPEN TRADE: dir={trade.direction} entry={trade.entry} stop={trade.stop} "
+                     f"target={getattr(trade, 'target', None)} price={cur} | open PnL={pnl:+.1f}pt ({rr:+.2f}R)")
+    msg = (f"{trade_context}\n\n## 40-BAR M1 WINDOW (oldest->newest)\n{_fmt_m1_window(m1_bars, 40)}"
+           f"\n\n## NARRATIVE\n{market_narrative or '(none)'}\n\nDecide: hold / trail / early_exit.")
+    raw = llm_ask(_get_management_system_prompt(), msg, model=SCALPER_MODEL)
     if raw.startswith('```'): raw = raw.split('```')[1].lstrip('json').strip()
     try:
         data = json.loads(raw)
-        return {"decision": data.get("decision", "hold"), "new_stop": data.get("new_stop"), "new_target": None, "reasoning": ""}
-    except:
+        decision = data.get("decision", "hold")
+        new_stop = data.get("new_stop")
+        # Safety: mai allargare lo stop
+        if decision == 'trail' and new_stop is not None:
+            if trade.direction == 'long' and new_stop <= trade.stop:
+                new_stop = None; decision = 'hold'
+            elif trade.direction == 'short' and new_stop >= trade.stop:
+                new_stop = None; decision = 'hold'
+        return {"decision": decision, "new_stop": new_stop, "new_target": None,
+                "reasoning": data.get("reason", "")}
+    except Exception:
         return {"decision": "hold", "new_stop": None, "new_target": None, "reasoning": "parse error"}

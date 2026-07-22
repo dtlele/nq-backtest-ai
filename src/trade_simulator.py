@@ -2,6 +2,35 @@ from src import (Bar, ConsensusSignal, OpenTrade, ClosedTrade, PendingTrade,
                  NQ_TICK_SIZE, NQ_TICK_VALUE)
 from src.risk_manager import calculate_commissions
 
+def _last_confirmed_swing(bars: list, direction: str, lookback: int = 40, k: int = 3):
+    """Ultimo swing CONFERMATO nella finestra (default 40 barre M1).
+    Swing low (long): low di una barra che e' il minimo delle k barre prima/dopo.
+    Swing high (short): simmetrico. Solo swing confermati (k barre a destra),
+    quindi struttura reale — non rumore dell'ultima barra."""
+    win = bars[-lookback:]
+    swings = []
+    for i in range(k, len(win) - k):
+        if direction == 'long':
+            if all(win[i].low <= win[j].low for j in range(i - k, i + k + 1) if j != i):
+                swings.append(win[i].low)
+        else:
+            if all(win[i].high >= win[j].high for j in range(i - k, i + k + 1) if j != i):
+                swings.append(win[i].high)
+    return swings[-1] if swings else None
+
+
+def _structural_stop_after_partial(trade, buffer: float = 0.5) -> float:
+    """Stop post-partial: MAI semplice breakeven. Dietro l'ultimo swing
+    confermato (40-bar window); se lo swing e' sopra l'entry, e' profit locked.
+    Fallback BE solo se non esiste ancora struttura."""
+    swing = _last_confirmed_swing(trade.bars_seen or [], trade.direction)
+    if swing is None:
+        return trade.entry
+    if trade.direction == 'long':
+        return max(trade.entry, swing - buffer)
+    return min(trade.entry, swing + buffer)
+
+
 def _compute_micro_poc(bars: list) -> float:
     """Compute the POC (price of control) from a list of M1 bars.
     Used for intra-trade dynamic trailing based on live volume profile."""
@@ -166,7 +195,9 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
                 partial_closed = _close(trade, partial_exit_price, 'partial_tp', bar)
                 trade.contracts = orig_contracts - closed_contracts
                 trade.partial_taken = True
-                trade.stop = trade.entry  # Move remaining to Break Even!
+                # Stop STRUTTURALE post-partial (dietro ultimo swing 40-bar),
+                # non semplice BE: il runner deve avere spazio per respirare.
+                trade.stop = _structural_stop_after_partial(trade)
                 if on_partial_close:
                     on_partial_close(partial_closed)
             
@@ -194,26 +225,16 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
             if bar.high >= trade.target:
                 return _close(trade, trade.target, 'target', bar)
             
-            # --- 4. POC Trailing / Accumulation Detection (LONG) ---
-            if risk_points > 0:
-                profit_so_far = bar.close - trade.entry
-                if profit_so_far >= MIN_RR_FOR_POC_TRAIL * risk_points and len(trade.bars_seen) >= 3:
-                    micro_poc = _compute_micro_poc(trade.bars_seen)
-                    if micro_poc > 0:
-                        poc_trail_active = True
-                        poc_trail_stop = micro_poc - (POC_TRAIL_BUFFER_TICKS * 0.25)
-                        # Only move stop UP (never down for a long)
-                        if poc_trail_stop > trade.stop and poc_trail_stop < bar.close:
-                            print(f"  [POC TRAIL] Micro POC={micro_poc:.2f}. Trailing stop UP: {trade.stop:.2f} -> {poc_trail_stop:.2f}")
-                            trade.stop = poc_trail_stop
-                        # Stall detection: price closed below the micro POC
-                        if bar.close < micro_poc:
-                            trade.bars_stalling_vs_poc += 1
-                            if trade.bars_stalling_vs_poc >= MAX_STALL_BARS:
-                                print(f"  [ACCUMULATION EXIT] Price stalled below POC={micro_poc:.2f} for {MAX_STALL_BARS} bars. Exiting early.")
-                                return _close(trade, bar.close, 'poc_accumulation_exit', bar)
-                        else:
-                            trade.bars_stalling_vs_poc = 0  # reset if price re-crosses above POC
+            # --- 4. SWING TRAILING strutturale (LONG) — finestra 40 M1 ---
+            # Sostituisce il vecchio micro-POC trail + stall-exit che soffocava
+            # il runner. Lo stop segue gli swing low confermati, mai il rumore.
+            if risk_points > 0 and trade.partial_taken and len(trade.bars_seen) >= 7:
+                swing = _last_confirmed_swing(trade.bars_seen, 'long')
+                if swing is not None:
+                    swing_stop = swing - 0.5
+                    if swing_stop > trade.stop and swing_stop < bar.close:
+                        print(f"  [SWING TRAIL] swing low={swing:.2f}. Stop UP: {trade.stop:.2f} -> {swing_stop:.2f}")
+                        trade.stop = swing_stop
                 
             # --- 5. Check Stop Loss Hit ---
             if bar.low <= trade.stop:
@@ -234,7 +255,8 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
                 partial_closed = _close(trade, partial_exit_price, 'partial_tp', bar)
                 trade.contracts = orig_contracts - closed_contracts
                 trade.partial_taken = True
-                trade.stop = trade.entry  # Move remaining to Break Even!
+                # Stop STRUTTURALE post-partial (dietro ultimo swing 40-bar)
+                trade.stop = _structural_stop_after_partial(trade)
                 if on_partial_close:
                     on_partial_close(partial_closed)
             
@@ -262,26 +284,14 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
             if bar.low <= trade.target:
                 return _close(trade, trade.target, 'target', bar)
             
-            # --- 4. POC Trailing / Accumulation Detection (SHORT) ---
-            if risk_points > 0:
-                profit_so_far = trade.entry - bar.close
-                if profit_so_far >= MIN_RR_FOR_POC_TRAIL * risk_points and len(trade.bars_seen) >= 3:
-                    micro_poc = _compute_micro_poc(trade.bars_seen)
-                    if micro_poc > 0:
-                        poc_trail_active = True
-                        poc_trail_stop = micro_poc + (POC_TRAIL_BUFFER_TICKS * 0.25)
-                        # Only move stop DOWN (never up for a short)
-                        if poc_trail_stop < trade.stop and poc_trail_stop > bar.close:
-                            print(f"  [POC TRAIL] Micro POC={micro_poc:.2f}. Trailing stop DOWN: {trade.stop:.2f} -> {poc_trail_stop:.2f}")
-                            trade.stop = poc_trail_stop
-                        # Stall detection: price closed above micro POC
-                        if bar.close > micro_poc:
-                            trade.bars_stalling_vs_poc += 1
-                            if trade.bars_stalling_vs_poc >= MAX_STALL_BARS:
-                                print(f"  [ACCUMULATION EXIT] Price stalled above POC={micro_poc:.2f} for {MAX_STALL_BARS} bars. Exiting early.")
-                                return _close(trade, bar.close, 'poc_accumulation_exit', bar)
-                        else:
-                            trade.bars_stalling_vs_poc = 0
+            # --- 4. SWING TRAILING strutturale (SHORT) — finestra 40 M1 ---
+            if risk_points > 0 and trade.partial_taken and len(trade.bars_seen) >= 7:
+                swing = _last_confirmed_swing(trade.bars_seen, 'short')
+                if swing is not None:
+                    swing_stop = swing + 0.5
+                    if swing_stop < trade.stop and swing_stop > bar.close:
+                        print(f"  [SWING TRAIL] swing high={swing:.2f}. Stop DOWN: {trade.stop:.2f} -> {swing_stop:.2f}")
+                        trade.stop = swing_stop
                 
             # --- 5. Check Stop Loss Hit ---
             if bar.high >= trade.stop:
