@@ -168,6 +168,18 @@ def compute_institutional_bias(candidate) -> InstitutionalBias:
         score -= 5
         drivers.append(f"market_structure={ms}")
 
+    # ── 8. FAILED AUCTION = BIAS SHIFT (per Fabio e' IL setup) ──────────────
+    # Breakout IB rientrato nel range = iniziativa fallita, non drive.
+    sh = getattr(ctx, 'session_high', 0) or 0
+    sl = getattr(ctx, 'session_low', float('inf'))
+    if ib_high > 0 and ib_range > 0:
+        if sh > ib_high and bar.close < ib_high:
+            score -= 20
+            drivers.append("FAILED AUCTION sopra IB_high (rientro nel range) = bias shift ribassista")
+        if sl < ib_low and bar.close > ib_low:
+            score += 20
+            drivers.append("FAILED AUCTION sotto IB_low (rientro nel range) = bias shift rialzista")
+
     score = max(-100.0, min(100.0, score))
     return InstitutionalBias(score=score, regime=_regime(score), drivers=drivers)
 

@@ -178,6 +178,51 @@ def _reasoning_contradicts(direction: str, reasoning: str) -> bool:
     return False
 
 
+def _et_time(candidate) -> tuple:
+    """(hour, minute) ET del candidate bar. Bar.timestamp e' UTC."""
+    try:
+        from zoneinfo import ZoneInfo
+        ts = candidate.bar.timestamp
+        if ts.tzinfo is None:
+            from datetime import timezone
+            ts = ts.replace(tzinfo=timezone.utc)
+        et = ts.astimezone(ZoneInfo('America/New_York'))
+        return et.hour, et.minute
+    except Exception:
+        return 12, 0  # fail-open a mezzogiorno (nessun gate orario)
+
+
+def _time_gate(candidate, bias) -> tuple:
+    """Gate orario da desk orderflow. Ritorna (ok, veto_reason).
+    - 9:30-9:45 ET: opening rotation, rumore puro → no entry.
+    - 11:45-13:15 ET: lunch chop → consentito SOLO se allineato a un drive
+      (in lunch il drive continua; il chop punisce il mean-reversion).
+    - dopo 15:15 ET: nessuna nuova posizione (chiusura/EOD risk).
+    """
+    h, m = _et_time(candidate)
+    t = h * 60 + m
+    if t < 9 * 60 + 45:
+        return False, f"VETO: opening_rotation (entry alle {h:02d}:{m:02d} ET, prime 15min = rumore)"
+    if t >= 15 * 60 + 15:
+        return False, f"VETO: late_session (entry alle {h:02d}:{m:02d} ET, no nuove posizioni dopo 15:15)"
+    if 11 * 60 + 45 <= t < 13 * 60 + 15 and not bias.is_drive:
+        return False, (f"VETO: lunch_chop ({h:02d}:{m:02d} ET, regime {bias.regime}: "
+                       "solo drive-aligned consentito in lunch)")
+    return True, ""
+
+
+def _participation_gate(candidate) -> tuple:
+    """Segnale su volume sotto media recente = rumore, non iniziativa."""
+    recent = (getattr(candidate, 'recent_bars', None) or [])[-6:-1]
+    vols = [getattr(b, 'volume', 0) for b in recent if getattr(b, 'volume', 0) > 0]
+    if len(vols) >= 3:
+        avg = sum(vols) / len(vols)
+        if candidate.bar.volume < 0.5 * avg:
+            return False, (f"VETO: low_participation (vol {candidate.bar.volume} < 50% "
+                           f"media recente {avg:.0f}: non e' iniziativa istituzionale)")
+    return True, ""
+
+
 def validate_narrative_decision(direction: str, conviction: str, reasoning: str,
                                 candidate: CandidateBar, flow_report: dict) -> tuple:
     """Validatore meccanico post-LLM. Ritorna (ok, reason, conviction_capped).
@@ -228,6 +273,28 @@ def validate_narrative_decision(direction: str, conviction: str, reasoning: str,
     # 4) INSTITUTIONAL BIAS GATE — deterministico, funziona anche nella PRIMA
     #    ORA dove il day-type gate e' cieco (fix dei 2 short killer del 03/02).
     bias = compute_institutional_bias(candidate)
+
+    # 5) GATE ORARIO da desk (opening rotation / lunch chop / late session)
+    ok, reason = _time_gate(candidate, bias)
+    if not ok:
+        return False, reason, conviction
+
+    # 6) PARTECIPAZIONE: segnale su volume sotto media = rumore, non iniziativa
+    ok, reason = _participation_gate(candidate)
+    if not ok:
+        return False, reason, conviction
+
+    # 7) ESAURIMENTO: IB gia' > 80% ATR e pomeriggio → il movimento e' fatto;
+    #    with-trend tardi = comprare il top. Cap conviction (non veto: il drive
+    #    puo' continuare, ma non a piena convinzione).
+    h_et, _ = _et_time(candidate)
+    ib_rng = getattr(candidate.session_ctx, 'ib_range', 0) or 0
+    atr = getattr(candidate.session_ctx, 'atr_5day', 0) or 0
+    if (atr > 0 and ib_rng > 0.8 * atr and h_et >= 13
+            and direction == bias.direction and conviction == 'high'):
+        conviction = 'med'
+
+    # 8) BIAS GATE vero e proprio (drive / reversal contro bias / lean cap)
     ok, reason, conviction = bias_gate(direction, candidate.setup_category,
                                        conviction, bias)
     if not ok:
@@ -338,10 +405,35 @@ def _finalize_decision(data: dict, flow_report: dict, candidate: CandidateBar,
 
     if direction == 'long':
         stop = anchor_price - buffer
-        target = entry_price + (entry_price - stop) * 1.5
     else:
         stop = anchor_price + buffer
-        target = entry_price - (stop - entry_price) * 1.5
+
+    risk_points_pre = abs(entry_price - stop)
+
+    # TARGET STRUTTURALE (non un multiplo R nel vuoto): il desk esce al livello
+    # opposto — POC/VAH/VAL/IB edges/VWAP/prev-day VP — il primo a distanza >= 1R
+    # nella direzione del trade. Fallback 1.5R solo se non c'e' struttura utile.
+    def _structural_target(direction, entry, risk):
+        cands = []
+        ctx = candidate.session_ctx
+        for v in levels.values():
+            if v['price'] > 0:
+                cands.append((v['name'], v['price']))
+        if ctx.ib_high > 0:
+            cands += [('IB_high', ctx.ib_high), ('IB_low', ctx.ib_low)]
+        pvp = getattr(ctx, 'prev_day_vp', None)
+        if pvp is not None:
+            for nm, pr in [('prevVAH', getattr(pvp, 'va_high', 0)), ('prevPOC', getattr(pvp, 'poc', 0)),
+                           ('prevVAL', getattr(pvp, 'va_low', 0))]:
+                if pr:
+                    cands.append((nm, pr))
+        if direction == 'long':
+            valid = sorted(p for _, p in cands if p >= entry + risk)
+            return valid[0] if valid else entry + risk * 1.5
+        valid = sorted((p for _, p in cands if p <= entry - risk), reverse=True)
+        return valid[0] if valid else entry - risk * 1.5
+
+    target = _structural_target(direction, entry_price, risk_points_pre)
 
     # RISK VALIDATOR
     risk_points = abs(entry_price - stop)

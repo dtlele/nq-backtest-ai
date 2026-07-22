@@ -814,8 +814,9 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         # OPT: extract M1 context for Fabio V3 Unified (reduced to 7 bars to save tokens and latency)
         m1_bars = get_m1_context(bars_1min_ny, candidate.bar, context_before=7)
 
-        # INTELLIGENT COOLDOWN (2-Loss Rule)
+        # INTELLIGENT COOLDOWN (2-Loss Rule) — ora MECCANICO, non solo narrativo
         current_narrative = market_narrative
+        cooldown_block_dir = None
         if len(recent_losses) >= 2:
             loss1 = recent_losses[-2]
             loss2 = recent_losses[-1]
@@ -826,6 +827,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 
                 # Apply cooldown for 15 minutes after the SECOND loss
                 if time_since_last_loss.total_seconds() < 15 * 60:
+                    cooldown_block_dir = loss2['direction']  # HARD BLOCK stessa direzione
                     mins_ago = int(time_since_last_loss.total_seconds() // 60)
                     loss_dir = loss2['direction'].upper()
                     cooldown_warning = (
@@ -1184,6 +1186,10 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 reason = f'fabio_confidence={fabio_signal.confidence} < {required_confidence}'
             else:
                 reason = 'fabio_direction_none'
+        elif cooldown_block_dir and fabio_signal.direction == cooldown_block_dir:
+            # 2 stop consecutivi stessa direzione entro 20min → blocco meccanico
+            # per 15min. Il mercato ti sta mitragliando: non rientrare uguale.
+            reason = f'cooldown_2loss_hard ({cooldown_block_dir})'
         elif fabio_signal.setup_type == 'reversal':
             # Non piu' veto cieco: il reversal e' valutato a merito rispetto alla
             # bias istituzionale. Contro un drive/lean forte = veto; allineato
