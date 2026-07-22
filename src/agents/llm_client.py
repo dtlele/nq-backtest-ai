@@ -250,7 +250,8 @@ def _ask_human(system_prompt: str, user_msg: str) -> str:
 
 # ── OpenRouter backend ─────────────────────────────────────────────────────────
 
-def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None, model: str = None) -> str:
+def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None, model: str = None,
+                    reasoning_effort: str = None, max_tokens: int = None) -> str:
     import os
     from pathlib import Path
     import time
@@ -308,9 +309,12 @@ def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None, m
         try:
             extra_body_params = {}
             if model == "z-ai/glm-5.2":
-                # Inject reasoning effort: high to drop CoT latency under 5 seconds (supported level)
+                # Reasoning effort: env GLM_REASONING_EFFORT (default high) o override per-call.
+                # 'low' per reflex da scalping (CoT breve = latenza ~5-10s invece di ~40s),
+                # 'high' solo per deep audit dove la qualita' del ragionamento conta.
+                effort = reasoning_effort or os.environ.get("GLM_REASONING_EFFORT", "high")
                 extra_body_params["reasoning"] = {
-                    "effort": "high",
+                    "effort": effort,
                     "exclude": False
                 }
 
@@ -320,7 +324,7 @@ def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None, m
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content}
                 ],
-                max_tokens=8192,
+                max_tokens=max_tokens or int(os.environ.get("LLM_MAX_TOKENS", "8192")),
                 extra_headers={
                     "HTTP-Referer": "http://localhost:8000",
                     "X-Title": "AgentForge Backtester",
@@ -377,8 +381,10 @@ def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None, m
 
 def llm_ask(system_prompt: str, user_msg: str, timeout: int = 120,
             use_cache: bool = True, video_path: str = None,
-            provider: str = None, model: str = None) -> str:
-    key = _cache_key(system_prompt, user_msg, video_path, provider, model)
+            provider: str = None, model: str = None,
+            reasoning_effort: str = None, max_tokens: int = None) -> str:
+    key = _cache_key(system_prompt, user_msg, video_path, provider,
+                     f"{model}|eff={reasoning_effort}|mt={max_tokens}" if (reasoning_effort or max_tokens) else model)
 
     if provider is None:
         provider = _get_provider()
@@ -400,7 +406,8 @@ def llm_ask(system_prompt: str, user_msg: str, timeout: int = 120,
     if provider == "claude":
         response = _ask_claude(system_prompt, user_msg, timeout)
     elif provider == "openrouter":
-        response = _ask_openrouter(system_prompt, user_msg, video_path, model=model)
+        response = _ask_openrouter(system_prompt, user_msg, video_path, model=model,
+                                   reasoning_effort=reasoning_effort, max_tokens=max_tokens)
     elif provider == "human":
         response = _ask_human(system_prompt, user_msg)
     else:

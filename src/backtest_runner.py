@@ -1033,7 +1033,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                               f"stop={fabio_signal.stop} target={fabio_signal.target}\n"
                               f"reasoning: {fabio_signal.reasoning[:300]}")
                 try:
-                    _raw = llm_ask(_audit_sys, _audit_msg, model=os.environ.get('OPENROUTER_MODEL', 'minimax/minimax-m2'))
+                    _raw = llm_ask(_audit_sys, _audit_msg, model=os.environ.get('OPENROUTER_MODEL', 'minimax/minimax-m2'),
+                                   reasoning_effort='high', max_tokens=2000)
                     if _raw.startswith('```'):
                         _raw = _raw.split('```')[1].lstrip('json').strip()
                     _ad = json.loads(_raw)
