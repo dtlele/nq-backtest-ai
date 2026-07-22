@@ -305,6 +305,7 @@ def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None, m
         user_content = user_msg
 
     max_retries = 8
+    _mt = max_tokens or int(os.environ.get("LLM_MAX_TOKENS", "8192"))
     for attempt in range(max_retries):
         try:
             extra_body_params = {}
@@ -324,7 +325,7 @@ def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None, m
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content}
                 ],
-                max_tokens=max_tokens or int(os.environ.get("LLM_MAX_TOKENS", "8192")),
+                max_tokens=_mt,
                 extra_headers={
                     "HTTP-Referer": "http://localhost:8000",
                     "X-Title": "AgentForge Backtester",
@@ -358,6 +359,11 @@ def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None, m
                 extra = getattr(raw_msg, 'model_extra', {}) or {}
                 text = extra.get('content') or extra.get('text') or refusal
                 if not text:
+                    if finish_reason == 'length' and _mt < 16384:
+                        # CoT ha consumato tutto il budget: raddoppia e riprova
+                        _mt = min(_mt * 2, 16384)
+                        print(f"  [OPENROUTER] finish_reason=length: aumento max_tokens a {_mt} e riprovo.")
+                        continue
                     raise ValueError(f"Model returned None content (finish_reason={finish_reason}). Possible video format issue.")
                 
             text = text.strip()
