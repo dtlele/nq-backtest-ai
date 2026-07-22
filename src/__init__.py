@@ -106,6 +106,10 @@ class SessionContext:
     ib_first_breakout_dir: str = 'none'  # 'long'|'short'|'none' — direction of the FIRST IB breakout
     active_walls: List['LiquidityWall'] = field(default_factory=list) # Permanent liquidity map nodes
     atr_5day: float = 180.0
+    gex_regime: str = "positive"  # 'positive' | 'negative'
+    zero_gamma_level: float = 0.0
+    call_wall: float = 0.0
+    put_wall: float = 0.0
 
 @dataclass
 class CandidateBar:
@@ -170,6 +174,14 @@ class AndreaSignal:
     structural_stop: Optional[float] = None # Added for V3.1 Structural SL
 
 @dataclass
+class Regime:
+    regime_type: str = "RUNNER_3.5R" # "RUNNER_3.5R" or "LEGACY"
+    target_rr: float = 3.5
+    allow_partials: bool = False
+    allow_trailing: bool = False
+    time_stop_et: str = "11:30"
+
+@dataclass
 class ConsensusSignal:
     direction: str
     entry: float
@@ -183,6 +195,8 @@ class ConsensusSignal:
     no_trade_reason: str       # '' if decision=='trade'
     news_flag: str = "none"    # NEW: Flag to track if trade was taken near a news event
     context_fingerprint: str = "" # To tie the trade to the statistical memory
+    regime: Optional[Regime] = None
+    veto_reason: str = "none"
 
 @dataclass
 class OpenTrade:
@@ -202,6 +216,7 @@ class OpenTrade:
     bars_stalling_vs_poc: int = 0
     entry_type: str = "market"       # 'market' | 'limit_pending' | 'chaser'
     signal_bar_time: Optional[datetime] = None  # when the original signal was generated (for pending orders)
+    regime: Optional[Regime] = None
 
 @dataclass
 class PendingTrade:

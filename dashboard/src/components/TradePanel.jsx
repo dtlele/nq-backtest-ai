@@ -434,62 +434,6 @@ export default function TradePanel({ trade, allTrades = [], proposals = [], onSe
                 </div>
               )}
             </div>
-
-            {/* Proposals Section */}
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '4px' }}>
-                ⚪ Scartati / No Trade ({proposals.length})
-              </div>
-              {proposals.length === 0 ? (
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', padding: '8px 0' }}>
-                  Nessun setup scartato oggi.
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {proposals.map((p, idx) => {
-                    return (
-                      <div 
-                        key={idx} 
-                        onClick={() => onSelect(p)}
-                        style={{
-                          background: 'var(--bg-glass)',
-                          border: '1px solid var(--border)',
-                          borderRadius: '6px',
-                          padding: '10px 12px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          transition: 'border-color 0.2s'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-blue)'}
-                        onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
-                      >
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: 10, fontWeight: 'bold', color: 'var(--text-muted)' }}>
-                              {p.bar_time_utc ? fmtTime(p.bar_time_utc, timeZone) : ''} {timeZone === 'America/New_York' ? 'ET' : 'Local'}
-                            </span>
-                            <span className={`tag tag-${p.direction === 'long' ? 'long' : 'short'}`} style={{ fontSize: 9, padding: '2px 4px' }}>
-                              {p.direction.toUpperCase()}
-                            </span>
-                            <span style={{ fontSize: 11, fontWeight: 'bold' }}>
-                              @{p.entry?.toFixed(2) || 'N/A'}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            Setup: {p.setup_type || 'N/A'}
-                          </div>
-                        </div>
-                        <div style={{ textTransform: 'uppercase', fontSize: 9, padding: '2px 6px', borderRadius: '4px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-red)', maxWidth: '120px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={p.no_trade_reason}>
-                          {p.no_trade_reason?.replace(/_/g, ' ') || 'VETO'}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
           </div>
         )}
       </div>

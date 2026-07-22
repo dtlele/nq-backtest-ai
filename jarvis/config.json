@@ -1,0 +1,43 @@
+{
+  "wake_word": "jarvis",
+  "mode": "wakeword",
+  "whisper": {
+    "model": "small",
+    "language": "it",
+    "device": "cpu",
+    "compute_type": "int8"
+  },
+  "vad": {
+    "enabled": true,
+    "aggressiveness": 1
+  },
+  "tts": {
+    "engine": "edge",
+    "voice": "it-IT-DiegoNeural",
+    "rate": "+0%",
+    "volume": "+0%"
+  },
+  "pi": {
+    "mode": "rpc",
+    "cwd": "C:/Users/Mauro/Documents/nq-backtest-clean",
+    "no_session": false,
+    "session_dir": "C:/Users/Mauro/Documents/nq-backtest-clean/jarvis/.pi-sessions",
+    "provider": "openrouter",
+    "model": "openrouter/free",
+    "thinking": "off",
+    "no_extensions": true
+  },
+  "wakeword": {
+    "sensitivity": 0.5
+  },
+  "ptt": {
+    "silence_timeout": 1.0,
+    "min_phrase_seconds": 0.5
+  },
+  "audio": {
+    "sample_rate": 16000,
+    "channels": 1,
+    "blocksize": 1024,
+    "device": null
+  }
+}

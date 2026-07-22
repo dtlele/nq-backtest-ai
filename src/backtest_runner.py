@@ -1185,7 +1185,16 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
             else:
                 reason = 'fabio_direction_none'
         elif fabio_signal.setup_type == 'reversal':
-            reason = 'veto_reversal_setup'
+            # Non piu' veto cieco: il reversal e' valutato a merito rispetto alla
+            # bias istituzionale. Contro un drive/lean forte = veto; allineato
+            # o in regime rotational = consentito (fix audit 3.4).
+            from src.agents.institutional_bias import compute_institutional_bias
+            _bias = compute_institutional_bias(candidate)
+            if _bias.opposes(fabio_signal.direction) and abs(_bias.score) >= 25:
+                reason = (f'reversal_against_bias (dir={fabio_signal.direction} vs '
+                          f'bias={_bias.direction} score={_bias.score:+.0f} regime={_bias.regime})')
+            else:
+                reason = None  # REVERSAL APPROVATO (bias allineata o rotational)
         elif candidate.session_bias in ['long', 'short'] and fabio_signal.direction != candidate.session_bias:
             # INSTEAD OF VETO: We allow counter-trend trades (like Squeeze) but we flag them for HALVED RISK
             reason = None

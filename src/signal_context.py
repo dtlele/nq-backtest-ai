@@ -649,6 +649,17 @@ def build_fabio_question(candidate: CandidateBar, session_context: list = None, 
     if similar_trades_str:
         question += f"\n\n{similar_trades_str}\n"
 
+    # Append GEX options structure context
+    gex_info = (
+        f"\n\n## OPTIONS MARKET STRUCTURE (GEX DATA)\n"
+        f"- Current GEX Regime: {ctx.gex_regime.upper()} (Volatility expectation: "
+        f"{'Chop/Mean-Reversion' if ctx.gex_regime == 'positive' else 'Trend/Expansion'})\n"
+        f"- Zero Gamma Flip Level: {ctx.zero_gamma_level:.2f}\n"
+        f"- Call Wall (Major Option Resistance): {ctx.call_wall:.2f}\n"
+        f"- Put Wall (Major Option Support): {ctx.put_wall:.2f}"
+    )
+    question += gex_info
+
     return question
 
 def build_andrea_question(candidate: CandidateBar,
@@ -762,6 +773,16 @@ def build_andrea_question(candidate: CandidateBar,
     # Inject Macroeconomic News
     if getattr(candidate, 'upcoming_news', None):
         question += f"\n\n## UPCOMING MACROECONOMIC NEWS CALENDAR\n{candidate.upcoming_news}\n"
+
+    # Append GEX options structure context
+    gex_info = (
+        f"\n\n## OPTIONS MARKET STRUCTURE (GEX DATA)\n"
+        f"- Current GEX Regime: {ctx.gex_regime.upper()}\n"
+        f"- Zero Gamma Flip Level: {ctx.zero_gamma_level:.2f}\n"
+        f"- Call Wall: {ctx.call_wall:.2f}\n"
+        f"- Put Wall: {ctx.put_wall:.2f}"
+    )
+    question += gex_info
 
     return question
 

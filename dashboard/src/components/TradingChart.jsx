@@ -634,6 +634,37 @@ export default function TradingChart({ trades = [], proposals = [], reasonings =
       }
     }
 
+    // 4d. Create static GEX levels (Call Wall, Put Wall, Zero Gamma)
+    if (latestReasoning && candles.length) {
+      if (latestReasoning.call_wall) {
+        chart.createOverlay({
+          id: 'system_call_wall',
+          name: 'labeledHLine',
+          points: [{ timestamp: candles[0].time * 1000, value: latestReasoning.call_wall }],
+          styles: { lineColor: 'rgba(231, 76, 60, 0.8)', label: 'Call Wall', lineStyle: 'solid', lineWidth: 2 },
+          lock: true
+        });
+      }
+      if (latestReasoning.put_wall) {
+        chart.createOverlay({
+          id: 'system_put_wall',
+          name: 'labeledHLine',
+          points: [{ timestamp: candles[0].time * 1000, value: latestReasoning.put_wall }],
+          styles: { lineColor: 'rgba(46, 204, 113, 0.8)', label: 'Put Wall', lineStyle: 'solid', lineWidth: 2 },
+          lock: true
+        });
+      }
+      if (latestReasoning.zero_gamma) {
+        chart.createOverlay({
+          id: 'system_zero_gamma',
+          name: 'labeledHLine',
+          points: [{ timestamp: candles[0].time * 1000, value: latestReasoning.zero_gamma }],
+          styles: { lineColor: 'rgba(241, 196, 15, 0.8)', label: 'Zero Gamma', lineStyle: 'solid', lineWidth: 2 },
+          lock: true
+        });
+      }
+    }
+
     // 5. Create Trade segments (closed trades)
     if (layers.trades && trades.length && candles.length) {
       // Group trades by entry_time to avoid drawing multiple overlapping boxes for partial exits

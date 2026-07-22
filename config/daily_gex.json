@@ -1,0 +1,14 @@
+{
+  "2025-01-09": {
+    "zero_gamma": 16500,
+    "call_wall": 16600,
+    "put_wall": 16400,
+    "notes": "Valori di esempio per la giornata di benchmark del 9 Gennaio. Da aggiornare con i livelli reali."
+  },
+  "2026-07-17": {
+    "zero_gamma": 0.0,
+    "call_wall": 0.0,
+    "put_wall": 0.0,
+    "notes": "Dati scaricati automaticamente da FlashAlpha API"
+  }
+}

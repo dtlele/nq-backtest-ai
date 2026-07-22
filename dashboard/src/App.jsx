@@ -28,6 +28,7 @@ export default function App() {
 
   const [activeDate, setActiveDate] = useState('2025-01-07')
   const [activeTrade, setActiveTrade] = useState(null)
+  const [userSelectedDate, setUserSelectedDate] = useState(false)
   const [activeReasoning, setActiveReasoning] = useState(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [runFilter, setRunFilter] = useState('all')
@@ -56,19 +57,21 @@ export default function App() {
     return () => clearInterval(interval)
   }, [])
 
-  // Auto-select date only if the current activeDate is not available (e.g. fresh load)
+  // Auto-select date: solo al cambio reale di liveDate, e solo se l'utente non ha selezionato manualmente
+  const prevLiveDateRef = useState(() => dashboardData.LIVE_SESSION_STATE?.date)[0]
   useEffect(() => {
     const availableDates = dashboardData.MOCK_SESSIONS.map(s => s.date)
     const liveDate = dashboardData.LIVE_SESSION_STATE?.date
-    
-    if (availableDates.length > 0 && !availableDates.includes(activeDate)) {
-      if (liveDate && availableDates.includes(liveDate)) {
-        setActiveDate(liveDate)
-      } else {
-        setActiveDate(availableDates[availableDates.length - 1])
-      }
+
+    // Se la liveDate è cambiata (nuovo giorno di backtest), resetta la selezione manuale e segui
+    if (liveDate && liveDate !== activeDate && !userSelectedDate) {
+      setActiveDate(liveDate);
     }
-  }, [dashboardData.MOCK_SESSIONS, dashboardData.LIVE_SESSION_STATE?.date, activeDate])
+    // Primo caricamento: se la data attiva non esiste ancora, prendi l'ultima disponibile
+    else if (availableDates.length > 0 && !availableDates.includes(activeDate) && !liveDate && !userSelectedDate) {
+      setActiveDate(availableDates[availableDates.length - 1])
+    }
+  }, [dashboardData.MOCK_SESSIONS, dashboardData.LIVE_SESSION_STATE?.date])
 
   const handleToggleTimeZone = () => {
     const localTZ = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Rome'
@@ -110,7 +113,7 @@ export default function App() {
             <Sidebar
               sessions={dashboardData.MOCK_SESSIONS}
               activeDate={activeDate}
-              onSelect={(d) => { setActiveDate(d); handleSetActiveTrade(null) }}
+              onSelect={(d) => { setActiveDate(d); setUserSelectedDate(true); handleSetActiveTrade(null) }}
               collapsed={sidebarCollapsed}
               onToggle={() => setSidebarCollapsed(c => !c)}
               onOpenStrategy={() => setShowStrategyRules(true)}

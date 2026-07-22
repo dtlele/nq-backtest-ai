@@ -270,8 +270,13 @@ def _ask_openrouter(system_prompt: str, user_msg: str, video_path: str = None, m
         http_client=httpx.Client(timeout=120.0)
     )
     if not model:
-        model = os.environ.get("OPENROUTER_MODEL", "z-ai/glm-5.2")
-    
+        model = os.environ.get("OPENROUTER_MODEL", "deepseek/deepseek-chat")
+        
+        # Override se siamo in dry run
+        if os.environ.get("DRY_RUN") == "true":
+            # Per dry run usiamo un modello gratis e veloce
+            model = "google/gemma-2-9b-it:free"
+
     # Format messages based on whether video_path is provided
     if video_path and os.path.exists(video_path):
         import base64

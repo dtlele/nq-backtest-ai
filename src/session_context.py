@@ -181,6 +181,10 @@ def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None, histo
         low = min(b.low for b in bars)
         profile_shape = classify_profile_shape(vp, high, low)
 
+    from src.gex_manager import load_gex_for_date
+    opening_price = bars[0].open if bars else None
+    gex_metrics = load_gex_for_date(date_str, overnight_vp=vp, opening_price=opening_price)
+
     ctx = SessionContext(
         date=date_str,
         ib_high=ib_high,
@@ -195,6 +199,10 @@ def build_session_context(date_str: str, bars: list, vp, prev_day_vp=None, histo
         session_memory=[],
         profile_shape=profile_shape,
         atr_5day=compute_5day_atr(date_str),
+        gex_regime=gex_metrics["gex_regime"],
+        zero_gamma_level=gex_metrics["zero_gamma_level"],
+        call_wall=gex_metrics["call_wall"],
+        put_wall=gex_metrics["put_wall"],
     )
     # Internal trackers for session memory filters
     ctx._last_level_test = {}

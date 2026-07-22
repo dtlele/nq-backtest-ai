@@ -1,17 +1,24 @@
 import json
+import os
+import concurrent.futures
 from pathlib import Path
 from src import CandidateBar, FabioSignal, FABIO_NOTEBOOK_ID
 from src.agents.llm_client import llm_ask
 from src.signal_context import build_fabio_question
 from src.agents.topic_router import select_fabio_topics, build_tiered_knowledge, FABIO_CORE
-# Note: light_analyze is now fully deterministic (no LLM calls)
+from src.agents.institutional_bias import compute_institutional_bias, bias_gate
+
+# Modalita' agente: 'scalper' (1 chiamata LLM, default — 5x piu' economico)
+# o 'experts' (legacy: 4 esperti + Chief). Modello: OPENROUTER_MODEL,
+# default MiniMax M2 (forte e molto economico per i backtest).
+FABIO_MODE = os.environ.get('FABIO_MODE', 'scalper').lower()
+SCALPER_MODEL = os.environ.get('OPENROUTER_MODEL', 'minimax/minimax-m2')
 
 KNOWLEDGE_FILE = Path(__file__).parent.parent.parent / 'knowledge' / 'fabio_distilled.json'
 
 _knowledge_cache = None
 
 def _load_knowledge_store() -> dict:
-    """Load and merge all Fabio knowledge into a single dict (cached)."""
     global _knowledge_cache
     if _knowledge_cache is not None:
         return _knowledge_cache
@@ -23,488 +30,443 @@ def _load_knowledge_store() -> dict:
     _knowledge_cache = store
     return store
 
-import os as _os
+def _get_scalper_system_prompt() -> str:
+    """Single-call orderflow scalper (MiniMax). Ragiona come un vero scalper
+    istituzionale: prima la BIAS, poi la location, poi il trigger di flusso."""
+    return """You are an elite NQ orderflow scalper trading WITH institutional flow.
+You think like a Market Profile / AMT / footprint professional, in this exact order:
 
-_LANG_SUFFIX = {
-    'zh': '\n\n⚠️ 重要：你的所有回答 must be in Chinese.',
-    'en': '\n\n⚠️ IMPORTANT: Your entire response MUST be in English only. Respond in English.',
-    'it': '\n\n⚠️ IMPORTANTE: La tua intera risposta deve essere scritta esclusivamente in lingua italiana. Rispondi in italiano.',
-}
+1. INSTITUTIONAL BIAS FIRST. You receive a deterministic INSTITUTIONAL BIAS block
+   (score, regime, drivers). Treat it as ground truth computed from data:
+   - regime drive_up/drive_down: initiative participants control the day. You may
+     ONLY trade WITH the drive (pullback/continuation). NEVER fade it — a reversal
+     against a drive is the classic losing trade.
+   - regime lean_up/lean_down: trade with the bias preferred; counter-bias only at
+     extreme location WITH clear absorption evidence, conviction max 'med'.
+   - regime rotational: balance day — mean-reversion at value extremes (VAH/VAL,
+     IB edges) is the correct business; breakouts are suspect.
+2. LOCATION. A trade is only valid at a structural level (VAH/VAL/POC, IB edges,
+   defended wall, VWAP). The middle of the range is never traded.
+3. FLOW TRIGGER. Confirm with: delta divergence at the level, effort-no-result,
+   absorption at the wall (big prints, price holds), trapped traders, stop hunt
+   completed in the trade direction. If delta opposes your direction at the wall,
+   say so explicitly — never rationalize it away.
+4. REVERSAL DISCIPLINE. A reversal is valid ONLY if EITHER the bias regime is
+   rotational/lean AND aligned, OR there is explicit evidence of a bias shift
+   (failed auction + POC migration flip + delta flip). "Price went too far" is
+   NOT a reason. In a drive, the only valid business is joining it.
+5. PREDATORY PATIENCE. The first drive is never chased, low participation is
+   noise, and 'no_trade' is the default answer. You are paid to WAIT.
+
+HARD RULES (a mechanical validator enforces them AFTER you — violating = veto):
+1. COHERENCE: 'reasoning' must NEVER describe an expectation opposite to 'direction'.
+2. FLOW DISSENT: if delta/flow evidence opposes your direction, conviction='low'.
+3. BIAS: no short in drive_up, no long in drive_down; reversal/pullback against a
+   |score|>=25 bias requires conviction='high' AND explicit bias-shift evidence.
+4. CONVICTION: 'high' only with full confluence (bias + location + flow trigger).
+
+Respond ONLY with valid JSON matching this schema:
+{
+  "reasoning": "<MAX 100 WORDS. Start with the bias read, then location, then the flow trigger. Cite real numbers from the snapshot.>",
+  "market_narrative_update": "<Evolving narrative: who is in control, what would invalidate it>",
+  "setup_type": "squeeze" | "reversal" | "ivb_breakout" | "imbalance_hunting" | "pullback" | "none",
+  "direction": "long" | "short" | "none",
+  "anchor_level_id": "<ID of the chosen level, e.g., 'L1', 'L3'>",
+  "conviction": "high" | "med" | "low"
+}"""
+
 
 def _get_system_prompt() -> str:
-    prompt = """You are Fabio Valentini's PREDATORY trading methodology agent analyzing NQ futures (E-mini).
-You follow a high-conviction institutional approach based on Volume Profile and Order Flow, aiming strictly for high-probability Triple A (A+) setups.
-
-⚠️ DETAILED CHAIN OF THOUGHT (EXTENDED REASONING):
-- You must produce a deep, articulate, and discursive analysis of the market structure and order flow.
-- Explain your reasoning step by step. Do not rush.
-- You are encouraged to provide detailed market commentaries, building a coherent narrative of what the buyers and sellers are doing.
-
-⚠️ PREDATORY PATIENCE (ANTI-FOMO):
-- Do NOT be hasty or premature in classification. 
-- For Second Drive/Breakout/Squeeze: You MUST wait for completed absorption of aggressive buyers/sellers and aligned micro-structure (M1 candle body and POC closing in trade direction). If confirmations are incomplete, output direction="none".
-"""
+    prompt = "You are Fabio Valentini's PREDATORY trading methodology agent analyzing NQ futures (E-mini).\nYou follow a high-conviction institutional approach based on Volume Profile and Order Flow.\n\n"
+    prompt += "⚠️ GEX REGIME RULES:\n- POSITIVE: Mean-reversion. Prioritize REVERSAL. VETO breakouts.\n- NEGATIVE: Volatility. Prioritize BREAKOUT/CONTINUATION.\n\n"
+    prompt += "⚠️ INSTITUTIONAL BIAS (deterministic block in the snapshot):\n- drive_up/drive_down: NEVER trade against it. Reversal against a drive = veto.\n- lean: counter-bias only at extreme location with absorption, conviction max 'med'.\n- rotational: mean-revert at value extremes only.\n\n"
     
-    # Load Active Dynamic Rules (Live corrections)
-    try:
-        from src.agents.dynamic_rules_manager import get_active_rules
-        active_rules = get_active_rules()
-        if active_rules:
-            prompt += "ACTIVE LIVE CORRECTIONS / DYNAMIC RULES (MUST STRICTLY FOLLOW):\n"
-            for r in active_rules:
-                prompt += f"- [{r['rule_id']}] Topic: {r['topic']}\n"
-                prompt += f"  Description: {r['description']}\n"
-                prompt += f"  Required Action: {r['action']}\n"
-            prompt += "\n"
-    except Exception as e:
-        print(f"Error loading active dynamic rules: {e}")
+    # JSON Schema definition for Chief LLM
+    prompt += """You are the CHIEF PORTFOLIO MANAGER. Synthesize the Expert JSON reports.
+Decide the direction and the structural anchor level (by ID) for the trade.
 
+HARD RULES (a mechanical validator will enforce them AFTER you — violating them = veto):
+1. COHERENCE: your 'reasoning' must NEVER describe an expectation opposite to 'direction'.
+   If you expect a pullback/rejection, direction CANNOT be into that move.
+2. FLOW DISSENT: if the Flow expert opposes your direction with med/high strength AND bar delta
+   confirms the opposition, you MUST set conviction='low' (the dissent is weighed, never rationalized away).
+3. TREND DAY: on a trend_up day you may NOT go short; on trend_down you may NOT go long.
+   On initiative auctions, no reversal/pullback against POC migration.
+4. CONVICTION: 'high' only if 4/4 experts agree AND no rule tension; 'med' if 3/4; else 'low'.
 
-    # Load Core Setups
-    strategies_file = Path(__file__).parent.parent.parent / 'knowledge' / 'strategies.json'
-    if strategies_file.exists():
-        try:
-            with open(strategies_file, 'r', encoding='utf-8') as f:
-                strats = json.load(f).get('strategies', [])
-                if strats:
-                    prompt += "CORE SETUP CLASSIFICATIONS (TRIPLE A SETUPS):\n"
-                    for i, s in enumerate(strats, 1):
-                        prompt += f"{i}. {s['name']} ({s['description']}):\n"
-                        prompt += f"   - Trigger: {s['trigger']}\n"
-                        prompt += f"   - Confirmation: {s['confirmation']}\n"
-                    prompt += "\n"
-        except Exception as e:
-            print(f"Error loading strategies.json: {e}")
-
-    # Load Mechanics
-    mechanics_file = Path(__file__).parent.parent.parent / 'knowledge' / 'amt_mechanics.json'
-    if mechanics_file.exists():
-        try:
-            with open(mechanics_file, 'r', encoding='utf-8') as f:
-                mechs = json.load(f).get('mechanics', [])
-                for m in mechs:
-                    prompt += f"{m['topic']}:\n{m['description']}\n\n"
-        except Exception as e:
-            print(f"Error loading amt_mechanics.json: {e}")
-
-    # Statistical calibration hints (derived from 549 backtested trades)
-    prompt += """BACKTEST CONVICTION PRIORS:
-1. IB + VA convergence is premium (59% WR). VAL/VAH alone without IB = weak (-15 conf).
-2. Big Trade size >= 150 = strong institutional activity. High volume but small Big Trade = retail trap (-10 conf).
-3. |Delta| >= 600 = directional commitment. |Delta| < 300 = chop (-10 conf).
-
-TEMPORAL AUDIT (0-100%):
-- q1: Time is outside Lunch Lull (12:00-13:30 ET), before 13:00 ET cutoff (or Power Hour exception), and before 15:00 ET.
-- q2: Outside 10:15-10:30 ET Kill Zone (unless overridden by fresh strong breakout).
-- q3: Clear initiative/momentum. Expansive delta aligned with price, or clear absorption.
-- q4: Trend-aligned OR premium Reversal at major extremes (Overnight H/L, IB edges, VAH/VAL) with clear wicks >=35% and absorption (score q4: 70-90%, setup_type='reversal').
-- q5: Entry precision at major structures (IB boundaries, Nodes, Big Trade walls). Rejection delta divergence is allowed.
-
-STOP LOSS: Must be wide structural stops (30-50 pts) behind key boundaries. No micro-stops (5-15 pts) allowed.
-"""
-    # Language-aware schema instructions
-    import os as _os2
-    _l = _os2.environ.get('BACKTEST_LANG', '').lower().strip()
-    if _l == 'zh':
-        _reasoning_instr = '<中文，详细的推导过程，解释大单分析、被困参与者、自审止损。>'
-        _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% （明确计算5个因素的百分比）'
-        _narrative_instr = '<中文，详细构建流畅的盘面叙述或你在等待什么。>'
-    elif _l == 'en':
-        _reasoning_instr = '<EXTENDED THOUGHT. Detail your step-by-step reasoning on big trades, trapped sides, and structural stop placement.>'
-        _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% (calculate percentages for all 5 factors)'
-        _narrative_instr = '<EXTENDED NARRATIVE. Describe the session flow update or what you are waiting for in detail.>'
-    else:  # default: Italian
-        _reasoning_instr = '<PENSIERO ESTESO. Spiega dettagliatamente il tuo ragionamento su big trades, lato in trappola e posizionamento stop strutturale.>'
-        _audit_instr     = 'q1:XX%, q2:XX%, q3:XX%, q4:XX%, q5:XX% (calcola le percentuali per i 5 fattori)'
-        _narrative_instr = '<NARRATIVA ESTESA. Descrivi dettagliatamente lo stato della sessione o cosa stai aspettando.>'
-    
-    _speed_rule = ''
-
-    prompt += f"""Respond ONLY with valid JSON matching this schema:
-{{
+Respond ONLY with valid JSON matching this schema:
+{
+  "reasoning": "<MAX 100 WORDS. Synthesize reports, explain bias and why you picked the anchor level.>",
+  "market_narrative_update": "<Evolving narrative>",
+  "setup_type": "squeeze" | "reversal" | "ivb_breakout" | "imbalance_hunting" | "pullback" | "none",
   "direction": "long" | "short" | "none",
-  "confidence": <int 0-100>,
-  "entry": <float or null>,
-  "stop": <float or null>,
-  "target": <float or null>,
-  "setup_type": "squeeze" | "ivb_breakout" | "none",
-  "imbalance_phase": "expansive" | "accumulation" | "none",
-  "reasoning": "{_reasoning_instr}",
-  "temporal_audit": "{_audit_instr}",
-  "market_narrative_update": "{_narrative_instr}",
-  "session_verdict": "continue" | "stop"
-}}
-{_speed_rule}
-
-Decidi se continuare a monitorare la sessione oltre l'orario standard: 'continue' se la giornata è volatile con forti volumi e setup istituzionali pendenti/attivi, 'stop' se la giornata è choppy, priva di volumi o se ritieni che l'attività istituzionale sia conclusa."""
+  "anchor_level_id": "<ID of the chosen level, e.g., 'L1', 'L3'>",
+  "conviction": "high" | "med" | "low"
+}"""
     return prompt
 
 def light_analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> int:
-    """
-    DETERMINISTIC light pass ÔÇö zero API calls.
-
-    Scoring logic (AMT + Fabio volume rules):
-      +30  wall_max_size >= 50 (strong institutional conviction)
-      +20  wall_max_size >= 30 (minimum institutional signal)
-      +60  setup_category == 'imbalance_hunting' (always evaluate M1 footprints outside IB)
-      +20  setup_category == 'momentum' (high-vol breakout)
-      +15  setup_category == 'reversal' (absorption at extreme)
-      +10  market_state == 'imbalance' (directional day)
-      +10  auction_type == 'initiative' (outside IB/prev VA)
-      +10  is_second_test == True (second drive / reload)
-      +10  poc_migration != 'flat' (VP shifting = trending)
-      -20  setup_category == 'pullback' AND wall_max_size < 20 (weak pullback)
-      -20  market_state == 'balance' AND auction_type == 'responsive' (chop inside value)
-
-    Returns score capped [0, 100].
-    """
     from src.agents.llm_client import _get_provider
-    if _get_provider() == "human":
-        return 100  # Skip light pass for human operator
-
+    if _get_provider() == "human": return 100
     score = 0
-
-    # --- Volume / Wall strength ---
     wms = candidate.wall_max_size
-    if wms >= 50:
-        score += 30
-    elif wms >= 30:
-        score += 20
-
-    # --- Setup category ---
+    if wms >= 50: score += 30
+    elif wms >= 30: score += 20
     cat = candidate.setup_category
-    if str(cat).startswith('liquidity_map_'):
-        score += 60  # Tier 1 Institutional footprint!
-    elif cat == 'imbalance_hunting':
-        score += 20  # Reduced from 60. Now it requires actual big trades or context to pass the light filter!
-    elif cat == 'momentum':
-        score += 20
-    elif cat == 'reversal':
-        score += 15
-
-    # --- AMT: market state ---
-    if candidate.market_state == 'imbalance':
-        score += 10
-
-    # --- AMT: auction type ---
-    if candidate.auction_type == 'initiative':
-        score += 10
-
-    # --- Second drive / reload ---
-    if candidate.is_second_test:
-        score += 10
-
-    # --- VP migration (trending day) ---
-    if candidate.poc_migration != 'flat':
-        score += 10
-
-    # --- Penalit├á fascia oraria 10:15-10:30 ET (18% WR storico su 51 trade) ---
-    try:
-        import pytz as _lp
-        _ET = _lp.timezone('America/New_York')
-        _bar_et = candidate.bar.timestamp.astimezone(_ET)
-        if _bar_et.hour == 10 and 15 <= _bar_et.minute < 30:
-            score -= 10  # Reduced penalty (was 25), caution only!
-    except Exception:
-        pass
-
-    # --- Penalties ---
-    if cat == 'pullback' and wms < 20:
-        score -= 20
-    if candidate.market_state == 'balance' and candidate.auction_type == 'responsive':
-        score -= 20
-
+    if cat == 'imbalance_hunting': score += 20
+    elif cat == 'momentum': score += 20
+    elif cat == 'reversal': score += 15
+    if candidate.market_state == 'imbalance': score += 10
+    if candidate.auction_type == 'initiative': score += 10
+    if candidate.is_second_test: score += 10
+    if candidate.poc_migration != 'flat': score += 10
+    if cat == 'pullback' and wms < 20: score -= 20
+    if candidate.market_state == 'balance' and candidate.auction_type == 'responsive': score -= 20
     return max(0, min(100, score))
 
-def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> FabioSignal:
-    store = _load_knowledge_store()
-    topics = select_fabio_topics(candidate, store)
-    rules_text, context_text = build_tiered_knowledge(topics, store)
-    question = build_fabio_question(candidate, session_context=session_context, m1_bars=m1_bars, market_narrative=market_narrative, bars_since_last=bars_since_last)
-    
-    # Bypass NotebookLM: inject distilled knowledge directly
-    base_user_msg = f"## TRADING RULES (DISTILLED KNOWLEDGE)\n{rules_text}\n{context_text}\n\n## TASK\n{question}\n\nAnalyze this setup using the Rules above. Respond with JSON only."
+def _build_market_vector(candidate: CandidateBar) -> dict:
+    vp = candidate.session_ctx.vp
+    levels = {
+        "L1": {"name": "VAH", "price": vp.va_high if vp else 0},
+        "L2": {"name": "VAL", "price": vp.va_low if vp else 0},
+        "L3": {"name": "POC", "price": vp.poc if vp else 0},
+        "L4": {"name": "Wall", "price": candidate.wall_level},
+        "L5": {"name": "VWAP", "price": candidate.vwap},
+        "L6": {"name": "ZeroGamma", "price": candidate.session_ctx.zero_gamma_level},
+    }
+    return levels
 
-    # Inject language instruction at END of user message (model follows last instruction)
-    _lang = _os.environ.get('BACKTEST_LANG', '').lower().strip()
-    lang_suffix = _LANG_SUFFIX.get(_lang, '')
-    user_msg = base_user_msg + lang_suffix
-    last_error = ""
-    
-    for attempt in range(3):
-        raw = llm_ask(_get_system_prompt(), user_msg)
+# ── Narrative-Decision Coherence Validator ────────────────────────────────
+# Frasi che indicano aspettativa CONTRARIA alla direzione del trade.
+# Se il Chief scrive "expect pullback" e poi va LONG, il testo e l'azione
+# si contraddicono → veto meccanico (il caso reale del 06/02, long perso).
+# Frasi CONTRARIE alla direzione: solo aspettative esplicite e non ambigue.
+# (La prima versione includeva 'rejection', 'buyers trapped' ecc. → falsi
+# positivi: 'sweep rejection' = rifiuto dei minimi = rialzista!)
+_BEARISH_PHRASES = (
+    "expect a pullback", "expect pullback", "expecting a pullback",
+    "expect a rejection", "expect rejection", "expecting rejection",
+    "expect a drop", "expect further downside", "expect lower",
+    "likely to fail", "will likely reverse down",
+)
+_BULLISH_PHRASES = (
+    "expect a bounce", "expect bounce", "expecting a bounce",
+    "expect a rally", "expect higher", "expect further upside",
+    "will likely reverse up",
+)
+# Clausole che annullano la contraddizione: la frase e' in un contesto
+# condizionale/di invalidazione ('if', 'unless', 'invalidat', 'risk', ...)
+_CONDITIONAL_MARKERS = ("if ", "if(", "unless", "invalidat", "abort", "risk",
+                        "would ", "in case", "failure", "warning", "however")
+
+def _reasoning_contradicts(direction: str, reasoning: str) -> bool:
+    """True se la narrativa descrive uno scenario opposto alla direzione decisa.
+    Gestisce negazioni semplici ('no rejection', 'not bearish')."""
+    text = reasoning.lower()
+    against = _BEARISH_PHRASES if direction == 'long' else _BULLISH_PHRASES
+    for ph in against:
+        idx = text.find(ph)
+        while idx != -1:
+            before = text[max(0, idx - 30):idx]
+            after = text[idx:idx + len(ph) + 30]
+            negated = any(neg in before[-12:] for neg in ('no ', 'not ', 'nessun', 'senza', "isn't", 'no-'))
+            conditional = any(m in before for m in _CONDITIONAL_MARKERS) or \
+                          any(m in after for m in (' would', ' then ', ' invalidat'))
+            if not negated and not conditional:
+                return True
+            idx = text.find(ph, idx + 1)
+    return False
+
+
+def validate_narrative_decision(direction: str, conviction: str, reasoning: str,
+                                candidate: CandidateBar, flow_report: dict) -> tuple:
+    """Validatore meccanico post-LLM. Ritorna (ok, reason, conviction_capped).
+
+    Regole (tutte derive da errori reali osservati nei log):
+    1. COERENZA NARRATIVA: il reasoning non puo' descrivere lo scenario opposto
+       alla direzione decisa → veto 'narrative_contradiction'.
+    2. DISSENSO FLOW PESA (non si razionalizza): se l'esperto Flow dissente con
+       forza med/high E il delta della barra conferma il dissenso
+       → conviction cappata a 'low' (il gate confidence<70 fara' il resto).
+    3. DAY-TYPE GATE anti mean-reversion: vietato operare contro una giornata
+       a iniziativa accertata (i 3 short del 03/02 sotto VAL in trend day up):
+       - day_type trend_up + short   → veto 'counter_trend_day'
+       - day_type trend_down + long  → veto 'counter_trend_day'
+       - auction initiative + poc_migration contro + setup reversal/pullback
+         → veto 'counter_initiative'.
+    """
+    # 1) coerenza testo↔direzione
+    if direction in ('long', 'short') and _reasoning_contradicts(direction, reasoning):
+        return False, f"VETO: narrative_contradiction (reasoning descrive scenario opposto a {direction})", conviction
+
+    # 2) dissenso Flow
+    if direction in ('long', 'short'):
+        flow_bias = str(flow_report.get('bias', 'none'))
+        flow_str = str(flow_report.get('strength', 'low'))
+        opposed = (direction == 'long' and flow_bias == 'short') or \
+                  (direction == 'short' and flow_bias == 'long')
+        if opposed and flow_str in ('med', 'high'):
+            delta = candidate.bar.delta
+            delta_confirms = (direction == 'long' and delta < 0) or \
+                             (direction == 'short' and delta > 0)
+            if delta_confirms:
+                conviction = 'low'   # cap: il dissenso Flow pesa, non si razionalizza
+
+    # 3) day-type gate
+    ctx = candidate.session_ctx
+    dt = getattr(ctx, 'day_type', 'unknown')
+    if direction == 'short' and dt == 'trend_up':
+        return False, "VETO: counter_trend_day (short in trend_up day)", conviction
+    if direction == 'long' and dt == 'trend_down':
+        return False, "VETO: counter_trend_day (long in trend_down day)", conviction
+    if candidate.auction_type == 'initiative' and candidate.setup_category in ('reversal', 'pullback'):
+        if direction == 'short' and candidate.poc_migration == 'up':
+            return False, "VETO: counter_initiative (short contro migrazione POC up in asta initiative)", conviction
+        if direction == 'long' and candidate.poc_migration == 'down':
+            return False, "VETO: counter_initiative (long contro migrazione POC down in asta initiative)", conviction
+
+    # 4) INSTITUTIONAL BIAS GATE — deterministico, funziona anche nella PRIMA
+    #    ORA dove il day-type gate e' cieco (fix dei 2 short killer del 03/02).
+    bias = compute_institutional_bias(candidate)
+    ok, reason, conviction = bias_gate(direction, candidate.setup_category,
+                                       conviction, bias)
+    if not ok:
+        return False, f"{reason} | bias: {bias.summary()}", conviction
+
+    return True, "", conviction
+
+
+def _fmt_bars_recent(candidate: CandidateBar, max_bars: int = 6) -> str:
+    """Ultime N barre in formato compatto: ts O H L C V delta."""
+    bars = (candidate.recent_bars or [])[-max_bars:]
+    if not bars:
+        return "(no recent bars)"
+    lines = []
+    for b in bars:
+        ts = getattr(b, 'timestamp', None)
+        hhmm = ts.strftime('%H:%M') if ts else '??'
+        lines.append(f"{hhmm} O={b.open:.2f} H={b.high:.2f} L={b.low:.2f} C={b.close:.2f} "
+                     f"V={b.volume} D={b.delta:+d}")
+    return "\n".join(lines)
+
+
+def _build_snapshot(candidate: CandidateBar, market_narrative: str,
+                    session_context: list = None) -> str:
+    """Snapshot strutturato COMPLETO per gli esperti LLM.
+    Prima ricevevano ~10 righe (livelli + price + delta + GEX): gli 'esperti'
+    non avevano dati su cui essere esperti. Ora ricevono tutto il contesto
+    gia' calcolato dal motore (wall, flow, asta, day-type, barre recenti,
+    narrativa, memoria di sessione)."""
+    levels = _build_market_vector(candidate)
+    levels_str = "\n".join([f"{k}: {v['name']} @ {v['price']}" for k, v in levels.items() if v['price'] > 0])
+    ctx = candidate.session_ctx
+    bar = candidate.bar
+
+    mem_lines = ""
+    if session_context:
+        mem_lines = "\n".join(f"- {m}" for m in session_context[-6:])
+    elif getattr(ctx, 'session_memory', None):
+        mem_lines = "\n".join(f"- {m.get('text', m)}" for m in ctx.session_memory[-6:])
+
+    bias = compute_institutional_bias(candidate)
+    bias_txt = bias.summary()
+
+    return f"""## STRUCTURAL LEVELS (MARKET VECTOR)
+{levels_str}
+IB: high={ctx.ib_high} low={ctx.ib_low} complete={ctx.ib_complete}
+Prev day: POC={getattr(ctx.prev_day_vp, 'poc', None)} VAH={getattr(ctx.prev_day_vp, 'va_high', None)} VAL={getattr(ctx.prev_day_vp, 'va_low', None)}
+
+## CANDIDATE BAR
+Price: {bar.close} | O={bar.open} H={bar.high} L={bar.low} | Vol={bar.volume} | Delta={bar.delta:+d}
+Wicks: top={candidate.top_wick_ratio:.0%} bottom={candidate.bottom_wick_ratio:.0%} | close_pct={candidate.close_percentile:.0%}
+Wall: {candidate.wall_side} @ {candidate.wall_level} | n_trades={candidate.wall_trade_count} max_size={candidate.wall_max_size}
+Proximity: {candidate.proximity_to} @ {candidate.proximity_level} | second_test={candidate.is_second_test}
+
+## FLOW & AUCTION
+Delta divergence: {candidate.delta_divergence} | Effort-no-result: {candidate.effort_no_result}
+Market state: {candidate.market_state} | Auction: {candidate.auction_type} | POC migration: {candidate.poc_migration}
+Setup category: {candidate.setup_category} | Session bias: {candidate.session_bias}
+Stop hunt: active={candidate.active_stop_hunt} dir={candidate.stop_hunt_direction}
+VWAP: {candidate.vwap:.2f} | NAV alert (vol spike): {candidate.nav_alert}
+
+## DAY CONTEXT
+Day type: {ctx.day_type} (history: {getattr(ctx, 'day_type_history', [])[-4:]})
+Profile shape: {ctx.profile_shape} | Market structure: {ctx.market_structure_state}
+IB breakouts: {ctx.ib_breakouts_count} (first dir: {ctx.ib_first_breakout_dir})
+GEX: {ctx.gex_regime} zero_gamma={ctx.zero_gamma_level} call_wall={ctx.call_wall} put_wall={ctx.put_wall}
+ATR5: {ctx.atr_5day} | News: {candidate.upcoming_news}
+
+## INSTITUTIONAL BIAS (deterministic — computed from data, treat as ground truth)
+{bias_txt}
+
+## RECENT BARS (M5, ultimi {6})
+{_fmt_bars_recent(candidate)}
+
+## EVOLVING NARRATIVE
+{market_narrative or '(none)'}
+
+## SESSION MEMORY (ultimi eventi)
+{mem_lines or '(none)'}"""
+
+def _finalize_decision(data: dict, flow_report: dict, candidate: CandidateBar,
+                       levels: dict, raw: str) -> FabioSignal:
+    """Validatore meccanico + execution compiler + risk validator.
+    Condiviso tra modalita' scalper (1 call) ed experts (5 call)."""
+    direction = data.get('direction', 'none')
+    if direction == 'none':
+        return FabioSignal('none', 0, None, None, None, 'none', "Chief opted for no trade.", "", raw)
+
+    # ── VALIDATORE MECCANICO narrativa↔decisione + bias (PRIMA del pricing)
+    reasoning_txt = data.get('reasoning', '')
+    ok, veto_reason, conviction = validate_narrative_decision(
+        direction, data.get('conviction', 'low'), reasoning_txt, candidate, flow_report)
+    if not ok:
+        return FabioSignal('none', 0, None, None, None, 'none',
+                           f"{veto_reason} | reasoning: {reasoning_txt[:120]}", "", raw)
+
+    anchor_id = data.get('anchor_level_id')
+    if anchor_id not in levels or levels[anchor_id]['price'] == 0:
+        return FabioSignal('none', 0, None, None, None, 'none', f"VETO: Invalid anchor {anchor_id}", "", raw)
+
+    # EXECUTION COMPILER (Code-based Pricing)
+    anchor_price = levels[anchor_id]['price']
+    entry_price = candidate.bar.close
+
+    # Volatility Buffer (approximate from 5day ATR, min 8 points)
+    atr = candidate.session_ctx.atr_5day
+    buffer = max(8.0, atr * 0.05)
+
+    if direction == 'long':
+        stop = anchor_price - buffer
+        target = entry_price + (entry_price - stop) * 1.5
+    else:
+        stop = anchor_price + buffer
+        target = entry_price - (stop - entry_price) * 1.5
+
+    # RISK VALIDATOR
+    risk_points = abs(entry_price - stop)
+    if risk_points < 2.0:  # Too tight, noise will kill it
+        return FabioSignal('none', 0, None, None, None, 'none', f"VETO: Stop too tight ({risk_points:.2f} pts).", "", raw)
+
+    # If stop is completely on the wrong side of price (e.g., long but stop is above entry)
+    if (direction == 'long' and stop >= entry_price) or (direction == 'short' and stop <= entry_price):
+        return FabioSignal('none', 0, None, None, None, 'none', f"VETO: Structurally invalid stop placement.", "", raw)
+
+    conf_map = {"high": 90, "med": 75, "low": 50}
+    confidence = conf_map.get(conviction, 50)   # usa conviction CAPPATA dal validatore
+
+    return FabioSignal(
+        direction=direction,
+        confidence=confidence,
+        entry=entry_price,
+        stop=stop,
+        target=target,
+        setup_type=data.get('setup_type', 'none'),
+        reasoning=f"Anchor: {levels[anchor_id]['name']} @ {anchor_price}. " + data.get('reasoning', ''),
+        market_narrative_update=data.get('market_narrative_update', ''),
+        nlm_answer=raw
+    )
+
+
+def _analyze_scalper(candidate: CandidateBar, session_context: list = None,
+                     m1_bars: list = None, market_narrative: str = "",
+                     bars_since_last: list = None) -> FabioSignal:
+    """Modalita' SCALPER: 1 sola chiamata LLM (MiniMax) invece di 5.
+    La bias istituzionale e' calcolata deterministicamente e data come ground
+    truth; il modello ragiona da orderflow scalper: bias → location → trigger."""
+    levels = _build_market_vector(candidate)
+    snapshot = _build_snapshot(candidate, market_narrative, session_context)
+
+    raw = llm_ask(_get_scalper_system_prompt(), snapshot, model=SCALPER_MODEL)
+    if raw.startswith('```'):
+        raw = raw.split('```')[1].lstrip('json').strip()
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as e:
+        return FabioSignal('none', 0, None, None, None, 'none', f"JSON parse error: {e}", "", raw)
+
+    # flow_report sintetico dal delta della barra (per il gate dissenso-flow):
+    # in modalita' single-call il 'flow expert' e' il dato stesso.
+    bar_delta = candidate.bar.delta
+    flow_report = {
+        'bias': 'long' if bar_delta > 0 else ('short' if bar_delta < 0 else 'none'),
+        'strength': 'high' if abs(bar_delta) >= 500 else ('med' if abs(bar_delta) >= 150 else 'low'),
+    }
+    return _finalize_decision(data, flow_report, candidate, levels, raw)
+
+
+def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> FabioSignal:
+    if FABIO_MODE == 'scalper':
+        return _analyze_scalper(candidate, session_context, m1_bars, market_narrative, bars_since_last)
+    levels = _build_market_vector(candidate)
+    snapshot = _build_snapshot(candidate, market_narrative, session_context)
+    base_user_msg = snapshot + "\n\n"
+
+    # Expert Prompts (JSON Output Required) — ogni esperto riceve lo STESSO
+    # snapshot completo (bias inclusa) + focus di ruolo
+    json_req = "Respond ONLY with valid JSON: {\"bias\": \"long|short|none\", \"strength\": \"low|med|high\", \"key_level_ids\": [\"L1\", ...], \"note\": \"<max 20 words>\"}"
+
+    amt_prompt = ("You are the AMT/Volume Profile Analyst. Judge from DAY TYPE, profile shape, "
+                  "POC migration, VA position, auction type (responsive vs initiative). "
+                  "Respect the INSTITUTIONAL BIAS block: NEVER suggest fading a drive regime. "
+                  "In rotational regime, mean-reversion at value extremes is the business.\n" + json_req)
+    flow_prompt = ("You are the Order Flow Analyst. Judge from delta, delta divergence, "
+                   "effort-no-result, wall size/side, stop hunts, recent bar deltas. "
+                   "If delta opposes price direction at a wall, say so explicitly. "
+                   "Absorption at a wall against the bias = reversal risk, flag it.\n" + json_req)
+    tech_prompt = ("You are the Technical Analyst. Judge from VWAP position, market structure, "
+                   "recent bars, IB state, wicks/close percentile. "
+                   "Price extended >0.5x IB range = drive: pullbacks-with-trend only.\n" + json_req)
+    macro_prompt = ("You are the Macro & GEX Analyst. Judge from GEX regime, zero-gamma distance, "
+                    "news risk. POSITIVE gex = mean-reversion; NEGATIVE = volatility/breakouts.\n" + json_req)
+
+    def fetch_expert(prompt, user_msg):
+        raw = llm_ask(prompt, user_msg)
         if raw.startswith('```'):
             raw = raw.split('```')[1].lstrip('json').strip()
-
         try:
-            data = json.loads(raw)
-            direction = data.get('direction', 'none')
-            entry = data.get('entry')
-            stop = data.get('stop')
-            
-            # Validation for backward stops
-            if direction == 'long' and entry is not None and stop is not None:
-                if stop >= entry:
-                    last_error = f"ERROR: You generated a backward stop for a LONG trade. Stop ({stop}) must be BELOW Entry ({entry}). Please recalculate and output valid JSON."
-                    user_msg = base_user_msg + f"\n\n{last_error}"
-                    continue
-                    
-            if direction == 'short' and entry is not None and stop is not None:
-                if stop <= entry:
-                    last_error = f"ERROR: You generated a backward stop for a SHORT trade. Stop ({stop}) must be ABOVE Entry ({entry}). Please recalculate and output valid JSON."
-                    user_msg = base_user_msg + f"\n\n{last_error}"
-                    continue
-                    
-            # If we get here, it's valid
-            imbalance_phase = data.get('imbalance_phase', 'none')
-            
-            base_reasoning = data.get('reasoning', '')
-            temporal_audit = data.get('temporal_audit', '')
-            if temporal_audit:
-                base_reasoning += f"\n\n[Audit Fase Temporale]\n{temporal_audit}"
-            return FabioSignal(
-                direction   = direction,
-                confidence  = int(data.get('confidence', 0)),
-                entry       = entry,
-                stop        = stop,
-                target      = data.get('target'),
-                setup_type  = data.get('setup_type', 'none'),
-                imbalance_phase = imbalance_phase,
-                reasoning   = base_reasoning,
-                market_narrative_update = data.get('market_narrative_update', ''),
-                nlm_answer  = "Bypassed",
-                session_verdict = data.get('session_verdict', 'continue'),
-            )
-            
-        except json.JSONDecodeError as e:
-            last_error = f"JSON parse error: {e}"
-            user_msg = base_user_msg + f"\n\nERROR: {last_error}. Please output strictly valid JSON."
+            return json.loads(raw)
+        except:
+            return {"bias": "none", "strength": "low", "key_level_ids": [], "error": "parse_failed"}
 
-    # If it fails 3 times, return none
-    return FabioSignal(
-        direction='none', confidence=0,
-        entry=None, stop=None, target=None,
-        setup_type='none',
-        reasoning=f'Failed after 3 attempts. Last error: {last_error}',
-        nlm_answer="Bypassed",
-    )
+    # Run Experts in Parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        f_macro = executor.submit(fetch_expert, macro_prompt, base_user_msg)
+        f_amt   = executor.submit(fetch_expert, amt_prompt, base_user_msg)
+        f_flow  = executor.submit(fetch_expert, flow_prompt, base_user_msg)
+        f_tech  = executor.submit(fetch_expert, tech_prompt, base_user_msg)
+        
+        macro_report = f_macro.result()
+        amt_report   = f_amt.result()
+        flow_report  = f_flow.result()
+        tech_report  = f_tech.result()
+
+    # Chief Decision
+    chief_prompt = _get_system_prompt()
+    chief_msg = base_user_msg + f"## EXPERT REPORTS (JSON)\nMacro: {json.dumps(macro_report)}\nAMT: {json.dumps(amt_report)}\nFlow: {json.dumps(flow_report)}\nTech: {json.dumps(tech_report)}\n"
+    
+    raw = llm_ask(chief_prompt, chief_msg)
+    if raw.startswith('```'):
+        raw = raw.split('```')[1].lstrip('json').strip()
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as e:
+        return FabioSignal('none', 0, None, None, None, 'none', f"JSON parse error: {e}", "", raw)
+
+    return _finalize_decision(data, flow_report, candidate, levels, raw)
 
 def _get_management_system_prompt() -> str:
-    prompt_file = Path(__file__).parent / 'fabio_management_prompt.txt'
-    if not prompt_file.exists():
-        with open(prompt_file, 'w', encoding='utf-8') as f:
-            f.write(DEFAULT_MANAGEMENT_SYSTEM_PROMPT)
-    with open(prompt_file, 'r', encoding='utf-8') as f:
-        return f.read().strip()
-
-DEFAULT_MANAGEMENT_SYSTEM_PROMPT = """You are Fabio Valentini's active risk management agent managing an open NQ futures position.
-Your goal is to protect capital and maximize returns based on real-time Volume Profile and Order Flow.
-You must analyze the open trade details and the latest M5 candle/M1 footprint to choose one of these actions:
-1. "hold": Keep the position exactly as is. DEFAULT action when no structural event has occurred.
-2. "trail": Move the stop loss structurally ÔÇö but ONLY when strict conditions are met (see below).
-3. "early_exit": Exit the trade immediately because the setup has been structurally invalidated.
-4. "reverse": Exit current trade and open the opposite position on a strong reversal signature.
-
---- ACTIVE POSITION MANAGEMENT (APM) ---
-
-1. TRAILING STOPS ÔÇö STRICT STRUCTURAL RULES:
-   Trail ONLY when ALL THREE of the following conditions are simultaneously true:
-   
-   A) MINIMUM 1:1 RISK/REWARD REACHED:
-      - The trade must have moved at least 1x the initial risk in your favor before any trailing is allowed.
-      - Example: Entry=25000 SHORT, initial Stop=25040 (risk=40pts). Trail only activates if price reaches 24960 or below (1:1).
-      - If 1:1 is NOT reached ÔåÆ always output "hold". No exceptions.
-   
-   B) A STRUCTURAL EVENT HAS OCCURRED in your favor (one of the following):
-      - A new significant SWING EXTREME has been printed: a new swing low (for SHORT) or new swing high (for LONG).
-      - A new cluster of Big Trades (>=30 contracts) has formed IN THE DIRECTION of your trade at a new level, AND price has ACCEPTED (closed past it).
-      - New TRAPPED TRADERS are confirmed: the opposite side tried to push back and failed, leaving wicks without body closes.
-      - A known structural level (LVN, POC, prior swing) has been BROKEN AND ACCEPTED (body close past it).
-   
-   C) STOP PLACEMENT MUST GIVE BREATHING ROOM:
-      - Place the new stop BEHIND the structural event ÔÇö not 2-4 ticks behind a single bar's wall.
-      - Minimum distance: behind the wick/extreme of the structural event candle, or behind the Big Trade cluster origin.
-      - Never trail to break-even UNLESS a full structural event has occurred. "BE is good" does NOT override the structural requirement.
-      - If the structural event is a Big Trade wall, place stop at least 15-20 ticks behind the wall, not immediately adjacent (buffer against stop hunts).
-   
-   If any of A, B, or C is NOT met ÔåÆ output "hold". Give the trade room to work.
-
-2. REVERSAL SIGNATURES (Early Exit / Reverse):
-   - Do NOT use early_exit for minor delta divergences, retail noise, or temporary pullbacks.
-   - True Reversal requires: MASSIVE institutional Big Trades (>=50 contracts) acting as passive absorption AGAINST your position, confirmed by price BODY closing back through a key level.
-   - Massive Ask/Bid Clusters (>100 contracts) on the opposite side near a structural level ÔåÆ EXIT EARLY.
-   - A single bar of adverse delta is NOT enough. You need 2+ consecutive bars of institutional flow against your position.
-
-3. DEFAULT BEHAVIOR:
-   - When in doubt ÔåÆ "hold".
-   - Only trail when the market has PROVEN the structural event with ACCEPTED price action (body close, not just a wick).
-   - Premature trailing is worse than a stop loss: it guarantees a scratch on a potentially great trade.
-
-Respond ONLY with valid JSON matching this schema:
-{
-  "decision": "hold" | "trail" | "early_exit" | "reverse",
-  "new_stop": <float or null (only if trailing, must give structural breathing room)>,
-  "new_target": <float or null (optional)>,
-  "rr_reached": <float ÔÇö current R:R achieved at this bar, e.g. 1.2>,
-  "structural_event": "<describe the structural event that triggered trail, or 'none'>",
-  "reasoning": "<MAX 80 WORDS. Cite R:R ratio, the specific structural event (or why holding), Big Trade levels, and exact stop placement logic.>"
-}"""
-
+    return "You are Fabio Valentini's active risk management agent.\nRespond in JSON: {\"decision\": \"hold|trail|early_exit\", \"new_stop\": float|null}"
 
 def manage_active_trade(trade, candidate: CandidateBar, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> dict:
-    """Ask Fabio to manage the active trade based on the latest bar activity."""
-    store = _load_knowledge_store()
-    topics = select_fabio_topics(candidate, store)
-    rules_text, context_text = build_tiered_knowledge(topics, store)
-    question = build_fabio_question(candidate, session_context=session_context, m1_bars=m1_bars, market_narrative=market_narrative, bars_since_last=bars_since_last)
-    
-    # Inject active trade details
-    trade_context = (
-        f"\n\n## ACTIVE OPEN POSITION DETAILS:\n"
-        f"Direction: {trade.direction.upper()}\n"
-        f"Entry Price: {trade.entry:.2f}\n"
-        f"Current Stop Loss: {trade.stop:.2f}\n"
-        f"Current Target: {trade.target:.2f}\n"
-        f"Contracts: {trade.contracts}\n"
-        f"Entry Time: {trade.entry_bar.timestamp.strftime('%H:%M UTC')}\n"
-    )
-    
-    user_msg = f"## TRADING RULES (DISTILLED KNOWLEDGE)\n{rules_text}\n{context_text}\n{trade_context}\n\n## TASK\n{question}\n\nAnalyze this active position and choose one of the actions: 'hold', 'trail', 'early_exit', or 'reverse'. Respond with JSON only."
-    
-    raw = llm_ask(_get_management_system_prompt(), user_msg)
-    if raw.startswith('```'):
-        raw = raw.split('```')[1].lstrip('json').strip()
-        
+    trade_context = f"\nDir: {trade.direction}, Entry: {trade.entry}, Stop: {trade.stop}, Price: {candidate.bar.close}"
+    msg = f"{trade_context}\nAnalyze and decide."
+    raw = llm_ask(_get_management_system_prompt(), msg)
+    if raw.startswith('```'): raw = raw.split('```')[1].lstrip('json').strip()
     try:
         data = json.loads(raw)
-    except json.JSONDecodeError:
-        return {
-            "decision": "hold",
-            "new_stop": None,
-            "new_target": None,
-            "reasoning": f"JSON parse error: {raw[:100]}"
-        }
-        
-    return {
-        "decision": data.get("decision", "hold"),
-        "new_stop": data.get("new_stop"),
-        "new_target": data.get("new_target"),
-        "reasoning": data.get("reasoning", "")
-    }
-
-
-def _get_auditor_system_prompt() -> str:
-    return """You are the Lead Risk Auditor for Fabio Valentini's predatory trading desk.
-Your job is to perform a rigorous second-stage audit of a trade proposed by our Reflex model.
-You have the final authority to confirm the trade, veto it (canceling it immediately), or optimize/adjust its Stop Loss (SL) and Take Profit (TP) levels to match the structural extremes (such as POC overnight, IB edges, VA boundaries, or key Big Trade walls).
-
-⚠️ CRITICAL AUDIT GUIDELINES:
-1. TREND DAYS ARE POWERFUL: On clear Trend Days (TREND_UP or TREND_DOWN), do NOT veto breakout or trend-continuation entries just because the price has already run ("hyper-extended") or because of small pullbacks. The trend is your friend. Confirm these setups.
-2. VETO SPAN LIMITS: Veto ONLY if there is a massive counter-trend block (e.g., >1500 contracts opposing) directly blocking the path, or if the price has clearly returned inside the IB range (indicating a fakeout).
-3. OPTIMIZE, DON'T VETO: If you feel the stop loss or target suggested by the Reflex model is slightly off but the direction is correct, do NOT veto. Instead, select "confirm" and provide the "adjusted_stop" and "adjusted_target" values.
-
-Respond ONLY with valid JSON matching this schema:
-{
-  "decision": "confirm" | "veto",
-  "adjusted_stop": <float or null (provide a float value to update/adjust the Stop Loss structural level, or null to keep original)>,
-  "adjusted_target": <float or null (provide a float value to update/adjust the Target structural level, or null to keep original)>,
-  "reasoning": "<Explain in detail why you decided to confirm, veto, or modify the stop/target. Quote relevant order flow and structural facts. Do not limit your length.>"
-}"""
-
-
-def deep_audit(candidate: CandidateBar, reflex_signal: FabioSignal, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> dict:
-    """Perform a deep structural audit of a proposed reflex trade using GLM 5.2 with full context."""
-    import src.agents.topic_router as tr
-    
-    # Temporarily increase knowledge chars budget to load the full rules database for the auditor
-    original_budget = tr.MAX_KNOWLEDGE_CHARS
-    tr.MAX_KNOWLEDGE_CHARS = 35_000
-    
-    store = _load_knowledge_store()
-    topics = select_fabio_topics(candidate, store)
-    rules_text, context_text = build_tiered_knowledge(topics, store)
-    
-    # Restore the original budget
-    tr.MAX_KNOWLEDGE_CHARS = original_budget
-    
-    question = build_fabio_question(candidate, session_context=session_context, m1_bars=m1_bars, market_narrative=market_narrative, bars_since_last=bars_since_last)
-    
-    # Format M1 sequence text for the prompt
-    from src.signal_context import _format_m1_sequence
-    m1_sequence_text = _format_m1_sequence(m1_bars) if m1_bars else "No M1 sequence context."
-    
-    # Load Active Dynamic Rules (Live corrections)
-    active_rules_str = ""
-    try:
-        from src.agents.dynamic_rules_manager import get_active_rules
-        active_rules = get_active_rules()
-        if active_rules:
-            active_rules_str += "## ACTIVE LIVE CORRECTIONS / DYNAMIC RULES (MUST STRICTLY FOLLOW):\n"
-            for r in active_rules:
-                active_rules_str += f"- [{r['rule_id']}] Topic: {r['topic']}\n"
-                active_rules_str += f"  Description: {r['description']}\n"
-                active_rules_str += f"  Required Action: {r['action']}\n"
-            active_rules_str += "\n"
-    except Exception as e:
-        print(f"Error loading active dynamic rules for auditor: {e}")
-
-    # Session Context parameters
-    import pytz
-    ET = pytz.timezone('US/Eastern')
-    
-    user_msg = f"""## TRADING RULES (DISTILLED KNOWLEDGE)
-{active_rules_str}
-{rules_text}
-{context_text}
-
-## PROPOSED TRADE FROM REFLEX MODEL
-Direction: {reflex_signal.direction.upper()}
-Proximity: {candidate.proximity_to.upper()} near {candidate.proximity_level:.2f}
-Suggested Entry: {reflex_signal.entry}
-Suggested Stop: {reflex_signal.stop}
-Suggested Target: {reflex_signal.target}
-
-## SESSION CONTEXT DATA
-- Date: {candidate.bar.timestamp.strftime('%Y-%m-%d')}
-- Bar Time: {candidate.bar.timestamp.astimezone(ET).strftime('%H:%M')} ET
-- Current Price: {candidate.bar.close}
-- Developing POC: {candidate.session_ctx.vp.poc if candidate.session_ctx.vp else 'N/A'}
-- IB boundaries: Low={candidate.session_ctx.ib_low}, High={candidate.session_ctx.ib_high}
-- Institutional footprint (Recent M1 sequence):
-{m1_sequence_text}
-
-## AUDIT TASK
-Perform a deep structural analysis using the Rules above.
-1. Is this a fakeout/trap? (If yes, output veto).
-2. Does the order flow (big trades/delta) confirm absorption or initiative?
-3. Check the stop loss: is it placed structurally behind the defending wall/IB boundary? If not, adjust it.
-4. Check the target: is there a structural logic for the target? If not, adjust it.
-Respond with JSON only.
-"""
-    
-    # Force DeepSeek via OpenRouter for high-conviction audit
-    import os
-    model = "deepseek/deepseek-chat"
-    
-    raw = llm_ask(_get_auditor_system_prompt(), user_msg, model=model)
-    if raw.startswith('```'):
-        raw = raw.split('```')[1].lstrip('json').strip()
-        
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
-        print(f"  [DEEP AUDIT ERROR] Failed to parse auditor JSON: {raw[:150]}")
-        return {
-            "decision": "confirm",  # Safe fallback: keep the trade if auditor fails
-            "adjusted_stop": None,
-            "adjusted_target": None,
-            "reasoning": f"JSON parse error: {raw[:80]}"
-        }
-        
-    return {
-        "decision": data.get("decision", "confirm"),
-        "adjusted_stop": data.get("adjusted_stop"),
-        "adjusted_target": data.get("adjusted_target"),
-        "reasoning": data.get("reasoning", "")
-    }
-
+        return {"decision": data.get("decision", "hold"), "new_stop": data.get("new_stop"), "new_target": None, "reasoning": ""}
+    except:
+        return {"decision": "hold", "new_stop": None, "new_target": None, "reasoning": "parse error"}

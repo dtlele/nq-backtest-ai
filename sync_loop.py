@@ -16,15 +16,36 @@ out_path = chart_data_dir / "status.json"
 
 def read_jsonl(path):
     rows = []
-    if path.exists():
-        with open(path, 'r', encoding='utf-8') as f:
-            for line in f:
-                if line.strip():
-                    try:
-                        rows.append(json.loads(line))
-                    except:
-                        pass
-    return rows
+    
+    def _read_single(p):
+        if p.exists():
+            with open(p, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.strip():
+                        try:
+                            rows.append(json.loads(line))
+                        except:
+                            pass
+
+    # Leggi il file principale
+    _read_single(path)
+    
+    # Leggi dai worker paralleli se esistono
+    if path.name in ('trades_log.jsonl', 'reasoning_log.jsonl'):
+        for worker_dir in path.parent.glob('*_w*/'):
+            worker_file = worker_dir / path.name
+            _read_single(worker_file)
+            
+    # Rimuovi duplicati basati su date + bar_time_et
+    unique_rows = []
+    seen = set()
+    for r in rows:
+        key = (r.get('date'), r.get('bar_time_et'), r.get('entry_time'))
+        if key not in seen:
+            seen.add(key)
+            unique_rows.append(r)
+            
+    return unique_rows
 
 def get_latest_line(path):
     if not path.exists():
@@ -152,11 +173,18 @@ def build_status():
         avg_win = sum(t.get('pnl_usd', 0) for t in wins) / len(wins) if wins else 0
         avg_loss = abs(sum(t.get('pnl_usd', 0) for t in losses) / len(losses)) if losses else 0
         asimmetria = round(avg_win / avg_loss, 2) if avg_loss else 2.00
+        
+        gross_profit = sum(t.get('pnl_usd', 0) for t in wins)
+        gross_loss = abs(sum(t.get('pnl_usd', 0) for t in losses))
+        profit_factor = round(gross_profit / gross_loss, 2) if gross_loss > 0 else (99.99 if gross_profit > 0 else 0)
+        expectancy = round(total_pnl / len(tl), 2) if tl else 0.0
+        
         peak, running, max_dd = 0, 0, 0
         for t in tl:
             running += t.get('pnl_usd', 0)
             peak = max(peak, running)
             max_dd = max(max_dd, peak - running)
+            
         return {
             'totalTrades': len(tl),
             'totalDays': len(dates),
@@ -166,6 +194,8 @@ def build_status():
             'losses': len(losses),
             'asimmetria': asimmetria,
             'maxDrawdown': round((max_dd / 50000) * 100, 2),
+            'profitFactor': profit_factor,
+            'expectancy': expectancy,
             'navAlerts': 0,
             'middayRejections': 0,
         }
@@ -189,7 +219,9 @@ def build_status():
             wins = len([t for t in day_trades if t.get('pnl_usd', 0) > 0])
             losses = len([t for t in day_trades if t.get('pnl_usd', 0) <= 0])
             pnl = sum(t.get('pnl_usd', 0) for t in day_trades)
-            result.append({'date': date, 'trades': len(day_trades), 'wins': wins, 'losses': losses, 'pnl': pnl, 'proposals': len([p for p in proposals if p.get('date') == date])})
+            num_proposals = len([p for p in proposals if p.get('date') == date])
+            if len(day_trades) > 0 or num_proposals > 0:
+                result.append({'date': date, 'trades': len(day_trades), 'wins': wins, 'losses': losses, 'pnl': pnl, 'proposals': num_proposals})
         return result
 
     return {
@@ -219,13 +251,10 @@ if __name__ == "__main__":
                 temp_path = out_path.with_suffix('.tmp')
                 with open(temp_path, 'w', encoding='utf-8') as f:
                     json.dump(data, f)
-                # On Windows, replace can fail if the file is being read by the dev server.
-                # os.replace handles atomic overwrite on Windows safely without deleting the file first.
-                import os
-                os.replace(temp_path, out_path)
-            except (PermissionError, FileNotFoundError):
-                # If Vite is locking the file, we skip this cycle
-                pass
+                import shutil
+                shutil.copy(temp_path, out_path)
+            except Exception as e:
+                print(f"Warning: could not update status.json: {e}")
             iteration += 1
             trades_count = len(data["ALL_TRADES"])
             latest = data["LATEST_REASONING"]

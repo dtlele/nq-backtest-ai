@@ -548,6 +548,67 @@ export default function AdvancedAnalytics({ trades = [], kpi = {} }) {
             </tbody>
           </table>
         </div>
+
+        {/* Historica Trade List */}
+        <div style={{
+          background: 'var(--bg-base)',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          padding: '20px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+        }}>
+          <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: 700, borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>
+            📜 Registro Trade (Tutti i trade)
+          </h4>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '700px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                  <th style={{ padding: '8px', textAlign: 'left' }}>#</th>
+                  <th style={{ padding: '8px', textAlign: 'left' }}>Data / Ora</th>
+                  <th style={{ padding: '8px', textAlign: 'center' }}>Dir</th>
+                  <th style={{ padding: '8px', textAlign: 'left' }}>Setup</th>
+                  <th style={{ padding: '8px', textAlign: 'right' }}>Entry</th>
+                  <th style={{ padding: '8px', textAlign: 'center' }}>Exit Reason</th>
+                  <th style={{ padding: '8px', textAlign: 'right' }}>R</th>
+                  <th style={{ padding: '8px', textAlign: 'right' }}>P&L Netto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedTrades.map((t, i) => {
+                  const isProfit = t.pnl_usd >= 0;
+                  return (
+                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', height: '36px' }}>
+                      <td style={{ padding: '8px', color: 'var(--text-muted)' }}>{i + 1}</td>
+                      <td style={{ padding: '8px', fontFamily: 'var(--font-mono)' }}>{t.date} {new Date(t.entry_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
+                      <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', color: t.direction === 'long' ? 'var(--accent-green)' : 'var(--accent-red)' }}>{t.direction.toUpperCase()}</td>
+                      <td style={{ padding: '8px', color: 'var(--accent-blue)' }}>{t.setup_type || 'N/A'}</td>
+                      <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{t.entry?.toFixed(2)}</td>
+                      <td style={{ padding: '8px', textAlign: 'center', color: 'var(--text-muted)' }}>{t.exit_reason}</td>
+                      <td style={{ padding: '8px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{t.r_ratio ? t.r_ratio.toFixed(2) : '-'}</td>
+                      <td style={{ 
+                        padding: '8px', 
+                        textAlign: 'right', 
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: 'bold',
+                        color: isProfit ? 'var(--accent-green)' : 'var(--accent-red)'
+                      }}>
+                        {isProfit ? '+' : ''}${t.pnl_usd.toFixed(0)}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {sortedTrades.length === 0 && (
+                  <tr>
+                    <td colSpan="8" style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      Nessun trade nel registro.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );

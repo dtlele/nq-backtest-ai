@@ -68,7 +68,7 @@ function AgentCard({ icon, title, subtitle, accent = '#63b3ed', isActive = false
     }}>
       {/* Card header */}
       <div style={{
-        padding: '8px 12px',
+        padding: '12px 14px',
         background: isActive ? `${accent}10` : 'var(--bg-elevated)',
         borderBottom: '1px solid var(--border)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -76,7 +76,7 @@ function AgentCard({ icon, title, subtitle, accent = '#63b3ed', isActive = false
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <span style={{ fontSize: 13 }}>{icon}</span>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', color: isActive ? accent : 'var(--text-secondary)' }}>{title}</div>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.05em', color: isActive ? accent : 'var(--text-secondary)' }}>{title}</div>
             {subtitle && <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>{subtitle}</div>}
           </div>
         </div>
@@ -89,7 +89,7 @@ function AgentCard({ icon, title, subtitle, accent = '#63b3ed', isActive = false
           }} />
         )}
       </div>
-      <div style={{ padding: '10px 12px' }}>{children}</div>
+      <div style={{ padding: '14px' }}>{children}</div>
     </div>
   )
 }
@@ -99,6 +99,9 @@ function ContextAgentCard({ latestReasoning }) {
   const hasData = latestReasoning && latestReasoning.date
 
   const bias = latestReasoning?.bias || latestReasoning?.fabio_direction || latestReasoning?.direction || null
+  const confidence = latestReasoning?.fabio_confidence || 0
+  const isNoTrade = latestReasoning?.decision?.toLowerCase() !== 'trade'
+
   const trueBias = latestReasoning?.session_bias || 'none'
   const dayType = latestReasoning?.day_type || '---'
   const isThinking = !hasData
@@ -125,7 +128,7 @@ function ContextAgentCard({ latestReasoning }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {/* Bias + State + Phase row */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
             <div style={{
               flex: 1, minWidth: '28%', background: 'rgba(0,0,0,0.2)', borderRadius: 7, padding: '6px 10px',
               border: `1px solid ${biasColor}25`,
@@ -167,25 +170,73 @@ function ContextAgentCard({ latestReasoning }) {
             </div>
           </div>
 
-          {/* Volume Profile snapshot */}
-          {(latestReasoning?.proximity_level || latestReasoning?.wall_level) && (
-            <div style={{ display: 'flex', gap: 6 }}>
-              {latestReasoning.proximity_level && (
-                <div style={{ flex: 1, background: 'rgba(0,0,0,0.2)', borderRadius: 7, padding: '5px 8px' }}>
-                  <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>NEAR LEVEL</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--accent-yellow)' }}>{latestReasoning.proximity_level}</div>
-                </div>
-              )}
-              {latestReasoning.wall_level && (
-                <div style={{ flex: 1, background: 'rgba(0,0,0,0.2)', borderRadius: 7, padding: '5px 8px' }}>
-                  <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>WALL</div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--accent-orange)' }}>{latestReasoning.wall_level} ({latestReasoning.wall_side})</div>
-                </div>
-              )}
-            </div>
-          )}
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '4px 0' }} />
+          
+          <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 8, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+             <div style={{ fontSize: 9.5, color: 'var(--text-muted)' }}>EXECUTION CONFIDENCE ⚡</div>
+             <ConfidenceGauge value={confidence} />
+             {isNoTrade && (
+               <div style={{ color: 'var(--accent-red)', fontSize: 10, marginTop: 4, fontWeight: 600 }}>
+                 ⛔ No valid setup — {latestReasoning?.no_trade_reason?.slice(0, 80) || `fabio_confidence=${confidence} < 70`}
+               </div>
+             )}
+          </div>
+
         </div>
       )}
+    </AgentCard>
+  )
+}
+
+
+// ── Pre-Session Roadmap ────────────────────────────────────────────────────
+function RoadmapCard({ latestReasoning }) {
+  const roadmap = latestReasoning?.daily_roadmap;
+  if (!roadmap || !roadmap.context_analysis) return null;
+  
+  const currentBias = latestReasoning?.bias || latestReasoning?.fabio_direction || latestReasoning?.direction || 'none';
+  const isBullish = currentBias === 'long';
+  const isBearish = currentBias === 'short';
+  const isChop = currentBias === 'none';
+
+  return (
+    <AgentCard icon="🗺️" title="PRE-SESSION HYPOTHESES" subtitle="Roadmap Iniziale & Scenari" accent="#f56565" isActive={true}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
+        <div style={{ background: 'rgba(255,255,255,0.03)', padding: '8px 10px', borderRadius: 6, fontSize: 11, color: 'var(--text-secondary)', fontStyle: 'italic', borderLeft: '2px solid #f56565' }}>
+          {roadmap.context_analysis}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ padding: '8px 10px', borderRadius: 6, background: isBullish ? 'rgba(72,187,120,0.15)' : 'rgba(0,0,0,0.2)', border: isBullish ? '1px solid rgba(72,187,120,0.4)' : '1px solid transparent', transition: 'all 0.3s' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent-green)', letterSpacing: '0.04em' }}>1. BULLISH SCENARIO</div>
+              {isBullish && <div style={{ fontSize: 9, color: 'var(--accent-green)', fontWeight: 700, padding: '2px 6px', background: 'rgba(72,187,120,0.2)', borderRadius: 10 }}>PLAYING OUT</div>}
+            </div>
+            <div style={{ fontSize: 10.5, color: 'var(--text-primary)', lineHeight: 1.4 }}>
+              <span style={{ color: 'var(--text-muted)' }}>Trigger:</span> {roadmap.bullish_scenario?.trigger_description}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, fontFamily: 'var(--font-mono)' }}>Target: {roadmap.bullish_scenario?.target_level}</div>
+          </div>
+          <div style={{ padding: '8px 10px', borderRadius: 6, background: isBearish ? 'rgba(245,101,101,0.15)' : 'rgba(0,0,0,0.2)', border: isBearish ? '1px solid rgba(245,101,101,0.4)' : '1px solid transparent', transition: 'all 0.3s' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent-red)', letterSpacing: '0.04em' }}>2. BEARISH SCENARIO</div>
+              {isBearish && <div style={{ fontSize: 9, color: 'var(--accent-red)', fontWeight: 700, padding: '2px 6px', background: 'rgba(245,101,101,0.2)', borderRadius: 10 }}>PLAYING OUT</div>}
+            </div>
+            <div style={{ fontSize: 10.5, color: 'var(--text-primary)', lineHeight: 1.4 }}>
+              <span style={{ color: 'var(--text-muted)' }}>Trigger:</span> {roadmap.bearish_scenario?.trigger_description}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4, fontFamily: 'var(--font-mono)' }}>Target: {roadmap.bearish_scenario?.target_level}</div>
+          </div>
+          <div style={{ padding: '8px 10px', borderRadius: 6, background: isChop ? 'rgba(237,137,54,0.15)' : 'rgba(0,0,0,0.2)', border: isChop ? '1px solid rgba(237,137,54,0.4)' : '1px solid transparent', transition: 'all 0.3s' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent-orange)', letterSpacing: '0.04em' }}>3. CHOP SCENARIO</div>
+              {isChop && <div style={{ fontSize: 9, color: 'var(--accent-orange)', fontWeight: 700, padding: '2px 6px', background: 'rgba(237,137,54,0.2)', borderRadius: 10 }}>PLAYING OUT</div>}
+            </div>
+            <div style={{ fontSize: 10.5, color: 'var(--text-primary)', lineHeight: 1.4 }}>
+              Range atteso tra <span style={{ fontFamily: 'var(--font-mono)' }}>{roadmap.chop_scenario?.range_low}</span> e <span style={{ fontFamily: 'var(--font-mono)' }}>{roadmap.chop_scenario?.range_high}</span>.
+            </div>
+          </div>
+        </div>
+      </div>
     </AgentCard>
   )
 }
@@ -209,7 +260,9 @@ function parseAuditScores(reasoningText) {
 // ── Audit & Full Reasoning Card ─────────────────────────────────────────────
 function AuditAndReasoningCard({ latestReasoning }) {
   const reasoning = latestReasoning?.fabio_reasoning || '';
+  const narrativeUpdate = latestReasoning?.market_narrative_update || '';
   const { displayed } = useTypingText(reasoning, !!reasoning);
+  const { displayed: displayedNarrative } = useTypingText(narrativeUpdate, !!narrativeUpdate);
   const scores = parseAuditScores(reasoning);
   const hasData = !!latestReasoning?.date;
 
@@ -245,10 +298,10 @@ function AuditAndReasoningCard({ latestReasoning }) {
 
           {displayed && (
             <div style={{
-              background: 'rgba(0,0,0,0.25)', borderRadius: 8, padding: '10px 12px',
+              background: 'rgba(0,0,0,0.25)', borderRadius: 8, padding: '14px',
               fontSize: 11, lineHeight: 1.6, color: 'var(--text-primary)',
               borderLeft: `2px solid #f6ad55`,
-              maxHeight: 250, overflowY: 'auto',
+              maxHeight: 'none',
               whiteSpace: 'pre-wrap',
             }}>
               {displayed}
@@ -403,7 +456,7 @@ function ActiveTradeCard({ openTrade, liveReasoning }) {
               background: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: '5px 7px', textAlign: 'center',
             }}>
               <div style={{ fontSize: 8, color: 'var(--text-muted)', marginBottom: 1 }}>{item.label}</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, color: item.color || 'var(--text-primary)' }}>{item.value}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 800, color: item.color || 'var(--text-primary)' }}>{item.value}</div>
             </div>
           ))}
         </div>
@@ -484,29 +537,11 @@ export default function AgentSidebar({ latestReasoning, openTrade, reasonings, o
 
   const prevOpenTradeTime = useRef(null)
 
-  useEffect(() => {
-    if (activeTrade) {
-      setTab('trade');
-      setSelectedTrade(activeTrade);
-    }
-  }, [activeTrade])
 
-  useEffect(() => {
-    if (openTrade && openTrade.entry_time && openTrade.entry_time !== prevOpenTradeTime.current) {
-      setTab('trade');
-      prevOpenTradeTime.current = openTrade.entry_time;
-    } else if (!openTrade && prevOpenTradeTime.current) {
-      prevOpenTradeTime.current = null;
-    }
-  }, [openTrade])
-
-  useEffect(() => {
-    setSelectedTrade(null)
-  }, [activeDate])
 
   return (
     <div style={{
-      width: 380,
+      width: 'clamp(420px, 35vw, 550px)',
       flexShrink: 0,
       background: 'var(--bg-base)',
       borderLeft: '1px solid var(--border)',
@@ -523,10 +558,10 @@ export default function AgentSidebar({ latestReasoning, openTrade, reasonings, o
         flexShrink: 0,
       }}>
         {[
-          { id: 'agents', label: '🤖 Agenti' },
-          { id: 'trade', label: '📊 Trade' },
-          { id: 'log', label: '📋 Log' },
+          { id: 'pre_session', label: '🗺️ Schema Iniziale' },
+          { id: 'agents', label: '🚀 Dashboard Live' },
           { id: 'narrative', label: '📖 Narrazione' },
+          { id: 'trade', label: '💰 Trades' },
         ].map(t => (
           <button
             key={t.id}
@@ -575,7 +610,7 @@ export default function AgentSidebar({ latestReasoning, openTrade, reasonings, o
                   }}
                   style={{
                     background: 'rgba(99, 179, 237, 0.15)', color: 'var(--accent-blue)', border: '1px solid rgba(99, 179, 237, 0.3)',
-                    padding: '4px 8px', borderRadius: 5, fontSize: 10, fontWeight: 700,
+                    padding: '4px 8px', borderRadius: 5, fontSize: 11, fontWeight: 800,
                     cursor: 'pointer', transition: 'background 0.2s'
                   }}
                   onMouseOver={e => e.currentTarget.style.background = 'rgba(99, 179, 237, 0.25)'}
@@ -586,28 +621,29 @@ export default function AgentSidebar({ latestReasoning, openTrade, reasonings, o
                 </button>
               </div>
             )}
+            {openTrade && <ActiveTradeCard openTrade={openTrade} liveReasoning={latestReasoning} />}
             <ContextAgentCard latestReasoning={latestReasoning} />
-            <ExecutionAgentCard latestReasoning={latestReasoning} />
+            
             <AuditAndReasoningCard latestReasoning={latestReasoning} />
           </>
         )}
-        {tab === 'trade' && (
-          selectedTrade ? (
-            <TradePanel trade={selectedTrade} allTrades={dayTrades} proposals={dayProposals} onSelect={(t) => { setSelectedTrade(t); onSelectTrade(t); }} timeZone={timeZone} />
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', overflow: 'hidden' }}>
-              <ActiveTradeCard openTrade={openTrade} liveReasoning={latestReasoning} />
-              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                <TradePanel trade={null} allTrades={dayTrades} proposals={dayProposals} onSelect={(t) => { setSelectedTrade(t); onSelectTrade(t); }} timeZone={timeZone} />
-              </div>
-            </div>
-          )
-        )}
-        {tab === 'log' && (
-          <ReasoningTimeline reasonings={reasonings} onJump={onJump} timeZone={timeZone} />
+        {tab === 'pre_session' && (
+          <RoadmapCard latestReasoning={latestReasoning} />
         )}
         {tab === 'narrative' && (
           <NarrativePanel reasonings={reasonings} onJump={onJump} timeZone={timeZone} />
+        )}
+        {tab === 'narrative' && (
+          <NarrativePanel reasonings={reasonings} onJump={onJump} timeZone={timeZone} />
+        )}
+        {tab === 'trade' && (
+          <TradePanel
+            trade={activeTrade || openTrade}
+            allTrades={dayTrades}
+            proposals={dayProposals}
+            onSelect={onSelectTrade}
+            timeZone={timeZone}
+          />
         )}
       </div>
 
