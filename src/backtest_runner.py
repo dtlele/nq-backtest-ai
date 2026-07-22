@@ -14,6 +14,7 @@ For each day:
 """
 import json
 import datetime
+import os
 from pathlib import Path
 from src.data_loader import load_day, list_data_files
 from src.bar_aggregator import aggregate_to_bars
@@ -1003,33 +1004,65 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         
         # STAGE 2: INDEPENDENT DEEP AUDITOR (Triggered only when Reflex indicates trading interest)
         # Threshold: direction in ['long', 'short'] and confidence >= 55.
-        # This prevents running the slow, full-context model on 90%+ of the bars, saving latency.
         if fabio_signal.direction in ['long', 'short'] and fabio_signal.confidence >= 55:
             print(f"  [DEEP AUDIT TRIGGERED 🎯] Reflex proposed {fabio_signal.direction} (Conf: {fabio_signal.confidence}). Calling GLM 5.2 Deep Auditor...")
             
-            # Temporarily override topic budget to 35k to load the full rules database
-            import src.agents.topic_router as tr
-            original_budget = tr.MAX_KNOWLEDGE_CHARS
-            tr.MAX_KNOWLEDGE_CHARS = 35_000
-            
-            # Load the complete 14-bar M1 context for the deep auditor
-            m1_bars_full = get_m1_context(bars_1min_ny, candidate.bar, context_before=14)
-            
-            # Query the deep auditor from scratch (unbiased blind test)
-            deep_signal = fabio_analyze(
-                candidate, 
-                session_context=session_buffer, 
-                m1_bars=m1_bars_full, 
-                market_narrative=current_narrative, 
-                bars_since_last=bars_since_last
-            )
-            
-            # Restore the original budget
-            tr.MAX_KNOWLEDGE_CHARS = original_budget
-            
-            # Override reflex signal with the auditor's final decision
-            fabio_signal = deep_signal
-            print(f"  [DEEP AUDIT DONE] Auditor final decision: direction={fabio_signal.direction} conf={fabio_signal.confidence}")
+            if os.environ.get('FABIO_MODE', 'scalper').lower() == 'scalper':
+                # SCALPER MODE: audit contrarian VERO (prompt diverso → niente cache hit).
+                import os as _os
+                from src.agents.llm_client import llm_ask
+                # Il riflesso ha proposto; l'auditor deve cercare attivamente
+                # l'INVALIDAZIONE. Se non la trova, conferma.
+                from src.agents.fabio_agent import _build_snapshot, _get_scalper_system_prompt
+                _snap = _build_snapshot(candidate, current_narrative, session_buffer)
+                _audit_sys = (
+                    "You are the DEVIL'S ADVOCATE risk auditor on an NQ orderflow desk.\n"
+                    "A junior scalper proposes the trade below. Your job is NOT to agree —\n"
+                    "it is to find the ONE fact that invalidates it. Check in order:\n"
+                    "1. BIAS: is the trade against the institutional bias regime? (drive/lean)\n"
+                    "2. FLOW: does delta/CVD actually confirm, or is it being rationalized?\n"
+                    "3. LOCATION: is entry at a real structural level or in the middle of nowhere?\n"
+                    "4. TIMING: opening rotation, lunch chop, late session, exhaustion?\n"
+                    "5. FAILED AUCTION risk: is price beyond IB with weak acceptance?\n"
+                    "Vote 'confirm' ONLY if you actively tried to kill the trade and failed.\n"
+                    "Respond ONLY with JSON: {\"verdict\": \"confirm|reject\", \"reason\": \"<max 25 words, the decisive fact>\", \"confidence\": <0-100>}"
+                )
+                _audit_msg = (_snap + f"\n\n## PROPOSED TRADE (junior scalper)\n"
+                              f"direction={fabio_signal.direction} conf={fabio_signal.confidence} "
+                              f"setup={fabio_signal.setup_type} entry={fabio_signal.entry} "
+                              f"stop={fabio_signal.stop} target={fabio_signal.target}\n"
+                              f"reasoning: {fabio_signal.reasoning[:300]}")
+                try:
+                    _raw = llm_ask(_audit_sys, _audit_msg, model=os.environ.get('OPENROUTER_MODEL', 'minimax/minimax-m2'))
+                    if _raw.startswith('```'):
+                        _raw = _raw.split('```')[1].lstrip('json').strip()
+                    _ad = json.loads(_raw)
+                    if _ad.get('verdict') == 'reject':
+                        print(f"  [DEEP AUDIT REJECTED ⛔] {_ad.get('reason', '')}")
+                        fabio_signal.direction = 'none'
+                        fabio_signal.confidence = 0
+                        fabio_signal.reasoning += f" | AUDIT REJECT: {_ad.get('reason', '')}"
+                    else:
+                        fabio_signal.confidence = max(fabio_signal.confidence, int(_ad.get('confidence', fabio_signal.confidence)))
+                        print(f"  [DEEP AUDIT CONFIRMED ✅] {_ad.get('reason', '')}")
+                except Exception as _e:
+                    print(f"  [DEEP AUDIT WARN] audit fallito ({_e}), mantengo reflex")
+            else:
+                # Legacy experts mode: re-analyze con contesto M1 esteso (14 barre)
+                import src.agents.topic_router as tr
+                original_budget = getattr(tr, 'MAX_KNOWLEDGE_CHARS', None)
+                m1_bars_full = get_m1_context(bars_1min_ny, candidate.bar, context_before=14)
+                deep_signal = fabio_analyze(
+                    candidate, 
+                    session_context=session_buffer, 
+                    m1_bars=m1_bars_full, 
+                    market_narrative=current_narrative, 
+                    bars_since_last=bars_since_last
+                )
+                if original_budget is not None:
+                    tr.MAX_KNOWLEDGE_CHARS = original_budget
+                fabio_signal = deep_signal
+                print(f"  [DEEP AUDIT DONE] Auditor final decision: direction={fabio_signal.direction} conf={fabio_signal.confidence}")
 
         # STOP BUFFER: 0.5 points (2 ticks) — minimal spread protection only.
         # Statistical insight: buffer 0-1pt → WR 41.7% (+$905). Buffer 3-6pt → WR 23.1% (-$309).
