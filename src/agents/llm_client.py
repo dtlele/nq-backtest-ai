@@ -390,7 +390,10 @@ def llm_ask(system_prompt: str, user_msg: str, timeout: int = 120,
             provider: str = None, model: str = None,
             reasoning_effort: str = None, max_tokens: int = None) -> str:
     key = _cache_key(system_prompt, user_msg, video_path, provider,
-                     f"{model}|eff={reasoning_effort}|mt={max_tokens}" if (reasoning_effort or max_tokens) else model)
+                     model)  # NB: reasoning_effort e max_tokens NON entrano nella cache key,
+                              # altrimenti il replay con parametri diversi genera cache miss inutili.
+                              # Il rischio (output leggermente diverso per stesso input) e' accettabile
+                              # dato che il cache serve a evitare chiamate ripetute durante backtest.
 
     if provider is None:
         provider = _get_provider()

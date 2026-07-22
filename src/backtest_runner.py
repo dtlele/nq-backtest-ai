@@ -753,10 +753,28 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 candidate.stop_hunt_direction = last_loss['direction']
 
         # ── OPT 3: Two-pass (light → full) ──────────────────────────
+        # PRE-FILTER meccanico (zero LLM) — applica time gate, participation,
+        # structural anchor. Risparmia la chiamata LLM se il setup e' noto-perdente.
         if not dry_run:
+            from src.agents.desk_gates import check_desk_gates
+            from src.agents.institutional_bias import compute_institutional_bias
+            _bias_pre = compute_institutional_bias(candidate)
+            # Pre-gate solo se la candidata potrebbe generare un trade
+            # (long/short in candidate, non ancora SKIP)
+            _pre_dir = 'long' if str(candidate.setup_category).startswith(('liquidity', 'imbalance', 'ivb', 'momentum')) or 'momentum' in str(candidate.setup_category).lower() else None
+            if _pre_dir:
+                _veto = check_desk_gates(candidate, _pre_dir, _bias_pre.regime)
+                if _veto:
+                    print(f"  {bar_ts} [PRE-GATE VETO] dir={_pre_dir} regime={_bias_pre.regime}: {_veto}")
+                    log_reasoning({
+                        'date': date_str, 'bar_time_utc': candidate.bar.timestamp.isoformat(),
+                        'fabio_direction': 'pregate_skip', 'fabio_confidence': 0,
+                        'decision': 'pregate_skip', 'no_trade_reason': _veto,
+                    })
+                    continue  # skippa la barra, NON chiama LLM
             light_conf = fabio_light(candidate, session_context=session_buffer, market_narrative=market_narrative, bars_since_last=bars_since_last)
-            if False:  # disabled: always run full analysis for every candidate bar
-                print(f"  {bar_ts} [LIGHT] conf={light_conf} -> skip")
+            if light_conf < LIGHT_CONFIDENCE_THRESHOLD:  # attivo: salta LLM se setup debole
+                print(f"  {bar_ts} [LIGHT] conf={light_conf} (th={LIGHT_CONFIDENCE_THRESHOLD}) -> skip")
                 import pytz as _lt_pytz
                 _lt_ET = _lt_pytz.timezone('America/New_York')
                 bar_et = candidate.bar.timestamp.astimezone(_lt_ET).strftime('%H:%M')
