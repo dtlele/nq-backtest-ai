@@ -759,6 +759,32 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 candidate.stop_hunt_direction = last_loss['direction']
 
         # ── OPT 3: Two-pass (light → full) ──────────────────────────
+        # ML PRE-FILTER (Random Forest) — skip candele M5 senza edge statistico.
+        # Addestrato su 230 giorni, AUC=0.73. Score > threshold = A+ setup.
+        if os.environ.get('ML_PRE_FILTER', '1') == '1':
+            try:
+                from src.agents.ml_filter import score_bar as ml_score
+                # Calcola vol_avg_12 dalle candele recenti
+                _recent_12 = [b for b in bars_ny if b.timestamp < candidate.bar.timestamp][-12:]
+                _vol_avg_12 = sum(b.volume for b in _recent_12) / len(_recent_12) if _recent_12 else candidate.bar.volume
+                _ml_score = ml_score(candidate.bar, ctx, _vol_avg_12)
+                _ml_threshold = float(os.environ.get('ML_SCORE_THRESHOLD', '0.6'))
+                if not quiet:
+                    print(f'  [ML] score={_ml_score:.3f} (th={_ml_threshold})')
+                if _ml_score < _ml_threshold:
+                    log_reasoning({
+                        'date': date_str, 'bar_time_utc': candidate.bar.timestamp.isoformat(),
+                        'fabio_direction': 'ml_filter', 'fabio_confidence': int(_ml_score * 100),
+                        'decision': 'ml_skip', 'no_trade_reason': f'ml_score={_ml_score:.3f} < {_ml_threshold}',
+                    })
+                    session_buffer.append(f"{bar_ts} ml_skip({_ml_score:.2f}) none")
+                    if len(session_buffer) > MAX_SESSION_BUFFER:
+                        session_buffer.pop(0)
+                    continue
+            except Exception as _e:
+                if not quiet:
+                    print(f'  [ML FILTER ERR] {_e}, falling through')
+
         # DEAD-BAR FILTER (zero LLM, ultra-cheap) — skip candele M5 'morte'
         # che non hanno struttura istituzionale. Riduce ~50% chiamate LLM.
         if os.environ.get('M5_DEAD_BAR_FILTER', '1') == '1':

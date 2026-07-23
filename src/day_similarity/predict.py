@@ -69,6 +69,14 @@ def _feature_columns() -> List[str]:
         "pm_close_in_va_pct", "pm_skew", "pm_hvn_count", "pm_lvn_count",
         "pm_hvn_density", "pm_lvn_max_gap_pct",
         "pm_dist_to_nearest_hvn_pct", "pm_dist_to_nearest_lvn_pct",
+        # pre-market microstructure (when built from ticks)
+        "pm_total_volume", "pm_delta_total", "pm_delta_pct",
+        "pm_big_trade_count", "pm_big_trade_volume",
+        "pm_big_trade_delta_pct", "pm_cvd_pct",
+        "pm_vwap_close_pct", "pm_vwap_drift_pct",
+        "pm_buy_share", "pm_max_bar_delta_pct",
+        "pm_vp_total_volume", "pm_vp_delta_total", "pm_vp_delta_pct",
+        "pm_poc_vp_close_pct", "pm_hvn_count_vp", "pm_lvn_count_vp",
         # initial balance
         "ib_range_pct", "ib_close_position", "ib_drift_pct",
         "ib_vs_pm_range_pct", "ib_vs_prior_day_range_pct", "ib_vs_adr_pct",
@@ -79,6 +87,14 @@ def _feature_columns() -> List[str]:
         "ib_vp_width_pct", "ib_poc_close_pct", "ib_poc_in_va_pct",
         "ib_close_in_va_pct", "ib_skew", "ib_hvn_count", "ib_lvn_count",
         "ib_dist_to_nearest_hvn_pct", "ib_dist_to_nearest_lvn_pct",
+        # IB microstructure
+        "ib_total_volume", "ib_delta_total", "ib_delta_pct",
+        "ib_big_trade_count", "ib_big_trade_volume",
+        "ib_big_trade_delta_pct", "ib_cvd_pct",
+        "ib_vwap_close_pct", "ib_vwap_drift_pct",
+        "ib_buy_share", "ib_max_bar_delta_pct",
+        "ib_vp_total_volume", "ib_vp_delta_total", "ib_vp_delta_pct",
+        "ib_poc_vp_close_pct", "ib_hvn_count_vp", "ib_lvn_count_vp",
         # calendar
         "dow", "week_of_month", "is_opex_week", "is_month_end",
         "is_turn_of_month",
@@ -88,6 +104,11 @@ def _feature_columns() -> List[str]:
         "z_pm_drift_pct", "z_pm_mean_abs_ret_pct", "z_pm_total_range_ticks",
         "z_ib_range_pct", "z_ib_drift_pct", "z_ib_vs_pm_range_pct",
         "z_pm_vp_width_pct", "z_ib_vp_width_pct", "z_pm_skew", "z_ib_skew",
+        # microstructure z-scores
+        "z_pm_total_volume", "z_pm_delta_pct", "z_pm_cvd_pct",
+        "z_pm_buy_share", "z_pm_big_trade_count", "z_pm_big_trade_delta_pct",
+        "z_ib_total_volume", "z_ib_delta_pct", "z_ib_cvd_pct",
+        "z_ib_buy_share", "z_ib_big_trade_count", "z_ib_big_trade_delta_pct",
     ]
     return base + z
 
