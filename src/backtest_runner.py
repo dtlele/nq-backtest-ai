@@ -758,6 +758,45 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 candidate.stop_hunt_direction = last_loss['direction']
 
         # ── OPT 3: Two-pass (light → full) ──────────────────────────
+        # DEAD-BAR FILTER (zero LLM, ultra-cheap) — skip candele M5 'morte'
+        # che non hanno struttura istituzionale. Riduce ~50% chiamate LLM.
+        if os.environ.get('M5_DEAD_BAR_FILTER', '1') == '1':
+            _bar = candidate.bar
+            _range = _bar.high - _bar.low
+            # Calcola volume medio delle ultime 12 candele (~1h di contesto)
+            _recent_bars = [b for b in bars_ny if b.timestamp < _bar.timestamp][-12:]
+            if _recent_bars:
+                _avg_vol = sum(b.volume for b in _recent_bars) / len(_recent_bars)
+            else:
+                _avg_vol = _bar.volume
+            # Regole dead-bar
+            _is_dead = False
+            _dead_reason = None
+            if _bar.volume < _avg_vol * 0.5:
+                _is_dead = True
+                _dead_reason = f'low_vol({_bar.volume:.0f} < 50% avg {_avg_vol:.0f})'
+            elif _range < 5.0:
+                _is_dead = True
+                _dead_reason = f'low_range({_range:.1f}pt < 5pt)'
+            elif not getattr(candidate, 'wall_max_size', 0) or candidate.wall_max_size < 50:
+                # No wall o wall debole (<50 contratti) = no institutional footprint
+                if not getattr(candidate, 'big_trades_count', 0):
+                    _is_dead = True
+                    _dead_reason = 'no_wall_no_bigtrade'
+            if _is_dead:
+                if not quiet:
+                    print(f"  {bar_ts} [DEAD-BAR] {_dead_reason} -> skip")
+                log_reasoning({
+                    'date': date_str, 'bar_time_utc': _bar.timestamp.isoformat(),
+                    'fabio_direction': 'dead_bar', 'fabio_confidence': 0,
+                    'decision': 'dead_bar_skip', 'no_trade_reason': _dead_reason,
+                })
+                session_buffer.append(f"{bar_ts} dead_bar({_dead_reason}) none")
+                if len(session_buffer) > MAX_SESSION_BUFFER:
+                    session_buffer.pop(0)
+                continue
+        # ─────────────────────────────────────────────────────────────────────
+
         # PRE-FILTER meccanico (zero LLM) — applica time gate, participation,
         # structural anchor. Risparmia la chiamata LLM se il setup e' noto-perdente.
         if not dry_run:
@@ -783,6 +822,19 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
             # validi che l'LLM completo avrebbe confermato. Decisione: rimosso.
             # Manteniamo solo: pre-gate HARD, mechanical_trigger, LLM reflex + audit.
             pass
+            # STREAK-SKIP: se le ultime 3 decisioni sono state SKIP, skippa la prossima
+            # senza LLM. Mercato in no-trade mode (lunch, low vol, no flow).
+            # Riprende dopo 1 candela.
+            if os.environ.get('M5_STREAK_SKIP', '1') == '1':
+                _recent = [e for e in session_buffer[-3:] if 'light_skip' not in e and 'dead_bar' not in e and 'pregate_skip' not in e]
+                _skips = [e for e in _recent if 'SKIP' in e or 'none' in e]
+                if len(_skips) >= 3 and len(_recent) >= 3:
+                    if not quiet:
+                        print(f"  {bar_ts} [STREAK-SKIP] 3+ SKIP consecutivi, mercato in no-trade mode")
+                    session_buffer.append(f"{bar_ts} streak_skip none")
+                    if len(session_buffer) > MAX_SESSION_BUFFER:
+                        session_buffer.pop(0)
+                    continue
 
         # Check for Macroeconomic News context
         upcoming_news = news_manager.get_upcoming_news(candidate.bar.timestamp)
