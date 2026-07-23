@@ -22,7 +22,7 @@ from src.volume_profile import compute_volume_profile
 from src import SessionContext
 from src.session_context import filter_ny_window, filter_overnight_window, filter_rth_session, build_session_context, update_day_type
 from src.candidate_detector import detect_candidates
-from src.agents.fabio_agent import analyze as fabio_analyze, light_analyze as fabio_light, manage_active_trade
+from src.agents.fabio_agent import analyze as fabio_analyze, manage_active_trade
 from src.agents.andrea_agent import confirm as andrea_confirm
 from src.agents.precision_entry import refine_entry, get_m1_context
 from src.consensus import build_consensus
@@ -116,6 +116,9 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
     # Inject M1 candidates for Imbalance Hunting
     existing_ts = {c.bar.timestamp for c in candidates}
     m1_candidates = []
+    if os.environ.get('M5_ONLY', '0') == '1':
+        # M5-only mode: skip M1 candidates
+        m1_candidates = []
     
     for idx, m1_bar in enumerate(bars_1min_ny):
         # History of M1 bars up to (but not including) this one, for RVOL/VWAP
@@ -774,38 +777,12 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                         'decision': 'pregate_skip', 'no_trade_reason': _veto,
                     })
                     continue  # skippa la barra, NON chiama LLM
-            light_conf = fabio_light(candidate, session_context=session_buffer, market_narrative=market_narrative, bars_since_last=bars_since_last)
-            if light_conf < LIGHT_CONFIDENCE_THRESHOLD:  # attivo: salta LLM se setup debole
-                print(f"  {bar_ts} [LIGHT] conf={light_conf} (th={LIGHT_CONFIDENCE_THRESHOLD}) -> skip")
-                import pytz as _lt_pytz
-                _lt_ET = _lt_pytz.timezone('America/New_York')
-                bar_et = candidate.bar.timestamp.astimezone(_lt_ET).strftime('%H:%M')
-                log_reasoning({
-                    'date': date_str, 'bar_time_utc': candidate.bar.timestamp.isoformat(),
-                    'bar_time_et': bar_et,
-                    'bar_open': candidate.bar.open, 'bar_high': candidate.bar.high,
-                    'bar_low': candidate.bar.low, 'bar_close': candidate.bar.close,
-                    'bar_volume': candidate.bar.volume, 'bar_delta': candidate.bar.delta,
-                    'wall_level': candidate.wall_level, 'wall_side': candidate.wall_side,
-                    'wall_max_size': candidate.wall_max_size,
-                    'wall_trade_count': candidate.wall_trade_count,
-                    'proximity_to': candidate.proximity_to,
-                    'proximity_level': candidate.proximity_level,
-                    'ib_high': ctx.ib_high, 'ib_low': ctx.ib_low, 'ib_range': ctx.ib_range,
-                    'poc': ctx.vp.poc if ctx.vp else None,
-                    'va_high': ctx.vp.va_high if ctx.vp else None,
-                    'va_low': ctx.vp.va_low if ctx.vp else None,
-                    'day_type': ctx.day_type,
-                    'market_state': getattr(candidate, 'market_state', 'balance'),
-                    'market_structure': ctx.market_structure_state,
-                    'fabio_direction': 'light_skip', 'fabio_imbalance_phase': 'none', 'fabio_confidence': light_conf,
-                    'fabio_setup': 'none', 'fabio_reasoning': f'light pass conf={light_conf}',
-                    'decision': 'light_skip', 'no_trade_reason': f'light_conf={light_conf} <= {LIGHT_CONFIDENCE_THRESHOLD}',
-                })
-                session_buffer.append(f"{bar_ts} light_skip({light_conf}) none")
-                if len(session_buffer) > MAX_SESSION_BUFFER:
-                    session_buffer.pop(0)
-                continue
+            # LIGHT GATE: RIMOSSO. Il light gate era un modello semplificato che
+            # skippava barre con conf<35 PRIMA dell'LLM, ma era ridondante con
+            # il pre-gate HARD (TIME/PARTICIPATION/ANCHOR) e poteva skippare trade
+            # validi che l'LLM completo avrebbe confermato. Decisione: rimosso.
+            # Manteniamo solo: pre-gate HARD, mechanical_trigger, LLM reflex + audit.
+            pass
 
         # Check for Macroeconomic News context
         upcoming_news = news_manager.get_upcoming_news(candidate.bar.timestamp)
@@ -1019,9 +996,64 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
             continue
         # ─────────────────────────────────────────────────────────────────────
 
+        # MECHANICAL PRE-FILTER (saves API tokens)
+        # Skip LLM call on bars that have no institutional structure.
+        # This catches ~50% of bars that would otherwise be LLM-skipped.
+        import pytz as _pf_pytz
+        _pf_ET = _pf_pytz.timezone('America/New_York')
+        _bar_et_str = candidate.bar.timestamp.astimezone(_pf_ET).strftime('%H:%M') if hasattr(candidate.bar.timestamp, 'astimezone') else ''
+        if not quiet:
+            print(f"  [PRE-FILTER] bar @ {_bar_et_str}...", end=' ', flush=True)
+        try:
+            from src.agents.mechanical_trigger import evaluate_candidate
+            # Build minimal daily_map from session context (or use None for fallback)
+            _daily_map = None
+            if hasattr(self, 'daily_map_today') and self.daily_map_today is not None:
+                _daily_map = self.daily_map_today
+            else:
+                _daily_map = None
+            _m5_history = []  # M5 history not directly available here, can be empty
+            _verdict = evaluate_candidate(candidate, _m5_history, _daily_map, ctx)
+            if not quiet:
+                print(f"verdict={_verdict.decision} score={_verdict.confidence}", flush=True)
+            if _verdict.decision == 'skip' and _verdict.confidence < 30:
+                # No structural pattern, low score: skip LLM
+                if not quiet:
+                    print(f"  [PRE-FILTER SKIP] no structural pattern, skipping LLM")
+                _quick_log = {
+                    'date': date_str,
+                    'bar_time_utc': candidate.bar.timestamp.isoformat(),
+                    'bar_time_et': _bar_et_str,
+                    'bar_close': candidate.bar.close,
+                    'bar_open': candidate.bar.open, 'bar_high': candidate.bar.high,
+                    'bar_low': candidate.bar.low, 'bar_volume': candidate.bar.volume,
+                    'bar_delta': candidate.bar.delta,
+                    'ib_high': ctx.ib_high, 'ib_low': ctx.ib_low, 'ib_range': ctx.ib_range,
+                    'poc': ctx.vp.poc if ctx.vp else 0.0,
+                    'va_high': ctx.vp.va_high if ctx.vp else 0.0,
+                    'va_low': ctx.vp.va_low if ctx.vp else 0.0,
+                    'day_type': ctx.day_type,
+                    'market_state': getattr(candidate, 'market_state', 'balance'),
+                    'fabio_direction': 'none', 'fabio_confidence': 0,
+                    'fabio_setup': 'none', 'fabio_entry': None,
+                    'fabio_stop': None, 'fabio_target': None, 'fabio_reasoning': '',
+                    'decision': 'prefiltered_mech',
+                    'no_trade_reason': f'mech_trigger_{_verdict.reasons[0] if _verdict.reasons else "low_score"}',
+                    'mech_verdict': _verdict.decision,
+                    'mech_confidence': _verdict.confidence,
+                }
+                log_reasoning(_quick_log)
+                continue
+            # Else: has structural pattern, let LLM confirm
+            if not quiet:
+                print(f"  [MECH OK] {','.join(_verdict.reasons[:2])} -> LLM call")
+        except Exception as e:
+            if not quiet:
+                print(f"  [PRE-FILTER ERR] {e}, falling through to LLM")
+
         # STAGE 1: REFLEX (Lightweight & Fast Trigger Check using optimized 10k context)
         fabio_signal = fabio_analyze(candidate, session_context=session_buffer, m1_bars=m1_bars, market_narrative=current_narrative, bars_since_last=bars_since_last)
-        
+
         # STAGE 2: INDEPENDENT DEEP AUDITOR (Triggered only when Reflex indicates trading interest)
         # Threshold: direction in ['long', 'short'] and confidence >= 55.
         if fabio_signal.direction in ['long', 'short'] and fabio_signal.confidence >= 55:
