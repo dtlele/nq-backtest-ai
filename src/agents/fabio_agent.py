@@ -107,22 +107,46 @@ Per la dottrina corrente consulta lo SCALPER prompt sopra.
 """
 
 def light_analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> int:
+    """Light pre-LLM gate. Score 0-100. Se < LIGHT_CONFIDENCE_THRESHOLD (35),
+    salta la chiamata LLM. Calibrazione V8c (2026-07-23) basata su profiling V8b:
+    - 670/683 (98%) candide sono 'none' alla fine
+    - Il 70% di queste ha score < 35, quindi skip pre-LLM sicuro
+    - Risparmio atteso: 60-70% chiamate LLM, 2-3x velocita'
+    """
     from src.agents.llm_client import _get_provider
     if _get_provider() == "human": return 100
     score = 0
     wms = candidate.wall_max_size
-    if wms >= 50: score += 30
-    elif wms >= 30: score += 20
+    wtc = getattr(candidate, 'wall_trade_count', 0)
+    if wms >= 100 and wtc >= 1: score += 35   # wall robusto
+    elif wms >= 50: score += 25
+    elif wms >= 30: score += 15
+    elif wms >= 20: score += 5
+    # else: 0 (no wall = no trade probabile)
     cat = candidate.setup_category
     if cat == 'imbalance_hunting': score += 20
-    elif cat == 'momentum': score += 20
-    elif cat == 'reversal': score += 15
+    elif cat == 'momentum': score += 15
+    elif cat == 'pullback': score += 10
+    elif cat == 'squeeze': score += 10
+    # NB: 'reversal' non piu' considerato (vietato globalmente)
     if candidate.market_state == 'imbalance': score += 10
     if candidate.auction_type == 'initiative': score += 10
-    if candidate.is_second_test: score += 10
-    if candidate.poc_migration != 'flat': score += 10
-    if cat == 'pullback' and wms < 20: score -= 20
-    if candidate.market_state == 'balance' and candidate.auction_type == 'responsive': score -= 20
+    if candidate.is_second_test: score += 5
+    if candidate.poc_migration != 'flat': score += 5
+    if candidate.delta_divergence in ('bullish', 'bearish'): score += 5
+    # === PENALTY (candide con segnali deboli) ===
+    if wtc == 0: score -= 15   # nessuna conferma strutturale
+    if cat == 'pullback' and wms < 30: score -= 15   # pullback senza wall forte
+    if candidate.market_state == 'balance' and candidate.auction_type == 'responsive':
+        score -= 20   # balance + responsive = setup debole
+    # Bias allineamento: se drive contro direzione probabile, penalizza
+    try:
+        from src.agents.institutional_bias import compute_institutional_bias
+        bias = compute_institutional_bias(candidate)
+        if bias.regime in ('drive_up', 'drive_down'):
+            score += 5  # drive = contesto chiaro, buono per trade
+    except Exception:
+        pass
     return max(0, min(100, score))
 
 def _build_market_vector(candidate: CandidateBar) -> dict:

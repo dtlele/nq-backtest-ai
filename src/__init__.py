@@ -33,7 +33,10 @@ RECENT_BARS_CONTEXT     = 6        # M5 bars of context sent to agents (30 min)
 # ── Agent thresholds ──────────────────────────────────────────────────────────
 FABIO_MIN_CONFIDENCE       = 70  # Auditor threshold: 70 aligned with reference run baseline
 ANDREA_VETO_THRESHOLD      = 40
-LIGHT_CONFIDENCE_THRESHOLD = 0    # disabled: always run full analysis for every candidate bar
+LIGHT_CONFIDENCE_THRESHOLD = 35   # V8c+ (2026-07-23): attivato, salta LLM se setup debole.
+                                          # 35 e' la soglia ottimale dopo profiling V8b: ~70% delle
+                                          # candide con score<35 sarebbero state SKIP comunque dall'LLM.
+                                          # Risparmio atteso: 60-70% chiamate LLM, 2-3x velocita' run.
 
 # ── NotebookLM IDs ────────────────────────────────────────────────────────────
 FABIO_NOTEBOOK_ID       = "4c868e52"
