@@ -522,7 +522,9 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                     if current_rr >= 2.0:
                         should_run_apm = True
                         is_runner_mode = True
-                    elif strat_config.get("apm_trailing_stop_enabled", False) and open_t.contracts >= 3:
+                    # FIX: era `contracts >= 3` che bloccava l'APM dopo partial TP
+                    # (rimangono 0.28 contratti). Ora parte con 0.1+ per gestire il runner.
+                    elif strat_config.get("apm_trailing_stop_enabled", False) and open_t.contracts >= 0.1:
                         if m1_bar.timestamp.minute % 2 == 0:
                             should_run_apm = True
                         elif getattr(m1_bar, 'big_trades', []):
