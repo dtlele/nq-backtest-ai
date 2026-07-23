@@ -117,8 +117,9 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
     existing_ts = {c.bar.timestamp for c in candidates}
     m1_candidates = []
     if os.environ.get('M5_ONLY', '0') == '1':
-        # M5-only mode: skip M1 candidates
-        m1_candidates = []
+        # M5-only mode: M5 decide la STRUTTURA (decision/trigger), M1 per TIMING
+        # Non skippare M1 candidates: servono per entry timing su pattern M5
+        pass  # M1 injection kept for precision entry timing
     
     for idx, m1_bar in enumerate(bars_1min_ny):
         # History of M1 bars up to (but not including) this one, for RVOL/VWAP
@@ -1157,7 +1158,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                               f"stop={fabio_signal.stop} target={fabio_signal.target}\n"
                               f"reasoning: {fabio_signal.reasoning[:300]}")
                 try:
-                    _raw = llm_ask(_audit_sys, _audit_msg, model=os.environ.get('OPENROUTER_MODEL', 'minimax/minimax-m2'),
+                    _raw = llm_ask(_audit_sys, _audit_msg, model=os.environ.get('AUDIT_MODEL', os.environ.get('OPENROUTER_MODEL', 'z-ai/glm-5.2')),
                                    reasoning_effort='high', max_tokens=6000)
                     if _raw.startswith('```'):
                         _raw = _raw.split('```')[1].lstrip('json').strip()

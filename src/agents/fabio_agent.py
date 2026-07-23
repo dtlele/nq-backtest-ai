@@ -9,10 +9,12 @@ from src.agents.topic_router import select_fabio_topics, build_tiered_knowledge,
 from src.agents.institutional_bias import compute_institutional_bias, bias_gate
 
 # Modalita' agente: 'scalper' (1 chiamata LLM, default — 5x piu' economico)
-# o 'experts' (legacy: 4 esperti + Chief). Modello: OPENROUTER_MODEL,
-# default MiniMax M2 (forte e molto economico per i backtest).
+# o 'experts' (legacy: 4 esperti + Chief).
+# Modello REFLEX: REFLEX_MODEL (default minimax-m2.7 — 4s, JSON valido, 2.7x piu' economico di GLM-5.2)
+# Modello AUDIT: AUDIT_MODEL (default z-ai/glm-5.2 — 2s ma ragiona profondo)
 FABIO_MODE = os.environ.get('FABIO_MODE', 'scalper').lower()
-SCALPER_MODEL = os.environ.get('OPENROUTER_MODEL', 'minimax/minimax-m2')
+SCALPER_MODEL = os.environ.get('REFLEX_MODEL', os.environ.get('OPENROUTER_MODEL', 'minimax/minimax-m2.7'))
+AUDIT_MODEL = os.environ.get('AUDIT_MODEL', os.environ.get('OPENROUTER_MODEL', 'z-ai/glm-5.2'))
 
 KNOWLEDGE_FILE = Path(__file__).parent.parent.parent / 'knowledge' / 'fabio_distilled.json'
 
