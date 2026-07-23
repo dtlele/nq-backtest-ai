@@ -1,68 +1,48 @@
 """
-TRAIL MANAGER — LLM trailing stop per R:R ≥ 1.0
-Prompt ultra-corto, decisioni veloci. Zero contesto inutile.
+⚠️ DEPRECATED — NON USARE ⚠️
+
+TRAIL MANAGER — LLM trailing stop per R:R >= 1.0
+Sostituito da: src/trade_simulator.py: _donchian_trail_stop (40-bar Donchian +
+swing trail, O(1) per barra, zero LLM, piu' veloce e piu' preciso).
+
+Motivi della rimozione:
+  1. "R:R>=2.0 -> MUST trail aggressively" causava il pattern "stop a BE a 1R
+     poi scratch immediato" che e' stato il killer dei nostri winner.
+  2. "trail behind nearest wall" non distingueva wall robusti (>=150 contratti)
+     da singole print retail.
+  3. Latenza ~50s per decisione di trailing su un'operazione che avviene su
+     ogni barra M1: ingestibile.
+
+Se devi attivare un trail manager basato su LLM, fallo in trade_simulator
+con il pattern attuale (Donchian + swing confermato).
 """
 
-import json, os
-from src.agents.llm_client import llm_ask
+# Mantenuto solo per retrocompatibilita' con vecchi import. Non esegue alcuna
+# logica: ogni chiamata a evaluate() ritorna 'hold' + warning di deprecazione.
 
-LOG_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-                        'agent_memory', 'trail_manager_log.jsonl')
+import os
+import json as _json
 
-SYSTEM = """You are the TRAIL MANAGER. A trade is in profit (≥1.0R). Protect profits, maximize runners.
+LOG_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+    'agent_memory', 'trail_manager_log.jsonl'
+)
 
-Decide: hold, trail (new_stop), or early_exit.
-Rules:
-- LONG: new_stop must be > old_stop. Trail behind nearest wall below price.
-- SHORT: new_stop must be < old_stop. Trail behind nearest wall above price.
-- R:R≥2.0 → MUST trail aggressively behind nearest structural wall.
-- early_exit only if clear reversal signals (delta divergence, volume collapse, key level break).
+SYSTEM = "[DEPRECATED] Use src/trade_simulator._donchian_trail_stop instead."
 
-Respond ONLY valid JSON: {"decision":"hold|trail|early_exit", "new_stop": float|null, "reasoning":"short_reason"}"""
+_DEPRECATION_WARNING_EMITTED = False
 
 
 def evaluate(trade, bar, m1_bars, ctx) -> dict:
-    risk = abs(trade.entry - trade.stop)
-    rr = ((bar.close - trade.entry) if trade.direction == 'long' else (trade.entry - bar.close)) / risk if risk > 0 else 0.0
-
-    # Trova il muro più vicino
-    walls_bid, walls_ask = [], []
-    for b in m1_bars[-15:]:
-        for bt in getattr(b, 'big_trades', []):
-            if bt.get('size', 0) >= 80:
-                (walls_bid if bt.get('side') == 'bid' else walls_ask).append(bt.get('price', 0))
-
-    near_bid = min([abs(bar.close - p) for p in walls_bid]) if walls_bid else None
-    near_ask = min([abs(bar.close - p) for p in walls_ask]) if walls_ask else None
-
-    context = (
-        f"{trade.direction.upper()} entry={trade.entry} stop={trade.stop} "
-        f"price={bar.close} rr={rr:.1f} bars={len(m1_bars)}\n"
-        f"day={getattr(ctx,'day_type','?')} ib={getattr(ctx,'ib_high',0):.0f}/{getattr(ctx,'ib_low',0):.0f}\n"
-        f"last_bar: O={bar.open} H={bar.high} L={bar.low} C={bar.close} V={bar.volume} D={bar.delta}\n"
-        f"walls: bid_near={near_bid} ask_near={near_ask}"
-    )
-
-    raw = llm_ask(SYSTEM, context, use_cache=False)
-    if '```' in raw:
-        raw = raw.split('```')[1].strip().lstrip('json')
-
-    try:
-        return json.loads(raw)
-    except Exception:
-        return {"decision": "hold", "new_stop": None, "reasoning": "parse_fail"}
+    """DEPRECATED. Restituisce sempre hold + warning. Usare _donchian_trail_stop()."""
+    global _DEPRECATION_WARNING_EMITTED
+    if not _DEPRECATION_WARNING_EMITTED:
+        print("[DEPRECATION] trail_manager_agent.evaluate() is DEPRECATED. "
+              "Use src/trade_simulator._donchian_trail_stop instead.")
+        _DEPRECATION_WARNING_EMITTED = True
+    return {"decision": "hold", "new_stop": None, "reasoning": "deprecated_module"}
 
 
-def log(dec: dict, trade, bar, ts):
-    risk = abs(trade.entry - trade.stop)
-    rr = ((bar.close - trade.entry) if trade.direction == 'long' else (trade.entry - bar.close)) / risk if risk > 0 else 0.0
-    entry = {
-        'ts': ts.isoformat(), 'event': f'TRAIL_{dec.get("decision","hold").upper()}',
-        'dir': trade.direction, 'entry': trade.entry, 'price': bar.close,
-        'old_stop': trade.stop, 'new_stop': dec.get('new_stop'), 'rr': round(rr, 2),
-        'decision': dec.get('decision'), 'reasoning': dec.get('reasoning', '')
-    }
-    os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
-    with open(LOG_PATH, 'a') as f:
-        f.write(json.dumps(entry) + '\n')
-    print(f"  [TRAIL MANAGER] {dec.get('decision','hold').upper()} | {dec.get('reasoning','')[:100]}")
+def log(dec, trade, bar, ts):
+    """DEPRECATED. Non scrive log utili."""
+    return  # no-op

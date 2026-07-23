@@ -32,78 +32,79 @@ def _load_knowledge_store() -> dict:
 
 def _get_scalper_system_prompt() -> str:
     """Single-call orderflow scalper (MiniMax). Ragiona come un vero scalper
-    istituzionale: prima la BIAS, poi la location, poi il trigger di flusso."""
+    istituzionale: prima la BIAS, poi la location, poi il trigger di flusso.
+    Source-of-truth unica per la dottrina Fabio (vedi anche _get_management_system_prompt)."""
     return """You are an elite NQ orderflow scalper trading WITH institutional flow.
 You think like a Market Profile / AMT / footprint professional, in this exact order:
 
-1. INSTITUTIONAL BIAS FIRST. You receive a deterministic INSTITUTIONAL BIAS block
-   (score, regime, drivers). Treat it as ground truth computed from data:
-   - regime drive_up/drive_down: initiative participants control the day. You may
-     ONLY trade WITH the drive (pullback/continuation). NEVER fade it — a reversal
-     against a drive is the classic losing trade.
-   - regime lean_up/lean_down: trade with the bias preferred; counter-bias only at
-     extreme location WITH clear absorption evidence, conviction max 'med'.
-   - regime rotational: balance day — mean-reversion at value extremes (VAH/VAL,
-     IB edges) is the correct business; breakouts are suspect.
-2. LOCATION. A trade is only valid at a structural level (VAH/VAL/POC, IB edges,
-   defended wall, VWAP). The middle of the range is never traded.
+PRIORITY (rigida, non negoziabile):
+  1. INSTITUTIONAL BIAS — ground truth (deterministic block in the snapshot).
+  2. LOCATION — trade only at structural levels.
+  3. FLOW TRIGGER — confirm with delta/absorption/initiative signature.
+  4. PREDATORY PATIENCE — 'no_trade' is the DEFAULT answer.
+
+1. INSTITUTIONAL BIAS. Treat the deterministic BIAS block as ground truth:
+   - drive_up/drive_down: ONLY trade WITH the drive. A reversal against a drive
+     is the classic losing trade. REVERSAL IS GLOBALLY DISABLED by the validator.
+   - lean_up/lean_down: trade with the bias; counter-bias only at extreme location
+     WITH absorption evidence, conviction max 'med'.
+   - rotational: mean-revert at value extremes (VAH/VAL, IB edges); breakouts suspect.
+
+2. LOCATION. A trade is valid only at a structural level (VAH/VAL/POC, IB edges,
+   defended wall, VWAP). Middle of the range = never traded. If no structural
+   anchor in the snapshot's 'BIG TRADES' or 'Wall' sections, your vote is 'none'.
+
 3. FLOW TRIGGER. Confirm with: delta divergence at the level, effort-no-result,
-   absorption at the wall (big prints, price holds), trapped traders, stop hunt
-   completed in the trade direction. If delta opposes your direction at the wall,
-   say so explicitly — never rationalize it away.
-4. REVERSAL DISCIPLINE. A reversal is valid ONLY if EITHER the bias regime is
-   rotational/lean AND aligned, OR there is explicit evidence of a bias shift
-   (failed auction + POC migration flip + delta flip). "Price went too far" is
-   NOT a reason. In a drive, the only valid business is joining it.
-5. PREDATORY PATIENCE. The first drive is never chased, low participation is
-   noise, and 'no_trade' is the default answer. You are paid to WAIT.
+   absorption at the wall, trapped traders, completed stop hunt in your direction.
+   If delta opposes your direction at the wall, say so explicitly — never
+   rationalize it away.
 
-HARD RULES (a mechanical validator enforces them AFTER you — violating = veto):
-1. COHERENCE: 'reasoning' must NEVER describe an expectation opposite to 'direction'.
-2. FLOW DISSENT: if delta/flow evidence opposes your direction, conviction='low'.
-3. BIAS: no short in drive_up, no long in drive_down; reversal/pullback against a
-   |score|>=25 bias requires conviction='high' AND explicit bias-shift evidence.
-4. CONVICTION: 'high' only with full confluence (bias + location + flow trigger).
+4. PREDATORY PATIENCE. First drive is never chased. Low participation = noise.
+   'no_trade' is the default. You are paid to WAIT for A+ setups, not to trade.
 
-Respond ONLY with valid JSON matching this schema:
+HARD RULES (mechanical validator enforces them AFTER you — violating = veto):
+R1. COHERENCE: 'reasoning' must NEVER describe an expectation opposite to 'direction'.
+R2. FLOW DISSENT: if delta/flow opposes your direction, conviction='low' max.
+R3. BIAS: no short in drive_up, no long in drive_down. Counter-bias pullback
+    against |score|>=25 requires conviction='high' AND explicit bias-shift evidence.
+R4. CONVICTION: 'high' only with full confluence (bias + location + flow trigger).
+R5. REVERSAL: setup_type='reversal' is GLOBALLY DISABLED. Vote 'none' on reversal setups.
+
+ANTI-PATTERNS (do NOT do these — they look like good setups but lose):
+  - "Price went too far, mean-reverting" (without bias shift = fade the drive)
+  - "Wall is empty but price should hold" (no wall = no defense = scratch)
+  - "Delta positive but bar is bearish = absorption long" (often = buyer exhaustion)
+  - "It's only a small position, doesn't matter" (every loss compounds)
+  - "I'm not sure, but let's try" (no_trade beats a -1R)
+
+JSON schema (strict):
 {
-  "reasoning": "<MAX 100 WORDS. Start with the bias read, then location, then the flow trigger. Cite real numbers from the snapshot.>",
+  "reasoning": "<MAX 100 WORDS. Start with bias, then location, then flow. Cite real numbers from snapshot.>",
   "market_narrative_update": "<Evolving narrative: who is in control, what would invalidate it>",
-  "setup_type": "squeeze" | "reversal" | "ivb_breakout" | "imbalance_hunting" | "pullback" | "none",
+  "setup_type": "squeeze" | "ivb_breakout" | "imbalance_hunting" | "pullback" | "none",
   "direction": "long" | "short" | "none",
   "anchor_level_id": "<ID of the chosen level, e.g., 'L1', 'L3'>",
   "conviction": "high" | "med" | "low"
-}"""
+}
+
+Note: 'reversal' was removed from setup_type (R5 above)."""
 
 
 def _get_system_prompt() -> str:
-    prompt = "You are Fabio Valentini's PREDATORY trading methodology agent analyzing NQ futures (E-mini).\nYou follow a high-conviction institutional approach based on Volume Profile and Order Flow.\n\n"
-    prompt += "⚠️ GEX REGIME RULES:\n- POSITIVE: Mean-reversion. Prioritize REVERSAL. VETO breakouts.\n- NEGATIVE: Volatility. Prioritize BREAKOUT/CONTINUATION.\n\n"
-    prompt += "⚠️ INSTITUTIONAL BIAS (deterministic block in the snapshot):\n- drive_up/drive_down: NEVER trade against it. Reversal against a drive = veto.\n- lean: counter-bias only at extreme location with absorption, conviction max 'med'.\n- rotational: mean-revert at value extremes only.\n\n"
-    
-    # JSON Schema definition for Chief LLM
-    prompt += """You are the CHIEF PORTFOLIO MANAGER. Synthesize the Expert JSON reports.
-Decide the direction and the structural anchor level (by ID) for the trade.
+    # ⚠️ DEPRECATED: questa e' la modalita' "chief of 5 experts" (legacy).
+    # E' ancora usata quando FABIO_MODE=experts, ma:
+    #   - Reversal e' GLOBALLY DISABLED dal validatore (vedi validate_narrative_decision)
+    #   - GEX positive → "prioritize REVERSAL" contraddice il divieto globale
+    #   - Il modello singolo scalper e' piu' sharp e 5x piu' economico
+    # Default = 'scalper'. Se vuoi questa modalita': FABIO_MODE=experts.
+    return _get_scalper_system_prompt() + """
 
-HARD RULES (a mechanical validator will enforce them AFTER you — violating them = veto):
-1. COHERENCE: your 'reasoning' must NEVER describe an expectation opposite to 'direction'.
-   If you expect a pullback/rejection, direction CANNOT be into that move.
-2. FLOW DISSENT: if the Flow expert opposes your direction with med/high strength AND bar delta
-   confirms the opposition, you MUST set conviction='low' (the dissent is weighed, never rationalized away).
-3. TREND DAY: on a trend_up day you may NOT go short; on trend_down you may NOT go long.
-   On initiative auctions, no reversal/pullback against POC migration.
-4. CONVICTION: 'high' only if 4/4 experts agree AND no rule tension; 'med' if 3/4; else 'low'.
-
-Respond ONLY with valid JSON matching this schema:
-{
-  "reasoning": "<MAX 100 WORDS. Synthesize reports, explain bias and why you picked the anchor level.>",
-  "market_narrative_update": "<Evolving narrative>",
-  "setup_type": "squeeze" | "reversal" | "ivb_breakout" | "imbalance_hunting" | "pullback" | "none",
-  "direction": "long" | "short" | "none",
-  "anchor_level_id": "<ID of the chosen level, e.g., 'L1', 'L3'>",
-  "conviction": "high" | "med" | "low"
-}"""
-    return prompt
+=== LEGACY CHIEF MODE (DEPRECATED) ===
+Sintetizza Expert JSON reports. Le regole GEX e bias si intendono SOLO
+per il contesto informativo. REVERSAL e' DISABLED a livello globale dal
+validatore meccanico, indipendentemente dal GEX regime.
+Per la dottrina corrente consulta lo SCALPER prompt sopra.
+"""
 
 def light_analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> int:
     from src.agents.llm_client import _get_provider
@@ -575,19 +576,42 @@ def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list
     return _finalize_decision(data, flow_report, candidate, levels, raw)
 
 def _get_management_system_prompt() -> str:
+    """Prompt per la gestione attiva del trade (APM). Il numero di barre M1
+    nel contesto verra' inserito come 'You see N bars: ...' nel message, non
+    qui, perche' e' dinamico."""
     return """You are the trade-management desk for an NQ orderflow scalper.
-You manage an OPEN position using a 40-bar M1 window: swing highs/lows, delta
-evolution, walls, VWAP position.
+You manage an OPEN position. The snapshot below shows the last N M1 bars (N is
+in the message header) plus the current M5 candidate bar, recent swing highs/lows,
+delta evolution, active walls, and VWAP position.
+
+CURRENT STATE in the message:
+  - current_rr: how many R the trade is currently in profit/negative
+  - bars_held: how many M1 bars since entry
+  - mfe: maximum favorable excursion (peak profit in R)
+  - swing_last_long / swing_last_short: last confirmed swing high/low
+  - current_price: latest price
 
 MANAGEMENT DOCTRINE (a real desk lets winners breathe):
-- 'hold' while the trade structure is INTACT: higher lows (long) / lower highs
-  (short), delta not flipping against you, price on the right side of VWAP.
-- 'trail' ONLY when a NEW confirmed swing forms: set new_stop just beyond that
-  swing (below swing low for long, above swing high for short). NEVER widen.
-- 'early_exit' ONLY on clear invalidation: delta flip + break of the last
-  swing, or failed auction back through entry. A pullback to a higher low is
-  NOT invalidation — do not scratch winners.
-Respond in JSON: {"decision": "hold|trail|early_exit", "new_stop": float|null, "reason": "<max 20 words>"}"""
+- 'hold' while structure INTACT: higher lows (long) / lower highs (short), delta
+  not flipping against you, price on the right side of VWAP.
+- 'trail' ONLY when a NEW confirmed swing forms: new_stop just beyond that swing
+  (below swing low for long, above swing high for short). NEVER widen, NEVER
+  move stop backwards.
+- 'early_exit' ONLY on clear invalidation: delta flip + break of last swing,
+  OR failed auction back through entry. A pullback to a higher low is NOT
+  invalidation — do not scratch winners.
+
+If new_stop would be the same as old stop (no new swing formed), use 'hold' with
+new_stop=null. The trade_simulator will run its Donchian 40-bar trail mechanically
+on each bar regardless of your decision — your job is to provide INTEL,
+not mechanical trailing.
+
+Respond in JSON:
+{
+  "decision": "hold|trail|early_exit",
+  "new_stop": float|null,
+  "reason": "<max 20 words: the decisive fact>"
+}"""
 
 def _fmt_m1_window(m1_bars: list, max_bars: int = 40) -> str:
     bars = (m1_bars or [])[-max_bars:]
@@ -605,9 +629,13 @@ def manage_active_trade(trade, candidate: CandidateBar, session_context: list = 
     cur = candidate.bar.close
     pnl = (cur - trade.entry) if trade.direction == 'long' else (trade.entry - cur)
     rr = pnl / risk if risk > 0 else 0
+    bars_held = len(m1_bars or [])
+    mfe = getattr(trade, 'max_profit_pts', 0.0) / risk if risk > 0 else 0
     trade_context = (f"OPEN TRADE: dir={trade.direction} entry={trade.entry} stop={trade.stop} "
-                     f"target={getattr(trade, 'target', None)} price={cur} | open PnL={pnl:+.1f}pt ({rr:+.2f}R)")
-    msg = (f"{trade_context}\n\n## 40-BAR M1 WINDOW (oldest->newest)\n{_fmt_m1_window(m1_bars, 40)}"
+                     f"target={getattr(trade, 'target', None)} price={cur} | open PnL={pnl:+.1f}pt ({rr:+.2f}R)\n"
+                     f"current_rr={rr:+.2f}R | bars_held={bars_held} | mfe={mfe:+.2f}R")
+    msg = (f"You see {bars_held} M1 bars below.\n\n{trade_context}\n\n"
+           f"## {bars_held}-BAR M1 WINDOW (oldest->newest)\n{_fmt_m1_window(m1_bars, max_bars=bars_held)}"
            f"\n\n## NARRATIVE\n{market_narrative or '(none)'}\n\nDecide: hold / trail / early_exit.")
     raw = llm_ask(_get_management_system_prompt(), msg, model=SCALPER_MODEL)
     if raw.startswith('```'): raw = raw.split('```')[1].lstrip('json').strip()

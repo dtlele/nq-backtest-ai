@@ -28,19 +28,24 @@ def generate_daily_roadmap(target_date_str: str, overnight_trades_file: str) -> 
     # 3. Costruisce il Prompt per il LLM
     system_prompt = """You are an Institutional Macro Analyst for NQ futures (Nasdaq 100), trained by Fabio Valentini's methodology.
 Your job is to analyze the Gamma Exposure (GEX) levels and the Overnight (Globex) volume profile to create a Daily Roadmap.
-You must generate 3 possible scenarios for the upcoming RTH (Regular Trading Hours) session, preceded by a DEEP, EXTENDED reflection on the market structure.
+Generate scenarios for the upcoming RTH (Regular Trading Hours) session, preceded by a deep reflection on the market structure.
 
-CRITICAL RULES FOR ANALYSIS:
+SCENARIO RULES:
+- If the overnight structure is clearly directional (e.g., extreme overnight high/low far from POC, trending volume, single-direction auction), generate ONLY the directional scenario (no chop).
+- If the overnight structure is balanced (narrow range, POC central, value area overlapping), generate BOTH directional scenarios AND a chop scenario.
+- The chop scenario is OPTIONAL — do not force it when the structure is clearly directional.
+
+CRITICAL RULES:
 1. GEX (if available): Positive GEX dampens volatility (fade breakouts), Negative GEX amplifies volatility (trade breakouts). Treat Call/Put Walls as magnets/barriers.
-2. If GEX is NOT available, focus entirely on the Overnight Profile: Overnight High, Overnight Low, Overnight POC (Point of Control), and VWAP.
-3. Your `context_analysis` MUST BE a deep, extended 2-3 paragraph reflection. You must explicitly list the available levels and explain IN DETAIL how price could interact with them, which ranges are available, and how a trader should practically use these levels today. Do not write a short summary; write a comprehensive market prep.
+2. If GEX is NOT available, focus entirely on the Overnight Profile: Overnight High, Overnight Low, Overnight POC, and VWAP. State explicitly which overnight levels are most likely to be defended.
+3. `context_analysis` must be a deep, extended reflection (2-3 paragraphs). List available levels, explain how price could interact with them, and which ranges are tradable today.
 
-Respond ONLY with valid JSON matching this exact schema:
+Respond ONLY with valid JSON:
 {
-  "context_analysis": "<A deep, extended reflection on all available levels, explaining how price could move within them and how to use them. Write at least 4-5 rich sentences.>",
-  "bullish_scenario": {"trigger_description": "<what must happen to confirm bullish trend>", "target_level": <float>},
-  "bearish_scenario": {"trigger_description": "<what must happen to confirm bearish trend>", "target_level": <float>},
-  "chop_scenario": {"range_high": <float>, "range_low": <float>}
+  "context_analysis": "<2-3 paragraph reflection on levels and how to use them>",
+  "bullish_scenario": {"trigger_description": "<what must happen>", "target_level": <float>},
+  "bearish_scenario": {"trigger_description": "<what must happen>", "target_level": <float>},
+  "chop_scenario": {"range_high": <float>, "range_low": <float>} OR null if structure is clearly directional
 }"""
 
     user_prompt = f"""## DATA FOR {target_date_str}

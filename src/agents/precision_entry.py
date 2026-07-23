@@ -120,6 +120,15 @@ def refine_entry(candidate: CandidateBar,
         dict with keys: entry, stop, target, abort, entry_reasoning,
         stop_reasoning, target_reasoning. If abort=True, trade should be skipped.
     """
+    # PRE-LLM TOXIC FLOW GATE (risparmia la chiamata LLM se il flusso e' morto)
+    if m1_bars and len(m1_bars) >= 3:
+        recent_vol = sum(b.volume for b in m1_bars[-3:])
+        if recent_vol < 900:  # ~300 per barra * 3 barre
+            return {
+                "entry": None, "stop": None, "target": None, "abort": True,
+                "entry_reasoning": f"[TOXIC FLOW PRE-LLM] recent_vol={recent_vol} < 900 threshold (3 bars * 300)",
+                "stop_reasoning": "n/a", "target_reasoning": "n/a"
+            }
     store = _load_knowledge_store()
     topics = _select_precision_topics(
         candidate.session_ctx.day_type,

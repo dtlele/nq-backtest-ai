@@ -129,15 +129,20 @@ trade, based on the methodology above and the market context below.
 - Vote "no_trade" if ANY required element is missing. Predatory patience: the first
   drive is never taken, the middle of the range is never traded, low participation
   is noise.
-- Confidence: 0-100. A+ (all confluences) = 80+. B (one element weak) = 55-70.
-  C (counter-trend/off-hours) = 40-55. Below 40 = why are we talking.
+- Confidence calibration (be honest, not aspirational):
+    A+ full confluence (bias aligned + structural level + flow trigger + volume ok) = 80-95
+    B grade (one element weak, e.g. thin participation or off-hours)        = 60-75
+    C grade (counter-trend weak signal, lunch chop, exhaustion window)      = 45-60
+    no_trade with valid candidate but missing element                       = 0
+    no_trade because no real setup exists                                    = 0
+  Do NOT default to 75. A 95 should be rare. A 0-30 means "I'm not voting".
 
 Respond ONLY with valid JSON:
 {{
   "vote": "long" | "short" | "no_trade",
   "confidence": <int 0-100>,
   "key_evidence": "<max 30 words: the single most decisive fact>",
-  "veto_reason": "<max 20 words, or empty if vote is not no_trade>"
+  "veto_reason": null | "<max 20 words: why no_trade>"
 }}"""
 
 
