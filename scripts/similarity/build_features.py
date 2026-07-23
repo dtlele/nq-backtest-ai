@@ -33,10 +33,16 @@ from src.day_similarity.features import (
 
 
 ZSCORE_COLS = [
+    # price / range
     "pm_gap_pct", "pm_close_gap_pct", "pm_range_pct", "pm_drift_pct",
     "pm_mean_abs_ret_pct", "pm_total_range_ticks", "ib_range_pct",
     "ib_drift_pct", "ib_vs_pm_range_pct",
     "pm_vp_width_pct", "ib_vp_width_pct", "pm_skew", "ib_skew",
+    # microstructure (volume / delta)
+    "pm_total_volume", "pm_delta_pct", "pm_cvd_pct", "pm_buy_share",
+    "pm_big_trade_count", "pm_big_trade_delta_pct",
+    "ib_total_volume", "ib_delta_pct", "ib_cvd_pct", "ib_buy_share",
+    "ib_big_trade_count", "ib_big_trade_delta_pct",
 ]
 
 

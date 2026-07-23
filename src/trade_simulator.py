@@ -273,8 +273,7 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
                 return _close(trade, trade.stop, reason, bar)
             elif bar.low <= trade.stop and bar.close > trade.stop:
                 # Wick tocca stop ma close sopra = probabile stop hunt, NON chiudere
-                if not quiet:
-                    print(f'  [STOP WICK] bar.low={bar.low:.2f} <= stop {trade.stop:.2f} ma close={bar.close:.2f} > stop (stop hunt sopravvissuto)')
+                print(f'  [STOP WICK] bar.low={bar.low:.2f} <= stop {trade.stop:.2f} ma close={bar.close:.2f} > stop (stop hunt sopravvissuto)')
         else:  # short
             # --- 1. Check Partial TP (50% distance / 1.0 R:R) ---
             if not trade.partial_taken and risk_points > 0 and bar.low <= trade.entry - risk_points:
@@ -333,8 +332,7 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
                 reason = 'trailing_stop' if trade.stop < trade.entry else 'stop'
                 return _close(trade, trade.stop, reason, bar)
             elif bar.high >= trade.stop and bar.close < trade.stop:
-                if not quiet:
-                    print(f'  [STOP WICK] bar.high={bar.high:.2f} >= stop {trade.stop:.2f} ma close={bar.close:.2f} < stop (stop hunt sopravvissuto)')
+                print(f'  [STOP WICK] bar.high={bar.high:.2f} >= stop {trade.stop:.2f} ma close={bar.close:.2f} < stop (stop hunt sopravvissuto)')
     return None
 
 def close_eod(trade: OpenTrade, last_bar: Bar) -> ClosedTrade:

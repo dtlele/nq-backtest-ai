@@ -102,6 +102,92 @@ def _safe_pct(num: float, den: float) -> float:
     return num / den * 100.0
 
 
+def _add_microstructure(out: Dict[str, float],
+                         bars: pd.DataFrame,
+                         prefix: str) -> None:
+    """Add volume / delta / big-trade features from a bar slice.
+
+    All features are dimensionless or normalized by the bar close.  If the
+    bars have no volume column, the function is a no-op (all NaN).
+    """
+    if "volume" not in bars.columns or bars.empty:
+        for k in ("total_volume", "delta_total", "delta_pct",
+                  "big_trade_count", "big_trade_volume", "big_trade_delta_pct",
+                  "cvd_pct", "vwap_close_pct", "vwap_drift_pct",
+                  "buy_share", "max_bar_delta_pct"):
+            out[f"{prefix}{k}"] = float("nan")
+        return
+    vol = float(bars["volume"].sum())
+    out[f"{prefix}total_volume"] = vol
+    delta = float((bars.get("buy_volume", 0) - bars.get("sell_volume", 0)).sum())
+    out[f"{prefix}delta_total"] = delta
+    out[f"{prefix}delta_pct"] = (abs(delta) / vol * 100.0) if vol else float("nan")
+    # Big trades
+    if "n_big_trades" in bars.columns:
+        out[f"{prefix}big_trade_count"] = float(bars["n_big_trades"].sum())
+        out[f"{prefix}big_trade_volume"] = float(bars["big_trade_volume"].sum())
+    else:
+        out[f"{prefix}big_trade_count"] = float("nan")
+        out[f"{prefix}big_trade_volume"] = float("nan")
+    if "big_trade_volume" in bars.columns and vol > 0:
+        out[f"{prefix}big_trade_delta_pct"] = (float(bars["big_trade_delta"].sum()) / vol * 100.0)
+    else:
+        out[f"{prefix}big_trade_delta_pct"] = float("nan")
+    # CVD: take the LAST cvd of the slice (if present) else cumulative sum of delta
+    if "cvd" in bars.columns and bars["cvd"].notna().any():
+        out[f"{prefix}cvd_pct"] = float(bars["cvd"].iloc[-1]) / vol * 100.0 if vol else float("nan")
+    else:
+        cvd = float((bars.get("buy_volume", 0) - bars.get("sell_volume", 0)).sum())
+        out[f"{prefix}cvd_pct"] = (cvd / vol * 100.0) if vol else float("nan")
+    # VWAP drift from close
+    if "vwap" in bars.columns and bars["vwap"].notna().any():
+        vwap = float(bars["vwap"].iloc[-1])
+        cl = float(bars["close"].iloc[-1])
+        out[f"{prefix}vwap_close_pct"] = ((vwap - cl) / cl * 100.0) if cl else float("nan")
+        out[f"{prefix}vwap_drift_pct"] = ((vwap - float(bars["open"].iloc[0])) / float(bars["open"].iloc[0]) * 100.0)
+    else:
+        out[f"{prefix}vwap_close_pct"] = float("nan")
+        out[f"{prefix}vwap_drift_pct"] = float("nan")
+    # Buy share
+    if "buy_volume" in bars.columns and vol > 0:
+        out[f"{prefix}buy_share"] = float(bars["buy_volume"].sum()) / vol
+    else:
+        out[f"{prefix}buy_share"] = float("nan")
+    # Max bar delta (the worst absorption bar)
+    if "delta" in bars.columns and vol > 0:
+        out[f"{prefix}max_bar_delta_pct"] = float(bars["delta"].abs().max()) / vol * 100.0
+    else:
+        out[f"{prefix}max_bar_delta_pct"] = float("nan")
+
+
+def _add_true_volume_profile(out: Dict[str, float],
+                              bars: pd.DataFrame,
+                              ref: float,
+                              prefix: str) -> None:
+    """Add true volume profile features (only when volume is present)."""
+    if "volume" not in bars.columns or bars["volume"].sum() == 0:
+        for k in ("vp_total_volume", "vp_delta_total", "vp_delta_pct",
+                  "poc_vp_close_pct", "vp_width_pct",
+                  "hvn_count_vp", "lvn_count_vp"):
+            out[f"{prefix}{k}"] = float("nan")
+        return
+    from src.day_similarity.volume_profile import build_volume_profile
+    vp = build_volume_profile(bars)
+    out[f"{prefix}vp_total_volume"] = float(vp.total_volume)
+    out[f"{prefix}vp_delta_total"] = float(vp.delta_total)
+    out[f"{prefix}vp_delta_pct"] = float(vp.delta_pct)
+    if np.isfinite(vp.poc):
+        out[f"{prefix}poc_vp_close_pct"] = (vp.poc - ref) / ref * 100.0
+    else:
+        out[f"{prefix}poc_vp_close_pct"] = float("nan")
+    if np.isfinite(vp.vah) and np.isfinite(vp.val) and ref:
+        out[f"{prefix}vp_width_pct"] = (vp.vah - vp.val) / ref * 100.0
+    else:
+        out[f"{prefix}vp_width_pct"] = float("nan")
+    out[f"{prefix}hvn_count_vp"] = float(len(vp.hvn_levels))
+    out[f"{prefix}lvn_count_vp"] = float(len(vp.lvn_levels))
+
+
 def _safe_ratio(num: float, den: float) -> float:
     if not np.isfinite(num) or not np.isfinite(den) or den == 0:
         return float("nan")
@@ -311,9 +397,15 @@ def compute_features_for_day(ctx: DayContext) -> Dict[str, float]:
     out["pm_n_down_bars"] = float(n_dn)
     out["pm_directional_consistency"] = _directional_consistency(rets.tolist(), chunk=30)
 
-    # ---- pre-market TPO profile ----
+    # ---- pre-market microstructure (only present when built from ticks) ----
+    _add_microstructure(out, pre, PM_PREFIX)
+
+    # ---- pre-market TPO profile (fallback) ----
     pm_profile = build_tpo([type("B", (), {"low": r.low, "high": r.high}) for r in pre.itertuples()])
     out.update(_profile_features(pm_profile, pm_close, PM_PREFIX))
+
+    # ---- pre-market TRUE volume profile (when volume data is present) ----
+    _add_true_volume_profile(out, pre, pm_close, PM_PREFIX)
 
     # ---- initial balance ----
     ib_range_pts = ib_high - ib_low
@@ -357,6 +449,12 @@ def compute_features_for_day(ctx: DayContext) -> Dict[str, float]:
     # ---- IB TPO profile ----
     ib_profile = build_tpo([type("B", (), {"low": r.low, "high": r.high}) for r in ib.itertuples()])
     out.update(_profile_features(ib_profile, ib_close, IB_PREFIX))
+
+    # ---- IB microstructure (volume, delta, big trades) ----
+    _add_microstructure(out, ib, IB_PREFIX)
+
+    # ---- IB TRUE volume profile ----
+    _add_true_volume_profile(out, ib, ib_close, IB_PREFIX)
 
     # ---- calendar ----
     out.update(_calendar_flags(ctx.date))

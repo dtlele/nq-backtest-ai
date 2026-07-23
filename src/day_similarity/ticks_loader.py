@@ -51,6 +51,14 @@ TICK_SIZE = NQ_TICK_SIZE  # 0.25
 # ──────────────────────────────────────────────────────────────────────────
 # Single-day loader
 # ──────────────────────────────────────────────────────────────────────────
+def _load_one_file(filepath: str) -> pd.DataFrame:
+    """Module-level wrapper for multiprocessing (Windows-safe)."""
+    try:
+        return _finalize(_load_one_day(filepath))
+    except Exception:
+        return pd.DataFrame()
+
+
 def _load_one_day(filepath: str) -> pd.DataFrame:
     """Read one Databento tick file and return 1-min OHLCV bars."""
     cols = ["ts_event", "side", "price", "size", "symbol"]
@@ -80,6 +88,7 @@ def _load_one_day(filepath: str) -> pd.DataFrame:
     df["b_sell_v"] = np.where(df["is_big"] & (df["side"] == "B"), df["size"], 0)
     df["dollar"]   = df["price"] * df["size"]
 
+    df["b_vol_v"] = np.where(df["is_big"], df["size"], 0)
     df["ts"] = df["ts"].dt.floor("1min")
     g = df.groupby("ts", sort=True)
 
@@ -93,7 +102,7 @@ def _load_one_day(filepath: str) -> pd.DataFrame:
         "sell_volume": g["sell_v"].sum(),
         "vwap":     g["dollar"].sum() / g["size"].sum(),
         "n_big_trades":    g["is_big"].sum().astype(np.int64),
-        "big_trade_volume": g.apply(lambda x: x.loc[x["is_big"], "size"].sum(), include_groups=False),
+        "big_trade_volume": g["b_vol_v"].sum(),
         "big_trade_buy":   g["b_buy_v"].sum(),
         "big_trade_sell":  g["b_sell_v"].sum(),
     })
@@ -133,7 +142,8 @@ def _finalize(bars: pd.DataFrame) -> pd.DataFrame:
 def load_all_bars_from_ticks(databento_dir: str = r"C:/Users/Mauro/Documents/databento-data",
                              start_date: Optional[str] = None,
                              end_date: Optional[str] = None,
-                             verbose: bool = True) -> pd.DataFrame:
+                             verbose: bool = True,
+                             n_jobs: int = 4) -> pd.DataFrame:
     """Read every Databento tick file in ``databento_dir`` and concatenate
     into one 1-min OHLCV frame.
 
@@ -142,6 +152,7 @@ def load_all_bars_from_ticks(databento_dir: str = r"C:/Users/Mauro/Documents/dat
     databento_dir   folder containing glbx-mdp3-YYYYMMDD.trades.csv files
     start_date      optional YYYYMMDD filter (inclusive)
     end_date        optional YYYYMMDD filter (inclusive)
+    n_jobs          number of worker processes (1 = sequential)
     """
     pattern = os.path.join(databento_dir, "glbx-mdp3-*.trades.csv")
     files = sorted(glob.glob(pattern))
@@ -153,23 +164,55 @@ def load_all_bars_from_ticks(databento_dir: str = r"C:/Users/Mauro/Documents/dat
         raise FileNotFoundError(f"No Databento trades files in {databento_dir}")
 
     if verbose:
-        print(f"Loading {len(files)} days of Databento ticks from {databento_dir} ...")
+        print(f"Loading {len(files)} days of Databento ticks from {databento_dir} "
+              f"(n_jobs={n_jobs}) ...")
 
-    frames: List[pd.DataFrame] = []
-    for i, f in enumerate(files):
-        try:
-            d = _finalize(_load_one_day(f))
+    if n_jobs <= 1:
+        frames: List[pd.DataFrame] = []
+        for i, f in enumerate(files):
+            d = _load_one_file(f)
             if not d.empty:
                 frames.append(d)
-        except Exception as e:
-            if verbose:
-                print(f"  skip {os.path.basename(f)}: {e}")
-        if verbose and ((i + 1) % 50 == 0 or i == len(files) - 1):
-            print(f"  {i + 1}/{len(files)} days processed "
-                  f"({sum(len(x) for x in frames):,} bars so far)")
+            if verbose and ((i + 1) % 50 == 0 or i == len(files) - 1):
+                print(f"  {i + 1}/{len(files)} days processed "
+                      f"({sum(len(x) for x in frames):,} bars so far)")
+    else:
+        import multiprocessing as mp
+        ctx = mp.get_context("spawn")  # windows-safe
+        with ctx.Pool(processes=n_jobs) as pool:
+            results = pool.map(_load_one_file, files)
+        frames = [r for r in results if not r.empty]
+        if verbose:
+            total = sum(len(r) for r in frames)
+            print(f"  {len(frames)} days kept, {total:,} bars total")
 
     if not frames:
         raise RuntimeError("No usable days in the selected range")
 
     out = pd.concat(frames, ignore_index=True).sort_values("ts").reset_index(drop=True)
     return out
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# CLI: build the cached bars parquet
+# ──────────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import argparse
+    p = argparse.ArgumentParser()
+    p.add_argument("--databento-dir", default=r"C:/Users/Mauro/Documents/databento-data")
+    p.add_argument("--out", default="data/similarity/bars_from_ticks.parquet")
+    p.add_argument("--n-jobs", type=int, default=4)
+    args = p.parse_args()
+
+    import time as _t
+    t0 = _t.time()
+    bars = load_all_bars_from_ticks(
+        databento_dir=args.databento_dir,
+        n_jobs=args.n_jobs,
+        verbose=True,
+    )
+    print(f"Done in {_t.time() - t0:.1f}s, {len(bars):,} bars")
+    out_path = args.out
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    bars.to_parquet(out_path, index=False)
+    print(f"Wrote {out_path}")

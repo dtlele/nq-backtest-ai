@@ -44,7 +44,16 @@ class _Bar:
 
 
 def load_all_bars(cache_dir: str = "cache_ohlc") -> pd.DataFrame:
-    """Load every CSV in ``cache_dir`` into one frame indexed by timestamp."""
+    """Load every CSV in ``cache_dir`` into one frame indexed by timestamp.
+
+    If ``data/similarity/bars_from_ticks.parquet`` exists (built by
+    :mod:`ticks_loader`), prefer it — it has full microstructural info
+    (buy/sell volume, delta, big trades) that the OHLC cache lacks.
+    """
+    ticks_path = os.path.join("data", "similarity", "bars_from_ticks.parquet")
+    if os.path.exists(ticks_path):
+        return pd.read_parquet(ticks_path)
+
     files = sorted(glob.glob(os.path.join(cache_dir, "*.csv")))
     if not files:
         raise FileNotFoundError(f"No CSV files in {cache_dir}")
