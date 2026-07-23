@@ -435,17 +435,51 @@ def _finalize_decision(data: dict, flow_report: dict, candidate: CandidateBar,
     if direction == 'none':
         return FabioSignal('none', 0, None, None, None, 'none', "Chief opted for no trade.", "", raw)
 
+    # FLEXIBLE PARSING: modelli diversi (GLM, M2.7) usano schemi diversi.
+    # Estrai conviction da vari possibili campi.
+    _raw_conf = data.get('conviction', '')
+    if not _raw_conf:
+        # M2.7 potrebbe usare 'confidence' numerica
+        _num_conf = data.get('confidence', 0)
+        if isinstance(_num_conf, (int, float)):
+            if _num_conf >= 80:
+                _raw_conf = 'high'
+            elif _num_conf >= 60:
+                _raw_conf = 'med'
+            else:
+                _raw_conf = 'low'
+        # oppure da setup_type
+        if not _raw_conf:
+            _setup = data.get('setup_type', data.get('setup', ''))
+            if _setup in ('pullback', 'ivb_breakout', 'squeeze'):
+                _raw_conf = 'med'
+            elif _setup in ('imbalance_hunting', 'reversal'):
+                _raw_conf = 'low'
+            else:
+                _raw_conf = 'med'  # default sensato
+
     # ── VALIDATORE MECCANICO narrativa↔decisione + bias (PRIMA del pricing)
     reasoning_txt = data.get('reasoning', '')
     ok, veto_reason, conviction = validate_narrative_decision(
-        direction, data.get('conviction', 'low'), reasoning_txt, candidate, flow_report)
+        direction, _raw_conf, reasoning_txt, candidate, flow_report)
     if not ok:
         return FabioSignal('none', 0, None, None, None, 'none',
                            f"{veto_reason} | reasoning: {reasoning_txt[:120]}", "", raw)
 
+    # FLEXIBLE ANCHOR: se LLM non ha specificato anchor_level_id, scegli il migliore.
     anchor_id = data.get('anchor_level_id')
     if anchor_id not in levels or levels[anchor_id]['price'] == 0:
-        return FabioSignal('none', 0, None, None, None, 'none', f"VETO: Invalid anchor {anchor_id}", "", raw)
+        # Scegli l'anchor piu' logico basato sulla direzione
+        valid_levels = [(k, v) for k, v in levels.items() if v['price'] > 0]
+        if not valid_levels:
+            return FabioSignal('none', 0, None, None, None, 'none', f"VETO: No valid levels available", "", raw)
+        # Per long: anchor piu' vicino SOTTO il prezzo. Per short: sopra.
+        price = candidate.bar.close
+        if direction == 'long':
+            valid_levels.sort(key=lambda x: price - x[1]['price'] if x[1]['price'] < price else 1e9)
+        else:
+            valid_levels.sort(key=lambda x: x[1]['price'] - price if x[1]['price'] > price else 1e9)
+        anchor_id = valid_levels[0][0]
 
     # EXECUTION COMPILER (Code-based Pricing)
     anchor_price = levels[anchor_id]['price']
