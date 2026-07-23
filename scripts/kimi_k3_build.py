@@ -25,7 +25,7 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 
 OPENROUTER_API_KEY = os.getenv(
     "OPENROUTER_API_KEY",
-    "REDACTED_KEY"
+    "REDACTED_USE_ENV_VAR"  # era una key di test, ora solo env var
 )
 KIMI_MODEL = "moonshotai/kimi-k3"
 MAX_FILE_SIZE = 40_000  # 40KB per file — Kimi K3 ha contesto molto grande
