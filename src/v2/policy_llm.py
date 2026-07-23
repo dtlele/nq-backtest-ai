@@ -79,7 +79,11 @@ class LLMPolicy:
             data = json.loads(raw)
         except Exception as e:
             sig.features.update(llm_vote="error", llm_confidence=0, calibrated_prob=0.0)
-            return {"allow": True, "reason": f"llm_error_allow({e})"}  # fail-open: il detector basta
+            # CHANGED: fail-CLOSED. Se l'LLM ha un errore, NON apriamo il trade.
+            # Il vecchio fail-open permetteva a trade non validati di passare in caso
+            # di problemi LLM, mascherando bug. In V2 il LLM e' un gate di sicurezza
+            # che deve essere attivo per approvare.
+            return {"allow": False, "reason": f"llm_error_veto({type(e).__name__})"}
 
         vote = str(data.get("vote", "no_trade"))
         conf = int(data.get("confidence", 0))

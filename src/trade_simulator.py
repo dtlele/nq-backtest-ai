@@ -190,10 +190,18 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
         trade.bars_stalling_vs_poc = 0
         
     POC_TRAIL_BUFFER_TICKS = 16 # 16 ticks = 4.0pts below POC for structural protection on NQ
-    MAX_STALL_BARS = 5         # exit after 5 consecutive M1 bars stalling under POC
-    MIN_RR_FOR_POC_TRAIL = 1.0 # only activate POC trailing once we're 1.0 R:R in profit to prevent premature tight trail
+    MAX_STALL_BARS = 9999      # DEPRECATED: non eseguiamo piu' lo stall-exit meccanico.
+                                # Era 5 barre consecutive stalling sotto POC. Sostituito da Donchian 40-bar trail.
+    MIN_RR_FOR_POC_TRAIL = 1.0 # DEPRECATED: usato dal vecchio POC trail (rimosso). Lasciato per compat.
     poc_trail_active = False
-    
+    # === DEPRECATED VECCHI TIER LOCK (rimossi) ===
+    # Tutti i lock trailing rigidi (1.6R lock 1R, 2.5R lock 1.5R, 3.5R lock 2.5R)
+    # sono stati sostituiti da Donchian 40-bar + swing trail (vedi sezione 4 sotto).
+    # Quei lock uccidevano il runner a +1R/+1.5R prima che potesse respirare.
+    # I partial TP a 1R restano attivi: gestione rischio sana (50% chiuso, 50% runner).
+    ENABLE_VECCHI_TIER_TRAILING = False
+    ENABLE_POC_TRAIL = False   # Vecchio POC micro-trail rimosso (vedi Donchian).
+
     for i, bar in enumerate(bars):
         is_first = first_bar_after_entry and (i == 0)
         trade.bars_seen.append(bar)
@@ -214,25 +222,28 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
                 if on_partial_close:
                     on_partial_close(partial_closed)
             
-            # --- 2. Check Near-TP Trailing (80% distance / 1.6 R:R) ---
-            if risk_points > 0 and bar.high >= trade.entry + 1.6 * risk_points:
-                lock_in_stop = trade.entry + 1.0 * risk_points
-                if lock_in_stop > trade.stop:
-                    print(f"  [MANAGEMENT] Near-TP reached (1.6 R:R). Trailing stop to lock in 1.0 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
-                    trade.stop = lock_in_stop
-                    
-            # --- Check High-RR Trailing Tiers ---
-            if risk_points > 0:
-                if bar.high >= trade.entry + 3.5 * risk_points:
-                    lock_in_stop = trade.entry + 2.5 * risk_points
+            # --- 2. VECCHI TIER TRAILING (1.6R/2.5R/3.5R) DISABILITATI ---
+            # Sostituiti dal Donchian 40-bar + swing trail (sezione 4).
+            # I lock rigidi a 1R/1.5R/2.5R uccidevano il runner su ogni pullback.
+            if not ENABLE_VECCHI_TIER_TRAILING:
+                pass  # Skip the lock — Donchian takes care of it
+            else:
+                if risk_points > 0 and bar.high >= trade.entry + 1.6 * risk_points:
+                    lock_in_stop = trade.entry + 1.0 * risk_points
                     if lock_in_stop > trade.stop:
-                        print(f"  [MANAGEMENT] 3.5 R:R reached. Trailing stop to lock in 2.5 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
+                        print(f"  [MANAGEMENT] Near-TP reached (1.6 R:R). Trailing stop to lock in 1.0 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
                         trade.stop = lock_in_stop
-                elif bar.high >= trade.entry + 2.5 * risk_points:
-                    lock_in_stop = trade.entry + 1.5 * risk_points
-                    if lock_in_stop > trade.stop:
-                        print(f"  [MANAGEMENT] 2.5 R:R reached. Trailing stop to lock in 1.5 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
-                        trade.stop = lock_in_stop
+                if risk_points > 0:
+                    if bar.high >= trade.entry + 3.5 * risk_points:
+                        lock_in_stop = trade.entry + 2.5 * risk_points
+                        if lock_in_stop > trade.stop:
+                            print(f"  [MANAGEMENT] 3.5 R:R reached. Trailing stop to lock in 2.5 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
+                            trade.stop = lock_in_stop
+                    elif bar.high >= trade.entry + 2.5 * risk_points:
+                        lock_in_stop = trade.entry + 1.5 * risk_points
+                        if lock_in_stop > trade.stop:
+                            print(f"  [MANAGEMENT] 2.5 R:R reached. Trailing stop to lock in 1.5 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
+                            trade.stop = lock_in_stop
             
             # --- 3. Check Target Hit ---
             if bar.high >= trade.target:
@@ -277,25 +288,26 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
                 if on_partial_close:
                     on_partial_close(partial_closed)
             
-            # --- 2. Check Near-TP Trailing (80% distance / 1.6 R:R) ---
-            if risk_points > 0 and bar.low <= trade.entry - 1.6 * risk_points:
-                lock_in_stop = trade.entry - 1.0 * risk_points
-                if lock_in_stop < trade.stop:
-                    print(f"  [MANAGEMENT] Near-TP reached (1.6 R:R). Trailing stop to lock in 1.0 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
-                    trade.stop = lock_in_stop
-                    
-            # --- Check High-RR Trailing Tiers ---
-            if risk_points > 0:
-                if bar.low <= trade.entry - 3.5 * risk_points:
-                    lock_in_stop = trade.entry - 2.5 * risk_points
+            # --- 2. VECCHI TIER TRAILING (1.6R/2.5R/3.5R) DISABILITATI ---
+            if not ENABLE_VECCHI_TIER_TRAILING:
+                pass  # Skip — Donchian handles trailing
+            else:
+                if risk_points > 0 and bar.low <= trade.entry - 1.6 * risk_points:
+                    lock_in_stop = trade.entry - 1.0 * risk_points
                     if lock_in_stop < trade.stop:
-                        print(f"  [MANAGEMENT] 3.5 R:R reached. Trailing stop to lock in 2.5 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
+                        print(f"  [MANAGEMENT] Near-TP reached (1.6 R:R). Trailing stop to lock in 1.0 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
                         trade.stop = lock_in_stop
-                elif bar.low <= trade.entry - 2.5 * risk_points:
-                    lock_in_stop = trade.entry - 1.5 * risk_points
-                    if lock_in_stop < trade.stop:
-                        print(f"  [MANAGEMENT] 2.5 R:R reached. Trailing stop to lock in 1.5 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
-                        trade.stop = lock_in_stop
+                if risk_points > 0:
+                    if bar.low <= trade.entry - 3.5 * risk_points:
+                        lock_in_stop = trade.entry - 2.5 * risk_points
+                        if lock_in_stop < trade.stop:
+                            print(f"  [MANAGEMENT] 3.5 R:R reached. Trailing stop to lock in 2.5 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
+                            trade.stop = lock_in_stop
+                    elif bar.low <= trade.entry - 2.5 * risk_points:
+                        lock_in_stop = trade.entry - 1.5 * risk_points
+                        if lock_in_stop < trade.stop:
+                            print(f"  [MANAGEMENT] 2.5 R:R reached. Trailing stop to lock in 1.5 R:R: {trade.stop:.2f} -> {lock_in_stop:.2f}")
+                            trade.stop = lock_in_stop
             
             # --- 3. Check Target Hit ---
             if bar.low <= trade.target:

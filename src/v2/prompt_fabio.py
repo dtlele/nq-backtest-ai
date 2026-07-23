@@ -59,6 +59,8 @@ VERIFIED_RULE_FILES = {
         "rule_fabio_failed_auction_is_the_setup.md",
         "rule_fabio_pre_market_levels_usage.md",
     ],
+    # "reversal" rimosso: 2/2 trade persi storicamente. Classificare come
+    # 'pullback' se il contesto lo consente (rotational, mean-reversion a value extreme).
 }
 
 MAX_RULE_CHARS = 6_000
@@ -123,9 +125,10 @@ trade, based on the methodology above and the market context below.
   0.5x IB range, CVD confirming) NEVER vote against the drive — a reversal against
   initiative flow is the classic losing trade. In a ROTATIONAL regime, mean-reversion
   at value extremes is the correct business.
-- REVERSAL DISCIPLINE: a reversal is valid only if the bias regime is rotational/aligned,
-  or there is explicit bias-shift evidence (failed auction + POC/CVD flip).
-  "Price went too far" is NOT a reason.
+- REVERSAL: globally disabled at the strategy level (see validate_narrative_decision
+  in fabio_agent). Historical backtests: 2/2 reversal trades lost money. Vote
+  'no_trade' for reversal setups. Mean-reversion at value extremes is still valid
+  as a 'pullback' classification, NOT as 'reversal'.
 - Vote "no_trade" if ANY required element is missing. Predatory patience: the first
   drive is never taken, the middle of the range is never traded, low participation
   is noise.
