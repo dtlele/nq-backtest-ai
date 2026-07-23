@@ -361,30 +361,29 @@ def compute_features_for_day(ctx: DayContext) -> Dict[str, float]:
     # ---- calendar ----
     out.update(_calendar_flags(ctx.date))
 
-    # ---- outcome labels ----
-    ref_30 = float(p30.iloc[0]["open"])   # ~ 10:00 ET open
-    hi_30  = float(p30["high"].max())
-    lo_30  = float(p30["low"].min())
-    cl_30  = float(p30.iloc[-1]["close"])
-    out[f"{OUTCOME_RET_COL}_next_30m"]   = _safe_pct(cl_30 - ref_30, ref_30)
-    out[f"{OUTCOME_MFE_COL}_next_30m"]   = _safe_pct(hi_30 - ref_30, ref_30)
-    out[f"{OUTCOME_MAE_COL}_next_30m"]   = _safe_pct(ref_30 - lo_30, ref_30)
-    out[f"{OUTCOME_RANGE_COL}_next_30m"] = _safe_pct(hi_30 - lo_30, ref_30)
-    out[f"{OUTCOME_DIR_COL}_next_30m"]   = float(np.sign(out[f"{OUTCOME_RET_COL}_next_30m"])
-                                                 if np.isfinite(out[f"{OUTCOME_RET_COL}_next_30m"])
-                                                 else float("nan"))
-
-    ref_eod = float(eod.iloc[0]["open"])
-    hi_eod  = float(eod["high"].max())
-    lo_eod  = float(eod["low"].min())
-    cl_eod  = float(eod.iloc[-1]["close"])
-    out[f"{OUTCOME_RET_COL}_eod"]   = _safe_pct(cl_eod - ref_eod, ref_eod)
-    out[f"{OUTCOME_MFE_COL}_eod"]   = _safe_pct(hi_eod - ref_eod, ref_eod)
-    out[f"{OUTCOME_MAE_COL}_eod"]   = _safe_pct(ref_eod - lo_eod, ref_eod)
-    out[f"{OUTCOME_RANGE_COL}_eod"] = _safe_pct(hi_eod - lo_eod, ref_eod)
-    out[f"{OUTCOME_DIR_COL}_eod"]   = float(np.sign(out[f"{OUTCOME_RET_COL}_eod"])
-                                            if np.isfinite(out[f"{OUTCOME_RET_COL}_eod"])
-                                            else float("nan"))
+    # ---- outcome labels (skipped if windows are empty) ----
+    if not p30.empty:
+        ref_30 = float(p30.iloc[0]["open"])   # ~ 10:00 ET open
+        hi_30  = float(p30["high"].max())
+        lo_30  = float(p30["low"].min())
+        cl_30  = float(p30.iloc[-1]["close"])
+        out[f"{OUTCOME_RET_COL}_next_30m"]   = _safe_pct(cl_30 - ref_30, ref_30)
+        out[f"{OUTCOME_MFE_COL}_next_30m"]   = _safe_pct(hi_30 - ref_30, ref_30)
+        out[f"{OUTCOME_MAE_COL}_next_30m"]   = _safe_pct(ref_30 - lo_30, ref_30)
+        out[f"{OUTCOME_RANGE_COL}_next_30m"] = _safe_pct(hi_30 - lo_30, ref_30)
+        ret_v = out[f"{OUTCOME_RET_COL}_next_30m"]
+        out[f"{OUTCOME_DIR_COL}_next_30m"]   = float(np.sign(ret_v)) if np.isfinite(ret_v) else float("nan")
+    if not eod.empty:
+        ref_eod = float(eod.iloc[0]["open"])
+        hi_eod  = float(eod["high"].max())
+        lo_eod  = float(eod["low"].min())
+        cl_eod  = float(eod.iloc[-1]["close"])
+        out[f"{OUTCOME_RET_COL}_eod"]   = _safe_pct(cl_eod - ref_eod, ref_eod)
+        out[f"{OUTCOME_MFE_COL}_eod"]   = _safe_pct(hi_eod - ref_eod, ref_eod)
+        out[f"{OUTCOME_MAE_COL}_eod"]   = _safe_pct(ref_eod - lo_eod, ref_eod)
+        out[f"{OUTCOME_RANGE_COL}_eod"] = _safe_pct(hi_eod - lo_eod, ref_eod)
+        ret_v = out[f"{OUTCOME_RET_COL}_eod"]
+        out[f"{OUTCOME_DIR_COL}_eod"]   = float(np.sign(ret_v)) if np.isfinite(ret_v) else float("nan")
     return out
 
 
