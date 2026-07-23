@@ -161,9 +161,10 @@ def compute_bias_from_data(ctx, m1_bars_early) -> tuple:
     elif hasattr(ctx, 'poc_migration_direction') and ctx.poc_migration_direction == 'down':
         score -= 10
     # VWAP position
-    if ctx.vwap > 0 and m1_bars_early:
+    vwap = getattr(ctx, 'vwap', 0) or 0
+    if vwap > 0 and m1_bars_early:
         last_close = m1_bars_early[-1].close
-        if last_close > ctx.vwap:
+        if last_close > vwap:
             score += 8; drivers.append("sopra VWAP")
         else:
             score -= 8

@@ -208,6 +208,50 @@ def check_failed_auction_setup(bar, recent_bars, daily_map) -> Tuple[float, str,
     return 0, 'none', '', ''
 
 
+def check_impulse_breakout(bar, recent_bars, daily_map) -> Tuple[float, str, str, str]:
+    """Impulse breakout = continuation in drive direction.
+    - bar in same direction as bias, close > open, range > 1.5x avg
+    - distance from level already (continuation, not first touch)
+    Returns: (score, direction, sl_reason, tp_reason)."""
+    if not daily_map:
+        return 0, 'none', '', ''
+    if daily_map.bias_regime not in ('drive_up', 'drive_down', 'lean_up', 'lean_down'):
+        return 0, 'none', '', ''
+    if len(recent_bars or []) < 4:
+        return 0, 'none', '', ''
+    
+    # Average range ultimi 4 bar
+    ranges = [b.high - b.low for b in recent_bars[-4:]]
+    avg_range = sum(ranges) / len(ranges)
+    bar_range = bar.high - bar.low
+    if bar_range < 1.5 * avg_range or bar_range < 20:
+        return 0, 'none', '', ''
+    
+    # Long impulse: in lean_up/drive_up, close > open
+    if (bar.close > bar.open and
+        daily_map.bias_regime in ('drive_up', 'lean_up')):
+        # SL: pullback sotto il minimo della barra
+        sl = bar.low - 0.5
+        # TP: measured move IB range above entry
+        ib_range = daily_map.primary_levels.get('ib_high', 0) - daily_map.primary_levels.get('ib_low', 0)
+        if ib_range > 0:
+            tp = bar.close + ib_range
+            if abs(tp - bar.close) >= 1.5 * abs(bar.close - sl):
+                return 70, 'long', f"below bar.low={bar.low:.2f}", f"above IB-extended={tp:.2f}"
+    
+    # Short impulse: in lean_down/drive_down, close < open
+    if (bar.close < bar.open and
+        daily_map.bias_regime in ('drive_down', 'lean_down')):
+        sl = bar.high + 0.5
+        ib_range = daily_map.primary_levels.get('ib_high', 0) - daily_map.primary_levels.get('ib_low', 0)
+        if ib_range > 0:
+            tp = bar.close - ib_range
+            if abs(bar.close - tp) >= 1.5 * abs(sl - bar.close):
+                return 70, 'short', f"above bar.high={bar.high:.2f}", f"below IB-extended={tp:.2f}"
+    
+    return 0, 'none', '', ''
+
+
 def compute_sl_tp_mechanical(candidate, daily_map, direction: str) -> Tuple[Optional[float], Optional[float], float]:
     """Calcola SL e TP meccanicamente.
     Returns: (sl, tp, rr) o (None, None, 0) se impossibile."""
@@ -348,6 +392,10 @@ def evaluate_candidate(candidate, recent_bars, daily_map, ctx) -> TriggerVerdict
     if s > best[0]: best = (s, d, slr, tpr)
     
     s, d, slr, tpr = check_failed_auction_setup(bar, recent_bars, daily_map)
+    if s > best[0]: best = (s, d, slr, tpr)
+    
+    # Impulse breakout (catch continuation moves in drive)
+    s, d, slr, tpr = check_impulse_breakout(bar, recent_bars, daily_map)
     if s > best[0]: best = (s, d, slr, tpr)
     
     score, direction, sl_reason, tp_reason = best
