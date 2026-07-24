@@ -15,7 +15,7 @@ Questo prompt serve per **riprendere il lavoro** sul progetto NQ Backtest AI in 
 | `src/trade_simulator.py` | `step_trade()` con **close-based stop** (no wick hunting) + risk kill switch |
 | `src/agents/institutional_bias.py` | Bias engine deterministico (drive/lean/rotational) |
 | `src/agents/desk_gates.py` | Pre-gate HARD (TIME, PARTICIPATION, ANCHOR) |
-| `src/agents/ml_filter.py` | **Random Forest pre-filter** (score 0-1) |
+| `src/agents/rf_pre_filter.py` | **Random Forest pre-filter** (score 0-1) |
 | `src/agents/daily_map.py` | Daily map LLM (1 call/giorno) |
 | `src/agents/mechanical_trigger.py` | Detector pattern geometrici (pullback/squeeze/IVB) |
 | `scripts/ml/build_features.py` | Estrae 26 features da 230 giorni di NQ |

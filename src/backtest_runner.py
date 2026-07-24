@@ -775,7 +775,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         # Addestrato su 230 giorni, AUC=0.73. Score > threshold = A+ setup.
         if os.environ.get('ML_PRE_FILTER', '1') == '1':
             try:
-                from src.agents.ml_filter import score_bar as ml_score
+                from src.agents.rf_pre_filter import score_bar as ml_score
                 # Calcola vol_avg_12 dalle candele recenti
                 _recent_12 = [b for b in bars_ny if b.timestamp < candidate.bar.timestamp][-12:]
                 _vol_avg_12 = sum(b.volume for b in _recent_12) / len(_recent_12) if _recent_12 else candidate.bar.volume
