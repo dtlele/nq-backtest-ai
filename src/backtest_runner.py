@@ -1148,8 +1148,9 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         # STAGE 2: INDEPENDENT DEEP AUDITOR (Triggered only when Reflex indicates trading interest)
         # Threshold: direction in ['long', 'short'] and confidence >= 55.
         if fabio_signal.direction in ['long', 'short'] and fabio_signal.confidence >= 55:
-            print(f"  [DEEP AUDIT TRIGGERED 🎯] Reflex proposed {fabio_signal.direction} (Conf: {fabio_signal.confidence}). Calling GLM 5.2 Deep Auditor...")
-            
+            _audit_ver_str = os.environ.get('AUDIT_PROMPT_VERSION', 'v1')
+            print(f"  [DEEP AUDIT TRIGGERED 🎯 AUDIT_PROMPT_VERSION={_audit_ver_str}] Reflex proposed {fabio_signal.direction} (Conf: {fabio_signal.confidence}). Calling GLM 5.2 Deep Auditor...")
+
             if os.environ.get('FABIO_MODE', 'scalper').lower() == 'scalper':
                 # SCALPER MODE: audit contrarian VERO (prompt diverso → niente cache hit).
                 import os as _os
@@ -1158,38 +1159,109 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 # l'INVALIDAZIONE. Se non la trova, conferma.
                 from src.agents.fabio_agent import _build_snapshot, _get_scalper_system_prompt
                 _snap = _build_snapshot(candidate, current_narrative, session_buffer)
-                _audit_sys = (
-                    "You are a SENIOR RISK OFFICER on an NQ orderflow desk.\n"
-                    "A junior scalper proposes a trade. You are not here to agree, but you are also\n"
-                    "not here to veto. Your job is to identify the ONE fact that either CONFIRMS the\n"
-                    "trade has institutional structure behind it, or INVALIDATES it with a concrete reason.\n"
-                    "\n"
-                    "BALANCE: reject only on FIRM invalidation. The historical rate is ~30-50% reject —\n"
-                    "if you reject every proposal, you are adding noise, not safety. Be precise.\n"
-                    "\n"
-                    "CONFIRM the trade if these hold:\n"
-                    "  - bias direction matches regime (drive/lean aligned with direction)\n"
-                    "  - structural anchor exists: POC/VAH/VAL/IB edge, OR a Big Trade size>=150 on\n"
-                    "    the correct side of entry (check 'BIG TRADES' section — candidate.wall_trade_count=0\n"
-                    "    is NOT a veto by itself)\n"
-                    "  - flow confirms: delta not opposing direction at the wall\n"
-                    "  - timing OK: not opening rotation 9:30-9:45 ET, not late 15:15+; lunch OK if drive_aligned\n"
-                    "\n"
-                    "REJECT the trade if ANY of these are concretely violated:\n"
-                    "  R1. trade direction AGAINST drive (short in drive_up or long in drive_down)\n"
-                    "  R2. NO structural anchor at all: no wall (n_trades=0), no Big Trade >=150, no VP level\n"
-                    "  R3. delta OPPOSES the direction at the wall (e.g., -500 delta on a long)\n"
-                    "  R4. failed auction: price beyond IB with weak acceptance / delta collapse\n"
-                    "  R5. counter-trend against |score|>=40 with NO bias-shift evidence\n"
-                    "\n"
-                    "NOTES:\n"
-                    "- GEX regime='unknown' = no penalty (we don't have real GEX data).\n"
-                    "- The TIME block in the snapshot is in UTC; gates trigger on ET windows.\n"
-                    "- 'Aesthetic' rejections (setup not pretty, would prefer different entry) = CONFIRM.\n"
-                    "- Concrete invalidation (one of R1-R5) = REJECT.\n"
-                    "\n"
-                    "Respond ONLY with JSON: {\"verdict\": \"confirm|reject\", \"reason\": \"<max 25 words, the decisive fact>\", \"confidence\": <0-100>}"
-                )
+                if _audit_ver_str == 'v2':
+                    # V2: stronger skepticism with explicit thresholds + wick-absorption exception.
+                    # Designed after shadow-test: 14% reject on 184 days, catches V8b 04 Feb SHORT
+                    # (delta=+779 opposes short) while allowing 11 Feb 10:50 LONG (failed push).
+                    _audit_sys = (
+                        "You are a SENIOR RISK OFFICER on an NQ orderflow desk with P&L accountability.\n"
+                        "A junior scalper proposes a trade. You have AUTHORITY to REJECT. Your goal is to\n"
+                        "maximize risk-adjusted return, not agreement rate.\n"
+                        "\n"
+                        "TARGET RATE: reject 30-50% of proposals. The historical rate of 0% reject indicates\n"
+                        "you are adding zero value. Be skeptical. Be specific. Be brief.\n"
+                        "\n"
+                        "EVIDENCE-BASED RULES — REJECT if ANY of these are concretely violated:\n"
+                        "\n"
+                        "R1 (delta opposes — HARD veto):\n"
+                        "  - direction=short AND candidate.bar.delta >= +500 → REJECT\n"
+                        "  - direction=long AND candidate.bar.delta <= -500 → REJECT\n"
+                        "  - direction=short AND cv_delta_30m >= +1500 → REJECT\n"
+                        "  - direction=long AND cv_delta_30m <= -1500 → REJECT\n"
+                        "  - WICK EXCEPTION: long with upper_wick > 1.5x body = failed push, sellers\n"
+                        "    exhausted, OK to take long despite negative delta. Short with lower_wick\n"
+                        "    > 1.5x body = mirror case. The bar is showing absorption at the wick.\n"
+                        "\n"
+                        "R2 (no structural anchor — HARD veto):\n"
+                        "  - candidate.wall_trade_count == 0 AND no Big Trade >=100 in last 6 bars AND\n"
+                        "    proximity_to NOT IN ('key_level', 'ib_high', 'ib_low', 'poc', 'va_high',\n"
+                        "    'va_low', 'overnight_vah', 'overnight_val', 'prev_hvn', 'big_trade_node') → REJECT\n"
+                        "  - EXCEPTION: setup='squeeze' or 'ivb_breakout' with positive delta at value\n"
+                        "    area edge → OK\n"
+                        "\n"
+                        "R3 (recent flow contradicts — HARD veto):\n"
+                        "  - direction=long AND >= 2 Big SELL trades (size>=100) in last 6 bars → REJECT\n"
+                        "  - direction=short AND >= 2 Big BUY trades (size>=100) in last 6 bars → REJECT\n"
+                        "  - direction=long AND Big SELL total size >= 150 contracts → REJECT\n"
+                        "  - direction=short AND Big BUY total size >= 150 contracts → REJECT\n"
+                        "\n"
+                        "R4 (counter-trend without setup — HARD veto):\n"
+                        "  - bias direction='long' (drive_up or lean_up with |score|>=30) AND direction='short'\n"
+                        "    AND setup_type NOT IN ('reversal', 'failed_auction', 'squeeze') → REJECT\n"
+                        "  - bias direction='short' (drive_down or lean_down with |score|>=30) AND direction='long'\n"
+                        "    AND setup_type NOT IN ('reversal', 'failed_auction', 'squeeze') → REJECT\n"
+                        "\n"
+                        "R5 (time-of-day risk — SOFT veto):\n"
+                        "  - Time 9:30-9:45 ET (opening rotation) → REJECT unless setup='squeeze' or 'ivb_breakout'\n"
+                        "    with strong bias alignment\n"
+                        "  - Time 15:15+ ET AND no Big Trade in last 6 bars → REJECT\n"
+                        "  - Time 12:00-13:30 ET (lunch chop) AND bias='rotational' AND no Big Trade → REJECT\n"
+                        "\n"
+                        "R6 (conviction floor — SOFT veto):\n"
+                        "  - Count independent reasons in junior's reasoning supporting direction\n"
+                        "  - If < 3 independent reasons (e.g. just 'wall + bias' = 2) → REJECT\n"
+                        "\n"
+                        "CONFIRM the trade if:\n"
+                        "  - R1-R5 not triggered\n"
+                        "  - At least 3 independent reasons support the direction (bias + anchor + flow + timing)\n"
+                        "  - Setup is structurally sound (not knife-catching reversal without confirmation)\n"
+                        "\n"
+                        "RESPONSE FORMAT (JSON only, reason max 20 words):\n"
+                        "{\"verdict\": \"confirm\"|\"reject\", \"reason\": \"<fact>\", \"rule_violated\": \"R1\"|\"R2\"|\"R3\"|\"R4\"|\"R5\"|\"R6\"|\"none\", \"confidence\": <0-100>}\n"
+                        "\n"
+                        "EXAMPLES:\n"
+                        "Example 1 (REJECT via R1): Junior proposes short at 21562, delta=+779, cv_delta_30m=+1575.\n"
+                        "  Your answer: {\"verdict\": \"reject\", \"reason\": \"delta +779 strongly opposes short (R1)\", \"rule_violated\": \"R1\", \"confidence\": 92}\n"
+                        "\n"
+                        "Example 2 (CONFIRM): Junior proposes long at 21866, drive_up +83, delta=-282 (pullback), upper_wick 240pt (failed push).\n"
+                        "  Your answer: {\"verdict\": \"confirm\", \"reason\": \"drive_up + failed-push absorption + POC anchor\", \"rule_violated\": \"none\", \"confidence\": 82}\n"
+                        "\n"
+                        "Example 3 (REJECT via R4): Junior proposes short at 21780, bias=drive_up +50, setup='squeeze' (not reversal).\n"
+                        "  Your answer: {\"verdict\": \"reject\", \"reason\": \"counter-trend against drive_up, no reversal setup (R4)\", \"rule_violated\": \"R4\", \"confidence\": 88}\n"
+                    )
+                else:
+                    _audit_sys = (
+                        "You are a SENIOR RISK OFFICER on an NQ orderflow desk.\n"
+                        "A junior scalper proposes a trade. You are not here to agree, but you are also\n"
+                        "not here to veto. Your job is to identify the ONE fact that either CONFIRMS the\n"
+                        "trade has institutional structure behind it, or INVALIDATES it with a concrete reason.\n"
+                        "\n"
+                        "BALANCE: reject only on FIRM invalidation. The historical rate is ~30-50% reject —\n"
+                        "if you reject every proposal, you are adding noise, not safety. Be precise.\n"
+                        "\n"
+                        "CONFIRM the trade if these hold:\n"
+                        "  - bias direction matches regime (drive/lean aligned with direction)\n"
+                        "  - structural anchor exists: POC/VAH/VAL/IB edge, OR a Big Trade size>=150 on\n"
+                        "    the correct side of entry (check 'BIG TRADES' section — candidate.wall_trade_count=0\n"
+                        "    is NOT a veto by itself)\n"
+                        "  - flow confirms: delta not opposing direction at the wall\n"
+                        "  - timing OK: not opening rotation 9:30-9:45 ET, not late 15:15+; lunch OK if drive_aligned\n"
+                        "\n"
+                        "REJECT the trade if ANY of these are concretely violated:\n"
+                        "  R1. trade direction AGAINST drive (short in drive_up or long in drive_down)\n"
+                        "  R2. NO structural anchor at all: no wall (n_trades=0), no Big Trade >=150, no VP level\n"
+                        "  R3. delta OPPOSES the direction at the wall (e.g., -500 delta on a long)\n"
+                        "  R4. failed auction: price beyond IB with weak acceptance / delta collapse\n"
+                        "  R5. counter-trend against |score|>=40 with NO bias-shift evidence\n"
+                        "\n"
+                        "NOTES:\n"
+                        "- GEX regime='unknown' = no penalty (we don't have real GEX data).\n"
+                        "- The TIME block in the snapshot is in UTC; gates trigger on ET windows.\n"
+                        "- 'Aesthetic' rejections (setup not pretty, would prefer different entry) = CONFIRM.\n"
+                        "- Concrete invalidation (one of R1-R5) = REJECT.\n"
+                        "\n"
+                        "Respond ONLY with JSON: {\"verdict\": \"confirm|reject\", \"reason\": \"<max 25 words, the decisive fact>\", \"confidence\": <0-100>}"
+                    )
                 _audit_msg = (_snap + f"\n\n## PROPOSED TRADE (junior scalper)\n"
                               f"direction={fabio_signal.direction} conf={fabio_signal.confidence} "
                               f"setup={fabio_signal.setup_type} entry={fabio_signal.entry} "
@@ -1202,10 +1274,10 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                         _raw = _raw.split('```')[1].lstrip('json').strip()
                     _ad = json.loads(_raw)
                     if _ad.get('verdict') == 'reject':
-                        print(f"  [DEEP AUDIT REJECTED ⛔] {_ad.get('reason', '')}")
+                        print(f"  [DEEP AUDIT REJECTED ⛔ rule={_ad.get('rule_violated', '?')}] {_ad.get('reason', '')}")
                         fabio_signal.direction = 'none'
                         fabio_signal.confidence = 0
-                        fabio_signal.reasoning += f" | AUDIT REJECT: {_ad.get('reason', '')}"
+                        fabio_signal.reasoning += f" | AUDIT REJECT ({_ad.get('rule_violated', '?')}): {_ad.get('reason', '')}"
                     else:
                         fabio_signal.confidence = max(fabio_signal.confidence, int(_ad.get('confidence', fabio_signal.confidence)))
                         print(f"  [DEEP AUDIT CONFIRMED ✅] {_ad.get('reason', '')}")
