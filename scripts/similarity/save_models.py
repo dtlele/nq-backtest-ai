@@ -60,7 +60,7 @@ def main() -> None:
     )
     range_model.fit(Xz[mask], y[mask])
     joblib.dump({"model": range_model, "feat_cols": feat_cols, "mean": means, "std": stds},
-                out_dir / "range_model.joblib")
+                out_dir / "range.joblib")
     print("   range model saved.")
 
     # UMAP

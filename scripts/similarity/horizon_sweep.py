@@ -128,7 +128,9 @@ def main() -> None:
         print(f"==== PREDICTION TIME: {pred_label}  (features: {len(feat_cols)}) ====")
 
         for label, start_min, end_min in HORIZONS:
-            leaky = end_min <= pred_min
+            # Leakage rule: if the target window STARTS before the prediction
+            # time, the model has already seen part of the target.
+            leaky = start_min < pred_min
             tag = " [LEAKY]" if leaky else ""
             print(f"  computing outcomes for {label} (pred at {pred_min//60:02d}:{pred_min%60:02d}){tag} ...")
             outcome_idx = []

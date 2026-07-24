@@ -19,6 +19,7 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('--days',    type=int, default=0, help='0=all')
     p.add_argument('--start-date', type=str, default=None, help='YYYYMMDD start date')
+    p.add_argument('--end-date', type=str, default=None, help='YYYYMMDD end date')
     p.add_argument('--dry-run', action='store_true')
     p.add_argument('--quiet', '-q', action='store_true',
                    help='Compact output: 1 line per candidate, verbose only on trades')
@@ -33,7 +34,7 @@ def main():
         force_reset_equity(50000.0)
         print("  [SYSTEM] Equity forcibly reset to $50,000.00 for this run.")
 
-    trades = run_backtest(args.data_dir, args.days, args.dry_run, args.quiet, args.start_date, fabio_only=args.fabio_only)
+    trades = run_backtest(args.data_dir, args.days, args.dry_run, args.quiet, args.start_date, end_date=args.end_date, fabio_only=args.fabio_only)
     if not trades:
         print("No trades generated.")
         return

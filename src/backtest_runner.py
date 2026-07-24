@@ -1107,7 +1107,8 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
             _verdict = evaluate_candidate(candidate, _m5_history, _daily_map, ctx)
             if not quiet:
                 print(f"verdict={_verdict.decision} score={_verdict.confidence}", flush=True)
-            if _verdict.decision == 'skip' and _verdict.confidence < 30:
+            # DISABLE_MECH_PRE_FILTER=1 forces every candidate to LLM (recovers V7/V8b complex patterns)
+            if _verdict.decision == 'skip' and _verdict.confidence < 30 and os.environ.get('DISABLE_MECH_PRE_FILTER', '0') != '1':
                 # No structural pattern, low score: skip LLM
                 if not quiet:
                     print(f"  [PRE-FILTER SKIP] no structural pattern, skipping LLM")
@@ -1144,6 +1145,44 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
 
         # STAGE 1: REFLEX (Lightweight & Fast Trigger Check using optimized 10k context)
         fabio_signal = fabio_analyze(candidate, session_context=session_buffer, m1_bars=m1_bars, market_narrative=current_narrative, bars_since_last=bars_since_last)
+
+        # STAGE 1.5: SETUP × ML FILTER (deterministic, no LLM)
+        # Empirical analysis of 816 Fabio direction calls (see docs/LLM_DIRECTION_QUALITY.md):
+        #   - pullback + ml>=0.7  : 64.6% accuracy (n=82) ← REAL EDGE
+        #   - ivb_breakout + ml>=0.7: 62.5% accuracy (n=16)
+        #   - squeeze + ml>=0.8: 56.1% (n=41)
+        #   - reversal + ml>=0.7: 41.9% accuracy (n=210) ← WORSE than random, BLOCK
+        #   - imbalance_hunting + ml>=0.7: 47.9% (n=71)
+        # Set SETUP_ML_FILTER=1 to enable (default off for backward compat).
+        if fabio_signal.direction in ['long', 'short'] and os.environ.get('SETUP_ML_FILTER', '0') == '1':
+            try:
+                from src.agents.rf_pre_filter import score_bar as ml_score_filter
+                _recent_12_f = [b for b in bars_ny if b.timestamp < candidate.bar.timestamp][-12:]
+                _vol_avg_12_f = sum(b.volume for b in _recent_12_f) / len(_recent_12_f) if _recent_12_f else candidate.bar.volume
+                _ml_score_for_filter = ml_score_filter(candidate.bar, ctx, _vol_avg_12_f)
+            except Exception:
+                _ml_score_for_filter = None
+            _setup = (fabio_signal.setup_type or '').lower()
+            # Block reversal with high ML score (41.9% accuracy is anti-pattern)
+            if _setup == 'reversal' and _ml_score_for_filter is not None and _ml_score_for_filter >= 0.7:
+                fabio_signal.direction = 'none'
+                fabio_signal.confidence = 0
+                fabio_signal.reasoning = (fabio_signal.reasoning or '') + ' | SETUP_ML_FILTER: reversal+ml>=0.7 blocked (41.9% accuracy)'
+                if not quiet:
+                    print(f"  [SETUP_ML_FILTER] BLOCKED reversal + ml={_ml_score_for_filter:.2f} (41.9% accuracy anti-pattern)")
+                log_reasoning({
+                    'date': date_str, 'bar_time_utc': candidate.bar.timestamp.isoformat(),
+                    'fabio_direction': 'none', 'fabio_confidence': 0,
+                    'fabio_setup': fabio_signal.setup_type,
+                    'fabio_entry': None, 'fabio_stop': None, 'fabio_target': None,
+                    'fabio_reasoning': 'SETUP_ML_FILTER: reversal+ml>=0.7 blocked',
+                    'decision': 'no_trade', 'no_trade_reason': 'setup_ml_filter_reversal_blocked',
+                    'ml_score': _ml_score_for_filter,
+                })
+                session_buffer.append(f"{bar_ts} ml_filter_skip none")
+                if len(session_buffer) > MAX_SESSION_BUFFER:
+                    session_buffer.pop(0)
+                continue
 
         # STAGE 2: INDEPENDENT DEEP AUDITOR (Triggered only when Reflex indicates trading interest)
         # Threshold: direction in ['long', 'short'] and confidence >= 55.

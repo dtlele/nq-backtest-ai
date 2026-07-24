@@ -15,6 +15,10 @@ from src.candidate_detector import detect_candidates
 from src.session_context import build_session_context
 from src.volume_profile import compute_volume_profile
 
+# Day-similarity engine: gives a regime-aware size + skip decision at 10:00 ET
+from src.day_similarity.open_signal import compute_open_signal, OpenSignal
+from src.day_similarity.data_loader import slice_phase as _ss_slice_phase
+
 def get_current_m5_bars(symbol, num_bars=100, broker_offset_hours=2):
     """
     Scarica le ultime `num_bars` candele M5 da MT5 e le converte in oggetti Bar compatibili.
@@ -102,6 +106,67 @@ def is_market_open():
     rth_end = now_et.replace(hour=16, minute=0, second=0, microsecond=0)
     return rth_start <= now_et <= rth_end
 
+
+# Module-level state for the once-per-day open signal
+_last_open_signal_date = None
+
+
+def _compute_today_open_signal(bars_m5, bot, broker_offset: int) -> OpenSignal:
+    """Build a 1-min pre-market + IB slice for today and run the
+    day-similarity engine.  Called once at 10:00 ET from the main loop.
+    """
+    from src.bar_aggregator import aggregate_to_bars
+    from src.data_loader import load_day
+    # Use the 1-min bars from the bot's tick buffer if available,
+    # otherwise fall back to the cache.
+    try:
+        # Try to get 1-min bars from the bot
+        bars_1min = getattr(bot, "m1_bars", None) or []
+    except Exception:
+        bars_1min = []
+
+    if not bars_1min:
+        # Fall back: read today's Databento tick file if present
+        from src.day_similarity.ticks_loader import _load_one_file
+        today_str = datetime.now(ET).strftime("%Y%m%d")
+        path = rf"C:\Users\Mauro\Documents\databento-data\glbx-mdp3-{today_str}.trades.csv"
+        if os.path.exists(path):
+            df = _load_one_file(path)
+            if not df.empty:
+                df["minute_et"] = (df["ts"].dt.tz_convert(ET).dt.hour * 60
+                                    + df["ts"].dt.tz_convert(ET).dt.minute)
+                df["date_et"] = pd.to_datetime(df["ts"].dt.tz_convert(ET).dt.date)
+                pre = _ss_slice_phase(df, 0, 9*60+30)
+                ib  = _ss_slice_phase(df, 9*60+30, 10*60)
+            else:
+                pre, ib = pd.DataFrame(), pd.DataFrame()
+        else:
+            pre, ib = pd.DataFrame(), pd.DataFrame()
+    else:
+        df = pd.DataFrame([{
+            "ts": b.timestamp, "open": b.open, "high": b.high,
+            "low": b.low, "close": b.close, "volume": b.volume,
+        } for b in bars_1min])
+        df["date_et"] = pd.to_datetime(df["ts"].dt.tz_convert(ET).dt.date)
+        df["minute_et"] = (df["ts"].dt.tz_convert(ET).dt.hour * 60
+                            + df["ts"].dt.tz_convert(ET).dt.minute)
+        pre = _ss_slice_phase(df, 0, 9*60+30)
+        ib  = _ss_slice_phase(df, 9*60+30, 10*60)
+
+    last_tick = mt5.symbol_info_tick(symbol)
+    current_price = float(last_tick.last) if last_tick else 0.0
+    account_equity = float(bot.account_balance) if hasattr(bot, "account_balance") else 50000.0
+
+    sig = compute_open_signal(
+        pre_bars=pre, ib_bars=ib,
+        current_price=current_price,
+        account_equity=account_equity,
+        base_risk_pct=0.005,
+        min_contracts=1, max_contracts=20,
+        symbol="MNQ",
+    )
+    return sig
+
 def main_loop(symbol="MNQM26", broker_offset=3):
     """
     Loop principale deterministico in Python puro per il monitoraggio
@@ -146,6 +211,16 @@ def main_loop(symbol="MNQM26", broker_offset=3):
                 # Scarica le ultime barre M5
                 bars_m5 = get_current_m5_bars(symbol, num_bars=50, broker_offset_hours=broker_offset)
                 if bars_m5:
+                    # 3a. Day-similarity open signal (only at 10:00 ET, once per day)
+                    if (now_dt.hour == 10 and now_dt.minute == 0
+                            and now_dt.date() != _last_open_signal_date):
+                        try:
+                            _open_sig = _compute_today_open_signal(bars_m5, bot, broker_offset)
+                            _last_open_signal_date = now_dt.date()
+                            print(f"[OPEN-SIGNAL] {_open_sig.summary_line()}")
+                        except Exception as _e:
+                            print(f"[OPEN-SIGNAL] failed: {_e}")
+                    
                     # Verifica la presenza di setup deterministici basati sulle regole quantitative
                     setup_name, direction, entry_price = check_deterministic_signals(bars_m5, bot)
                     
