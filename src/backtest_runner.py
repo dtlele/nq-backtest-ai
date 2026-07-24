@@ -221,9 +221,9 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         from src.memory.quantitative_memory import log_trade_for_quantitative_memory
         log_trade_for_quantitative_memory(result)
         # update_pattern_memory(result)
-        
+
         sync_session_state(None, closed_trades, ctx, equity_change=result.pnl_usd)
-        
+
         if not is_trade_already_logged(date_str, result.entry_time.isoformat(), result.exit_reason):
             log_trade_result(result)
         if result.exit_reason == 'stop' and result.pnl_ticks < 0:
@@ -237,7 +237,13 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         session_buffer.append(f"[TRADE CLOSED] {close_time_str} {result.direction.upper()} exit={result.exit_reason} pnl={result.pnl_usd:.1f}$")
         if len(session_buffer) > MAX_SESSION_BUFFER:
             session_buffer.pop(0)
-        return daily_stops_count
+
+        # === RISK MANAGEMENT: kill switch per daily loss ===
+        _daily_loss_limit = float(os.environ.get('DAILY_LOSS_LIMIT', '100'))
+        if result.pnl_usd < 0 and abs(result.pnl_usd) >= _daily_loss_limit:
+            print(f"  [RISK KILL] daily loss ${abs(result.pnl_usd):.0f} >= limit ${_daily_loss_limit}. STOP trading for today.")
+            return daily_stops_count, 'KILL'  # segnala al loop di fermarsi
+        return daily_stops_count, None
 
     # Load processed candidates to allow fast-forward
     processed_candidates = get_already_processed_candidates()
@@ -482,7 +488,7 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                         continue
                     def on_partial(result_part):
                         nonlocal daily_stops_count
-                        daily_stops_count = handle_close(result_part, session_buffer, daily_stops_count)
+                        daily_stops_count, _kill = handle_close(result_part, session_buffer, daily_stops_count)
                         print(f"  [PARTIAL TP] Closed 50% of contracts at {result_part.exit_price:.2f}. Remaining contracts: {open_t.contracts:.4f}. Stop moved to BE: {open_t.stop:.2f}")
 
                     # Keep track of stop and contracts before step_trade to detect trailing stop or partial TP changes
@@ -493,7 +499,9 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                                         first_bar_after_entry=(m1_bar.timestamp == getattr(open_t, 'entry_time', open_t.entry_bar.timestamp)),
                                         on_partial_close=on_partial)
                     if result:
-                        daily_stops_count = handle_close(result, session_buffer, daily_stops_count)
+                        daily_stops_count, _kill = handle_close(result, session_buffer, daily_stops_count)
+                        if _kill == 'KILL':
+                            return daily_trades, today_vp, today_close  # esci dalla funzione
                         open_t = None
                         trade_closed_early = True
                         break
@@ -609,14 +617,18 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                         
                         if decision == 'early_exit':
                             result = close_early(open_t, m1_bar, reasoning)
-                            daily_stops_count = handle_close(result, session_buffer, daily_stops_count)
+                            daily_stops_count, _kill = handle_close(result, session_buffer, daily_stops_count)
+                            if _kill == 'KILL':
+                                return daily_trades, today_vp, today_close
                             open_t = None
                             trade_closed_early = True
                             break
-                            
+
                         elif decision == 'reverse':
                             result = close_early(open_t, m1_bar, "reversed")
-                            daily_stops_count = handle_close(result, session_buffer, daily_stops_count)
+                            daily_stops_count, _kill = handle_close(result, session_buffer, daily_stops_count)
+                            if _kill == 'KILL':
+                                return daily_trades, today_vp, today_close
                             
                             # 2. Extract reverse parameters
                             rev_dir = 'short' if open_t.direction == 'long' else 'long'
