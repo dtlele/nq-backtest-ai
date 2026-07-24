@@ -11,7 +11,8 @@
 | V8b | 2025-02-04 to 02-11 | 3 | 33% | **+$666** | 0 | $0 | Best run, +$766 LONG 11 Feb 10:50 |
 | V19 | 2025-02-18 to 02-22 | 4 | 75% | **+$474** | 0 | $0.50 | 3 wins, 1 stop |
 | V21 | 2025-02-24 to 02-28 | 17 | 35.3% | **+$80** | 0 | $0.78 | 6 wins, 11 stops (whipsaw week) |
-| **TOTAL** | 13 days | 24 | 39% | **+$1,220** | 0 | $1.28 | |
+| V22 | 2025-03-03 to 03-07 | 13 | 38.5% | **+$197** | 0 | $0.60 | 5 wins, 8 stops |
+| **TOTAL** | 18 days | 37 | 41% | **+$1,417** | 0 | $1.88 | |
 
 ## 🔍 Observations
 
@@ -36,13 +37,21 @@
 - LLM kept shorting but getting stopped on bounces
 - Net: barely +$80
 
+### W10 (V22, 3-7 Mar): GOOD +$197
+- 13 trades, 38.5% WR (above breakeven)
+- 5 wins, 8 stops
+- SHORT 20175.75 hit +5.83R (big winner, drove the PnL)
+- Net: +$197
+
 ## 💡 Key Insights
 
 1. **V1 baseline IS profitable** but with high variance (+$80 to +$666 per week)
 2. **High WR weeks (75%) are rare** — most weeks 30-40% WR with 2:1 R:R
 3. **W09 shows the failure mode**: high trade count, lots of management calls, marginal profitability
-4. **Management calls are expensive** (~$0.50-0.80 per week) — they eat into profitability
-5. **The Feb 24-28 downtrend was difficult** — the LLM kept fighting the trend
+4. **W10 shows the upside**: 13 trades, 38.5% WR, +$197 — one big winner drives the week
+5. **Management calls are expensive** (~$0.50-0.80 per week) — they eat into profitability
+6. **The big winners come from SHORTs in downtrends** (Feb 28 SHORT 20175.75 hit +5.83R)
+7. **Average P&L/week = +$354** (so far, 4 weeks) — solid positive trend
 
 ## 📅 Remaining weeks to test (with $5.50 budget)
 
