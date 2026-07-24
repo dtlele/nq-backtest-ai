@@ -1,6 +1,7 @@
 from src import (Bar, ConsensusSignal, OpenTrade, ClosedTrade, PendingTrade,
                  NQ_TICK_SIZE, NQ_TICK_VALUE)
 from src.risk_manager import calculate_commissions
+import os
 
 def _last_confirmed_swing(bars: list, direction: str, lookback: int = 40, k: int = 3):
     """Ultimo swing CONFERMATO nella finestra (default 40 barre M1).
@@ -207,19 +208,24 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
         trade.bars_seen.append(bar)
         
         if trade.direction == 'long':
-            # --- 1. Check Partial TP (50% distance / 1.0 R:R) ---
-            if not trade.partial_taken and risk_points > 0 and bar.high >= trade.entry + risk_points:
-                partial_exit_price = trade.entry + risk_points
-                closed_contracts = trade.contracts * 0.5
-                orig_contracts = trade.contracts
-                trade.contracts = closed_contracts
-                partial_closed = _close(trade, partial_exit_price, 'partial_tp', bar)
-                trade.contracts = orig_contracts - closed_contracts
-                trade.partial_taken = True
-                # Stop STRUTTURALE post-partial (dietro ultimo swing 40-bar),
-                # non semplice BE: il runner deve avere spazio per respirare.
-                trade.stop = _structural_stop_after_partial(trade)
-                if on_partial_close:
+            # --- 1. Check Partial TP (50% distance / 1.0 R:R) - DISABLED per default ---
+            # V16: partial TP a 1R causa tutti i trade a chiudere a breakeven.
+            # Lasciamo correre fino a Donchian trail. Si puo' riattivare con
+            # env var ENABLE_PARTIAL_TP=1
+            if os.environ.get('ENABLE_PARTIAL_TP', '0') == '1':
+                if not trade.partial_taken and risk_points > 0 and bar.high >= trade.entry + risk_points:
+                    partial_exit_price = trade.entry + risk_points
+                    closed_contracts = trade.contracts * 0.5
+                    orig_contracts = trade.contracts
+                    trade.contracts = closed_contracts
+                    partial_closed = _close(trade, partial_exit_price, 'partial_tp', bar)
+                    trade.contracts = orig_contracts - closed_contracts
+                    trade.partial_taken = True
+                    # Stop STRUTTURALE post-partial (dietro ultimo swing 40-bar),
+                    # non semplice BE: il runner deve avere spazio per respirare.
+                    trade.stop = _structural_stop_after_partial(trade)
+                    if on_partial_close:
+                        on_partial_close(partial_closed, trade)
                     on_partial_close(partial_closed)
             
             # --- 2. VECCHI TIER TRAILING (1.6R/2.5R/3.5R) DISABILITATI ---
@@ -275,17 +281,21 @@ def step_trade(trade: OpenTrade, bars: list, first_bar_after_entry: bool = False
                 # Wick tocca stop ma close sopra = probabile stop hunt, NON chiudere
                 print(f'  [STOP WICK] bar.low={bar.low:.2f} <= stop {trade.stop:.2f} ma close={bar.close:.2f} > stop (stop hunt sopravvissuto)')
         else:  # short
-            # --- 1. Check Partial TP (50% distance / 1.0 R:R) ---
-            if not trade.partial_taken and risk_points > 0 and bar.low <= trade.entry - risk_points:
-                partial_exit_price = trade.entry - risk_points
-                closed_contracts = trade.contracts * 0.5
-                orig_contracts = trade.contracts
-                trade.contracts = closed_contracts
-                partial_closed = _close(trade, partial_exit_price, 'partial_tp', bar)
-                trade.contracts = orig_contracts - closed_contracts
-                trade.partial_taken = True
-                # Stop STRUTTURALE post-partial (dietro ultimo swing 40-bar)
-                trade.stop = _structural_stop_after_partial(trade)
+            # --- 1. Check Partial TP (50% distance / 1.0 R:R) - DISABLED per default ---
+            # V16: partial TP a 1R causa tutti i trade a chiudere a breakeven.
+            # Lasciamo correre fino a Donchian trail. Si puo' riattivare con
+            # env var ENABLE_PARTIAL_TP=1
+            if os.environ.get('ENABLE_PARTIAL_TP', '0') == '1':
+                if not trade.partial_taken and risk_points > 0 and bar.low <= trade.entry - risk_points:
+                    partial_exit_price = trade.entry - risk_points
+                    closed_contracts = trade.contracts * 0.5
+                    orig_contracts = trade.contracts
+                    trade.contracts = closed_contracts
+                    partial_closed = _close(trade, partial_exit_price, 'partial_tp', bar)
+                    trade.contracts = orig_contracts - closed_contracts
+                    trade.partial_taken = True
+                    # Stop STRUTTURALE post-partial (dietro ultimo swing 40-bar)
+                    trade.stop = _structural_stop_after_partial(trade)
                 if on_partial_close:
                     on_partial_close(partial_closed)
             
