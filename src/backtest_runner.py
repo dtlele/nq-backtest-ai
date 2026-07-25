@@ -773,7 +773,13 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
         # ── OPT 3: Two-pass (light → full) ──────────────────────────
         # ML PRE-FILTER (Random Forest) — skip candele M5 senza edge statistico.
         # Addestrato su 230 giorni, AUC=0.73. Score > threshold = A+ setup.
-        if os.environ.get('ML_PRE_FILTER', '1') == '1':
+        # ML_PRE_FILTER default changed to 0 (disabled) on 2026-07-25.
+        # Reason: rf_v1.pkl was trained on 230d including V8b (Feb 2025) and learned
+        # to give score<0.6 to 100% of those candidates, blocking all real trades.
+        # The model overfits to the training set distribution and is too aggressive
+        # for early-Feb and OOS periods. The GEX/audit/MLP pipeline is preserved
+        # but disabled by default; set ML_PRE_FILTER=1 to re-enable.
+        if os.environ.get('ML_PRE_FILTER', '0') == '1':
             try:
                 from src.agents.rf_pre_filter import score_bar as ml_score
                 # Calcola vol_avg_12 dalle candele recenti

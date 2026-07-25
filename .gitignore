@@ -33,3 +33,8 @@ output/
 # Large binary data files (not committed)
 data/options_qqq/QQQ_options_full.parquet
 data/options_qqq/QQQ_underlying.parquet
+
+# Video analysis
+data/video_analysis/fabio_v1_full.mp4
+data/video_analysis/*.html
+
