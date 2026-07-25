@@ -30,3 +30,6 @@ database.db
 tmp_data/
 output/
 
+# Large binary data files (not committed)
+data/options_qqq/QQQ_options_full.parquet
+data/options_qqq/QQQ_underlying.parquet

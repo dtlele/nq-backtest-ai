@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 from typing import Tuple, Dict, Any
 
+# Try real QQQ GEX first, fall back to SPX proxy
+GEX_DATA_FILE_QQQ = Path(__file__).parent.parent / 'data' / 'qqq_gex_daily.json'
 GEX_DATA_FILE = Path(__file__).parent.parent / 'data' / 'gex_data.json'
 
 def load_gex_for_date(date_str: str, overnight_vp=None, opening_price: float = None) -> Dict[str, Any]:
@@ -17,7 +19,17 @@ def load_gex_for_date(date_str: str, overnight_vp=None, opening_price: float = N
         norm_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
 
     gex_data = {}
-    if GEX_DATA_FILE.exists():
+    # Try real QQQ GEX first
+    if GEX_DATA_FILE_QQQ.exists():
+        try:
+            with open(GEX_DATA_FILE_QQQ, 'r', encoding='utf-8') as f:
+                all_gex = json.load(f)
+                gex_data = all_gex.get(norm_date, {})
+        except Exception as e:
+            print(f"  [GEX WARNING] Failed to read {GEX_DATA_FILE_QQQ}: {e}")
+
+    if not gex_data and GEX_DATA_FILE.exists():
+        # Fall back to SPX proxy
         try:
             with open(GEX_DATA_FILE, 'r', encoding='utf-8') as f:
                 all_gex = json.load(f)
@@ -26,12 +38,19 @@ def load_gex_for_date(date_str: str, overnight_vp=None, opening_price: float = N
             print(f"  [GEX WARNING] Failed to read {GEX_DATA_FILE}: {e}")
 
     if gex_data:
-        print(f"  [GEX] Successfully loaded GEX data for {norm_date}: Regime={gex_data.get('gex_regime')}, Flip={gex_data.get('zero_gamma_level')}")
+        # QQQ file uses zero_gamma_nq, call_wall_nq, put_wall_nq; SPX proxy uses zero_gamma_level, call_wall, put_wall
+        zg = gex_data.get('zero_gamma_nq') or gex_data.get('zero_gamma_level', 0.0)
+        cw = gex_data.get('call_wall_nq') or gex_data.get('call_wall', 0.0)
+        pw = gex_data.get('put_wall_nq') or gex_data.get('put_wall', 0.0)
+        source = gex_data.get('source', 'unknown')
+        print(f"  [GEX] Loaded {source} for {norm_date}: Regime={gex_data.get('gex_regime')}, Flip={zg:.0f}")
         return {
             "gex_regime": gex_data.get("gex_regime", "positive"),
-            "zero_gamma_level": float(gex_data.get("zero_gamma_level", 0.0)),
-            "call_wall": float(gex_data.get("call_wall", 0.0)),
-            "put_wall": float(gex_data.get("put_wall", 0.0))
+            "zero_gamma_level": float(zg),
+            "call_wall": float(cw),
+            "put_wall": float(pw),
+            "net_gex_dollar": float(gex_data.get("net_gex_dollar", 0.0)),
+            "qqq_spot": float(gex_data.get("qqq_spot", 0.0)),
         }
 
     print(f"  [GEX WARNING] No real GEX data found for {norm_date}. Returning unknown regime to prevent backtest falsification.")
