@@ -69,6 +69,17 @@ STEP 3 — ACCUMULATION/DISTRIBUTION SIGNATURE
   you cannot justify a counter-bias trade. Return direction='none'.
   If WITH bias: lighter requirement (delta agrees OR Big Trade present).
 
+  ABSORPTION EXCEPTION (often missed): Big trades on the OPPOSITE side
+  do NOT contradict if they are being absorbed at the wall you're defending.
+  - For LONG: big SELLS at the wall + positive bar delta = buyers absorbing
+    sellers. This is BULLISH, not opposing. Example: bar.delta=+77, big SELL
+    123 @ wall 21850, but bid absorbed it = long is valid.
+  - For SHORT: big BUYS overhead + negative bar delta = sellers absorbing
+    buyers. BEARISH, not opposing.
+  - If the bar closed with delta in your direction AND the big opposing
+    trades are AT your anchor level (not below/above it), treat them as
+    absorption evidence, not dissent. Note this in your reasoning.
+
 STEP 4 — LOCATION + TRIGGER
   Pick ONE structural level: VAH, VAL, POC, Wall, IB edge, or VWAP.
   Specify the trigger: "I act on {delta divergence / absorption / second test wick /
