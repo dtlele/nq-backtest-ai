@@ -33,50 +33,69 @@ def _load_knowledge_store() -> dict:
     return store
 
 def _get_scalper_system_prompt() -> str:
-    """Single-call orderflow scalper (MiniMax). Ragiona come un vero scalper
-    istituzionale: prima la BIAS, poi la location, poi il trigger di flusso.
-    Source-of-truth unica per la dottrina Fabio (vedi anche _get_management_system_prompt)."""
+    """Single-call orderflow scalper (MiniMax). 4-STEP CHAIN-OF-THOUGHT
+    obbligatorio: BIAS -> AUCTION_PHASE -> ACCUMULATION/DISTRIBUTION
+    SIGNATURE -> LOCATION+TRIGGER. Pensare PRIMA di decidere.
+
+    Source-of-truth unica per la dottrina Fabio (vedi anche
+    _get_management_system_prompt). V8b+: prompt piu' rigido per forzar
+    il modello a verificare evidence prima di LONG in drive_down."""
     return """You are an AGGRESSIVE NQ orderflow scalper. You trade WITH institutional flow.
-Bias MUST be followed: drive_up = long only. NO setup means SKIP, but if you see confluence, ACT.
+You think like a Market Profile / AMT / footprint professional.
 
-You think like a Market Profile / AMT / footprint professional, in this exact order:
+You MUST reason in EXACTLY 4 STEPS, in this order, before any decision.
+This is not optional. Skipping a step = invalid output.
 
-PRIORITY (rigida, non negoziabile):
-  1. INSTITUTIONAL BIAS — ground truth (deterministic block in the snapshot).
-  2. LOCATION — trade only at structural levels.
-  3. FLOW TRIGGER — confirm with delta/absorption/initiative signature.
-  4. AGGRESSIVE EXECUTION — 'no_trade' is for missing confluence, NOT for valid A+ setups.
+STEP 1 — BIAS ECHO
+  Read the deterministic BIAS block in the snapshot. Restate it:
+  "Bias = {drive/lean/rotational} {up/down}, score={X}, direction={long/short/none}."
+  Then state the trade implication:
+  "My direction = {long/short/none}. This is {WITH/AGAINST} the bias."
 
-1. INSTITUTIONAL BIAS. Treat the deterministic BIAS block as ground truth:
-   - drive_up/drive_down: ONLY trade WITH the drive. ACT on pullback with bias.
-   - lean_up/lean_down: trade with the bias; counter-bias only at extreme location.
-   - rotational: mean-revert at value extremes (VAH/VAL, IB edges); breakouts suspect.
+STEP 2 — AUCTION PHASE CLASSIFICATION
+  Look at the current bar and the prior 3 bars in the snapshot.
+  Classify: "This bar = {initiative/responsive/balance}."
+  In a {drive/lean} regime, responsive bars = CORRECTION, not change of structure.
+  Ask: "Is this bar correction WITHIN the drive, or genuine trend change?"
+  If correction in drive -> trade WITH the drive on the pullback.
+  If genuine trend change -> require bias shift evidence (see STEP 3).
 
-2. LOCATION. Trade at structural levels (VAH/VAL/POC, IB edges, wall, VWAP).
-   Wall with >=100 contracts absorbed = institutional footprint = ACT.
+STEP 3 — ACCUMULATION/DISTRIBUTION SIGNATURE
+  CRITICAL: if your direction is AGAINST the bias, you MUST have ALL of:
+    (a) Net delta of the last 3 bars in YOUR direction (e.g., positive for long)
+    (b) >= 1 Big Trade (size>=50) in YOUR direction at the relevant level
+    (c) At least 1 of the last 6 bars closed on the correct side of VWAP
+  Cite the actual numbers from the snapshot. If ANY of (a/b/c) is missing,
+  you cannot justify a counter-bias trade. Return direction='none'.
+  If WITH bias: lighter requirement (delta agrees OR Big Trade present).
 
-3. FLOW TRIGGER. Confirm with: delta divergence at level, absorption at wall,
-   completed stop hunt in your direction, second test with volume.
-   Delta divergence + big trade at wall = prime entry.
+STEP 4 — LOCATION + TRIGGER
+  Pick ONE structural level: VAH, VAL, POC, Wall, IB edge, or VWAP.
+  Specify the trigger: "I act on {delta divergence / absorption / second test wick /
+  big trade cluster / failed auction} at level {name @ price}."
+  If bias + signature + location + trigger all align -> ACT.
+  If ANY is missing -> direction='none'.
 
-4. AGGRESSIVE EXECUTION. If bias + location + flow all align = ACT NOW.
-   'no_trade' ONLY when ONE of bias/location/flow fails. Default to action.
+DECISION RULE: 'none' is the DEFAULT for missing evidence. It is NOT a sign
+of failure. It is the professional response to insufficient confluence. Bad
+trades come from forcing entries without evidence; the system loses $1000+
+per losing trade. ONE good trade per day is success.
 
 HARD RULES (mechanical validator enforces them AFTER you — violating = veto):
 R1. COHERENCE: 'reasoning' must NEVER describe an expectation opposite to 'direction'.
 R2. FLOW DISSENT: if delta/flow opposes your direction, conviction='low' max.
 R3. BIAS: no short in drive_up, no long in drive_down. Counter-bias pullback
     against |score|>=25 requires conviction='high' AND explicit bias-shift evidence.
-R4. CONVICTION: 'high' with full confluence. 'med' = standard valid setup. 'low' = edge case.
+R4. CONVICTION: 'high' with full confluence (all 4 steps aligned). 'med' = standard
+    valid setup. 'low' = edge case or partial evidence.
 R5. REVERSAL: setup_type='reversal' is GLOBALLY DISABLED. Vote 'none' on reversal setups.
+R6 (NEW): Bounce in drive needs evidence. If bias=drive_down and direction=long,
+    you must explicitly cite (a)+(b)+(c) from STEP 3 in your reasoning. Same
+    mirror for drive_up+short. Missing evidence = direction='none'.
 
-DECISION RULE: If bias is drive/lean AND wall/level present AND flow confirms,
-you MUST return direction != 'none'. 'none' is reserved for: no bias, no level,
-or flow strongly opposing. Be decisive.
-
-JSON schema (strict):
+JSON schema (strict, your output will be PARSED):
 {
-  "reasoning": "<MAX 100 WORDS. Start with bias, then location, then flow. Cite real numbers from snapshot.>",
+  "reasoning": "<MAX 150 WORDS. Must follow STEP 1 -> STEP 2 -> STEP 3 -> STEP 4. Cite actual numbers from snapshot.>",
   "market_narrative_update": "<Evolving narrative: who is in control, what would invalidate it>",
   "setup_type": "squeeze" | "ivb_breakout" | "imbalance_hunting" | "pullback" | "none",
   "direction": "long" | "short" | "none",
@@ -327,7 +346,61 @@ def validate_narrative_decision(direction: str, conviction: str, reasoning: str,
     if not ok:
         return False, f"{reason} | bias: {bias.summary()}", conviction
 
+    # 9) R6 (NEW): BOUNCE_IN_DRIVE_NEEDS_EVIDENCE. In drive_down + long, o
+    #    drive_up + short, il modello deve dimostrare accumulation/distribution
+    #    SIGNATURE con dati reali: delta concordi ultimi 3 bar + big trade nella
+    #    direzione giusta + close sopra/sotto VWAP. Senza questo, il bounce
+    #    in un drive è un trade ad alta probabilità di perdita (03/02: LONG a
+    #    10:00 in downtrend day = -50$). VETO secco.
+    if direction in ('long', 'short'):
+        if bias.regime == 'drive_down' and direction == 'long':
+            ok_r6, ev_r6 = _has_accumulation_evidence(candidate, 'long')
+            if not ok_r6:
+                return False, (f"VETO: bounce_in_drive_no_evidence "
+                               f"(LONG in drive_down senza accumulation: {ev_r6})"), 'low'
+        if bias.regime == 'drive_up' and direction == 'short':
+            ok_r6, ev_r6 = _has_accumulation_evidence(candidate, 'short')
+            if not ok_r6:
+                return False, (f"VETO: bounce_in_drive_no_evidence "
+                               f"(SHORT in drive_up senza distribution: {ev_r6})"), 'low'
+
     return True, "", conviction
+
+
+def _has_accumulation_evidence(candidate, direction: str) -> tuple:
+    """Verifica accumulation (per long) o distribution (per short) signature
+    in contesto drive. Richiesto TUTTO:
+      (a) >= 3 degli ultimi 6 bar hanno delta nella direzione giusta
+      (b) >= 1 Big Trade (size>=50) nella direzione giusta, sul livello rilevante
+      (c) >= 1 degli ultimi 6 bar ha chiuso dalla parte giusta del VWAP
+    Returns (ok: bool, evidence_str: str).
+    """
+    recent = (getattr(candidate, 'recent_bars', None) or [])[-6:]
+    if len(recent) < 3:
+        return False, "insufficient recent bars"
+
+    if direction == 'long':
+        pos_delta = sum(1 for b in recent if getattr(b, 'delta', 0) > 0)
+        buy_big = 0
+        for b in recent:
+            for bt in (getattr(b, 'big_trades', []) or []):
+                if getattr(bt, 'side', '') == 'A':  # 'A' = buy aggressor
+                    buy_big += 1
+        vwap_hold = sum(1 for b in recent
+                        if getattr(b, 'vwap', 0) > 0 and b.close > b.vwap)
+        ok = pos_delta >= 3 and buy_big >= 1 and vwap_hold >= 1
+        return ok, f"pos_delta={pos_delta}/6 buy_big={buy_big} vwap_hold={vwap_hold}"
+    else:  # short / distribution
+        neg_delta = sum(1 for b in recent if getattr(b, 'delta', 0) < 0)
+        sell_big = 0
+        for b in recent:
+            for bt in (getattr(b, 'big_trades', []) or []):
+                if getattr(bt, 'side', '') == 'B':  # 'B' = sell aggressor
+                    sell_big += 1
+        vwap_reject = sum(1 for b in recent
+                          if getattr(b, 'vwap', 0) > 0 and b.close < b.vwap)
+        ok = neg_delta >= 3 and sell_big >= 1 and vwap_reject >= 1
+        return ok, f"neg_delta={neg_delta}/6 sell_big={sell_big} vwap_reject={vwap_reject}"
 
 
 def _fmt_bars_recent(candidate: CandidateBar, max_bars: int = 6) -> str:
