@@ -102,6 +102,44 @@ def compute_institutional_bias(candidate) -> InstitutionalBias:
             score -= 10 + min(6, 2 * max(0, n_bo - 1))
             drivers.append(f"primo breakout IB short ({n_bo} totali)")
 
+    # ── 1b. EARLY DRIVE DETECTION (fix buco 10:00-10:30 di prima ora) ───
+    # Il check IB extension richiede che il prezzo sia GIA' >0.5x range
+    # fuori dall'IB. Nella prima mezz'ora dopo IB (10:00-10:30), spesso
+    # il drive e' gia' in corso ma il close e' ancora dentro il range.
+    # Euristica: 3+ test del bordo IB senza wick di assorbimento +
+    # VWAP falling = drive_down precoce. Stessa logica per drive_up.
+    if ib_high > 0 and ib_low > 0 and ib_range > 0:
+        recent_bars = (getattr(candidate, 'recent_bars', None) or [])[-12:]
+        if len(recent_bars) >= 3:
+            # Conta test del bordo IB senza assorbimento
+            tests_at_low = sum(1 for b in recent_bars
+                               if abs(b.low - ib_low) < ib_range * 0.15)
+            absorbed_at_low = sum(1 for b in recent_bars
+                                  if (abs(b.low - ib_low) < ib_range * 0.15)
+                                  and (min(b.open, b.close) - b.low) > (b.high - b.low) * 0.5)
+            rejected_at_low = tests_at_low - absorbed_at_low
+            tests_at_high = sum(1 for b in recent_bars
+                                if abs(b.high - ib_high) < ib_range * 0.15)
+            absorbed_at_high = sum(1 for b in recent_bars
+                                   if (abs(b.high - ib_high) < ib_range * 0.15)
+                                   and (b.high - max(b.open, b.close)) > (b.high - b.low) * 0.5)
+            rejected_at_high = tests_at_high - absorbed_at_high
+            # VWAP direction
+            vwaps = [getattr(b, 'vwap', 0) for b in recent_bars[-6:]
+                     if getattr(b, 'vwap', 0) > 0]
+            vwap_falling = (len(vwaps) >= 3 and vwaps[0] > vwaps[-1] * 0.998)
+            vwap_rising = (len(vwaps) >= 3 and vwaps[-1] > vwaps[0] * 1.002)
+            if rejected_at_low >= 3 and vwap_falling:
+                score -= 25
+                drivers.append(
+                    f"EARLY_DRIVE_DOWN: {rejected_at_low} test IB_low senza assorbimento + VWAP falling"
+                )
+            elif rejected_at_high >= 3 and vwap_rising:
+                score += 25
+                drivers.append(
+                    f"EARLY_DRIVE_UP: {rejected_at_high} test IB_high senza assorbimento + VWAP rising"
+                )
+
     # ── 2. POC MIGRATION (dove sta migrando il valore) ───────────────────────
     mig = getattr(candidate, 'poc_migration', 'flat')
     if mig == 'up':
