@@ -100,7 +100,12 @@ function ContextAgentCard({ latestReasoning }) {
 
   const bias = latestReasoning?.bias || latestReasoning?.fabio_direction || latestReasoning?.direction || null
   const confidence = latestReasoning?.fabio_confidence || 0
-  const isNoTrade = latestReasoning?.decision?.toLowerCase() !== 'trade'
+  // FIX: when a trade is OPEN, the latest reasoning is apm_hold/apm_trail (not a proposal).
+  // The 'no trade' panel should only show if there's no open trade AND the latest
+  // reasoning is a rejected proposal.
+  const hasOpenTrade = Boolean(openTrade && openTrade.entry)
+  const isApmDecision = latestReasoning?.decision?.toLowerCase().startsWith('apm_')
+  const isNoTrade = !hasOpenTrade && !isApmDecision && latestReasoning?.decision?.toLowerCase() !== 'trade'
 
   const trueBias = latestReasoning?.session_bias || 'none'
   const dayType = latestReasoning?.day_type || '---'

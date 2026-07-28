@@ -30,6 +30,8 @@ def loop():
                 status = {}
                 
             status["LIVE_SESSION_STATE"] = session
+            # FIX: expose open_trade at top level for TradingChart overlay
+            status["OPEN_TRADE"] = session.get("open_trade", None)
             if "ANALYZED_DATES" not in status:
                 status["ANALYZED_DATES"] = []
             if date_str not in status["ANALYZED_DATES"]:
