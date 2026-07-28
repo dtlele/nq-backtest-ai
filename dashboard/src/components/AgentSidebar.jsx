@@ -95,7 +95,7 @@ function AgentCard({ icon, title, subtitle, accent = '#63b3ed', isActive = false
 }
 
 // ── Step 1: Context Card ───────────────────────────────────────────────────
-function ContextAgentCard({ latestReasoning }) {
+function ContextAgentCard({ latestReasoning, openTrade }) {
   const hasData = latestReasoning && latestReasoning.date
 
   const bias = latestReasoning?.bias || latestReasoning?.fabio_direction || latestReasoning?.direction || null
@@ -627,7 +627,7 @@ export default function AgentSidebar({ latestReasoning, openTrade, reasonings, o
               </div>
             )}
             {openTrade && <ActiveTradeCard openTrade={openTrade} liveReasoning={latestReasoning} />}
-            <ContextAgentCard latestReasoning={latestReasoning} />
+            <ContextAgentCard latestReasoning={latestReasoning} openTrade={openTrade} />
             
             <AuditAndReasoningCard latestReasoning={latestReasoning} />
           </>
