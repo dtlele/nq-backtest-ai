@@ -707,44 +707,24 @@ def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list
     return _finalize_decision(data, flow_report, candidate, levels, raw)
 
 def _get_management_system_prompt() -> str:
-    """Prompt per la gestione attiva del trade (APM). Il numero di barre M1
-    nel contesto verra' inserito come 'You see N bars: ...' nel message, non
-    qui, perche' e' dinamico."""
-    return """You are the trade-management desk for an NQ orderflow scalper.
-You manage an OPEN position. The snapshot below shows the last N M1 bars (N is
-in the message header) plus the current M5 candidate bar, recent swing highs/lows,
-delta evolution, active walls, and VWAP position.
+    """Prompt minimale per trailing LLM. Solo dati necessari:
+    entry/stop/current, ultimi 10 M1 bars, swing high/low recenti.
+    Decision: hold o trail (con new_stop). Mai allargare lo stop."""
+    return """You manage an OPEN NQ position. Decide: hold or trail.
 
-CURRENT STATE in the message:
-  - current_rr: how many R the trade is currently in profit/negative
-  - bars_held: how many M1 bars since entry
-  - mfe: maximum favorable excursion (peak profit in R)
-  - swing_last_long / swing_last_short: last confirmed swing high/low
-  - current_price: latest price
+RULES:
+- 'trail' ONLY if there's a new confirmed swing (higher low for long, lower high
+  for short). Move stop just BEYOND the new swing (below swing low for long,
+  above swing high for short). NEVER widen, NEVER move stop backwards.
+- 'hold' if no new swing or structure intact.
+- new_stop must be STRICTLY better than current stop (higher for long,
+  lower for short). If no improvement possible, return hold.
 
-MANAGEMENT DOCTRINE (a real desk lets winners breathe):
-- 'hold' while structure INTACT: higher lows (long) / lower highs (short), delta
-  not flipping against you, price on the right side of VWAP.
-- 'trail' ONLY when a NEW confirmed swing forms: new_stop just beyond that swing
-  (below swing low for long, above swing high for short). NEVER widen, NEVER
-  move stop backwards.
-- 'early_exit' ONLY on clear invalidation: delta flip + break of last swing,
-  OR failed auction back through entry. A pullback to a higher low is NOT
-  invalidation — do not scratch winners.
+Respond JSON only:
+{"decision": "hold"|"trail", "new_stop": float|null, "reason": "<10 words>"}"""
 
-If new_stop would be the same as old stop (no new swing formed), use 'hold' with
-new_stop=null. The trade_simulator will run its Donchian 40-bar trail mechanically
-on each bar regardless of your decision — your job is to provide INTEL,
-not mechanical trailing.
-
-Respond in JSON:
-{
-  "decision": "hold|trail|early_exit",
-  "new_stop": float|null,
-  "reason": "<max 20 words: the decisive fact>"
-}"""
-
-def _fmt_m1_window(m1_bars: list, max_bars: int = 40) -> str:
+def _fmt_m1_window(m1_bars: list, max_bars: int = 10) -> str:
+    """Last N M1 bars, COMPACT: only H L C D (no O, no V). Default 10 (was 40)."""
     bars = (m1_bars or [])[-max_bars:]
     if not bars:
         return "(no M1 context)"
@@ -752,30 +732,33 @@ def _fmt_m1_window(m1_bars: list, max_bars: int = 40) -> str:
     for b in bars:
         ts = getattr(b, 'timestamp', None)
         hhmm = ts.strftime('%H:%M') if ts else '??'
-        lines.append(f"{hhmm} O={b.open:.2f} H={b.high:.2f} L={b.low:.2f} C={b.close:.2f} V={b.volume} D={b.delta:+d}")
+        lines.append(f"{hhmm} H={b.high:.2f} L={b.low:.2f} C={b.close:.2f} D={b.delta:+d}")
     return "\n".join(lines)
 
 def manage_active_trade(trade, candidate: CandidateBar, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> dict:
+    """MINIMAL trailing LLM. Window ridotta a 10 M1 bars, niente narrative,
+    prompt minimal. Decision semplice: hold o trail (no early_exit/reverse).
+    """
     risk = abs(trade.entry - trade.stop)
     cur = candidate.bar.close
     pnl = (cur - trade.entry) if trade.direction == 'long' else (trade.entry - cur)
     rr = pnl / risk if risk > 0 else 0
-    bars_held = len(m1_bars or [])
-    mfe = getattr(trade, 'max_profit_pts', 0.0) / risk if risk > 0 else 0
-    trade_context = (f"OPEN TRADE: dir={trade.direction} entry={trade.entry} stop={trade.stop} "
-                     f"target={getattr(trade, 'target', None)} price={cur} | open PnL={pnl:+.1f}pt ({rr:+.2f}R)\n"
-                     f"current_rr={rr:+.2f}R | bars_held={bars_held} | mfe={mfe:+.2f}R")
-    msg = (f"You see {bars_held} M1 bars below.\n\n{trade_context}\n\n"
-           f"## {bars_held}-BAR M1 WINDOW (oldest->newest)\n{_fmt_m1_window(m1_bars, max_bars=bars_held)}"
-           f"\n\n## NARRATIVE\n{market_narrative or '(none)'}\n\nDecide: hold / trail / early_exit.")
+    if rr <= 0.3:
+        # In loss o micro-profit, niente trailing: hold silente
+        return {"decision": "hold", "new_stop": None, "new_target": None, "reasoning": f"rr={rr:+.2f}, no trail zone"}
+    # Solo ultime 10 M1 (ridotto da 40)
+    m1_compact = _fmt_m1_window(m1_bars, max_bars=10)
+    msg = (f"dir={trade.direction} entry={trade.entry} stop={trade.stop} "
+           f"price={cur} rr={rr:+.2f}\n\nLAST 10 M1 (H L C D):\n{m1_compact}\n\n"
+           f"Move stop? trail/hold. If trail: new_stop > {trade.stop} (long) or < {trade.stop} (short).")
     raw = llm_ask(_get_management_system_prompt(), msg, model=SCALPER_MODEL)
     if raw.startswith('```'): raw = raw.split('```')[1].lstrip('json').strip()
     try:
         data = json.loads(raw)
         decision = data.get("decision", "hold")
         new_stop = data.get("new_stop")
-        # Safety: mai allargare lo stop
         if decision == 'trail' and new_stop is not None:
+            # Safety: mai allargare lo stop
             if trade.direction == 'long' and new_stop <= trade.stop:
                 new_stop = None; decision = 'hold'
             elif trade.direction == 'short' and new_stop >= trade.stop:

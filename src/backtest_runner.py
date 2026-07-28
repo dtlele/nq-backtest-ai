@@ -530,9 +530,11 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
 
                     should_run_apm = False
                     is_runner_mode = False
-                    
-                    if current_rr >= 2.0:
+
+                    # NEW: trailing si attiva da rr >= 0.3 (era 2.0). Più reattivo.
+                    if current_rr >= 0.3:
                         should_run_apm = True
+                    if current_rr >= 2.0:
                         is_runner_mode = True
                     # FIX: era `contracts >= 3` che bloccava l'APM dopo partial TP
                     # (rimangono 0.28 contratti). Ora parte con 0.1+ per gestire il runner.
@@ -541,10 +543,10 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                             should_run_apm = True
                         elif getattr(m1_bar, 'big_trades', []):
                             should_run_apm = True
-                        
+
                     if m1_bar.timestamp > getattr(open_t, 'entry_time', open_t.entry_bar.timestamp) and should_run_apm:
                         print(f"  [MANAGEMENT] Active {open_t.direction.upper()} trade open at {m1_bar.timestamp.strftime('%H:%M UTC')}. Consulting Fabio APM...")
-                        m1_context = get_m1_context(bars_1min_ny, m1_bar, context_before=40)  # finestra 40 barre M1
+                        m1_context = get_m1_context(bars_1min_ny, m1_bar, context_before=10)  # finestra 10 barre M1 (era 40)
                         
                         from src import CandidateBar
                         dummy_cand = CandidateBar(bar=m1_bar, session_ctx=ctx, wall_level=open_t.entry, wall_side='none', wall_trade_count=0, wall_max_size=0, proximity_to='none', proximity_level=0, bars_in_session=0, is_second_test=False)
