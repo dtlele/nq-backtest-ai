@@ -238,15 +238,17 @@ def _et_time(candidate) -> tuple:
 
 def _time_gate(candidate, bias) -> tuple:
     """Gate orario da desk orderflow. Ritorna (ok, veto_reason).
-    - 9:30-9:45 ET: opening rotation, rumore puro → no entry.
+    - 9:30-10:30 ET: opening rotation, rumore puro → no entry.
+      (Was 9:30-9:45, expanded to 10:30 after 104-trade audit showed
+      10:00-10:30 ET is net negative: 19 trade, 7W, -$322)
     - 11:45-13:15 ET: lunch chop → consentito SOLO se allineato a un drive
       (in lunch il drive continua; il chop punisce il mean-reversion).
     - dopo 15:15 ET: nessuna nuova posizione (chiusura/EOD risk).
     """
     h, m = _et_time(candidate)
     t = h * 60 + m
-    if t < 9 * 60 + 45:
-        return False, f"VETO: opening_rotation (entry alle {h:02d}:{m:02d} ET, prime 15min = rumore)"
+    if t < 10 * 60 + 30:
+        return False, f"VETO: opening_rotation (entry alle {h:02d}:{m:02d} ET, prime 60min = rumore, -$322 storico 10:00-10:30)"
     if t >= 15 * 60 + 15:
         return False, f"VETO: late_session (entry alle {h:02d}:{m:02d} ET, no nuove posizioni dopo 15:15)"
     if 11 * 60 + 45 <= t < 13 * 60 + 15 and not bias.is_drive:
@@ -738,19 +740,46 @@ def _fmt_m1_window(m1_bars: list, max_bars: int = 10) -> str:
 def manage_active_trade(trade, candidate: CandidateBar, session_context: list = None, m1_bars: list = None, market_narrative: str = "", bars_since_last: list = None) -> dict:
     """MINIMAL trailing LLM. Window ridotta a 10 M1 bars, niente narrative,
     prompt minimal. Decision semplice: hold o trail (no early_exit/reverse).
+
+    prod2-yellow: trigger rr=0.8 (was 0.3). Lets winners run more.
+    Lock-in: 50% at rr=1.5 (NEW safety net), 75% at rr=2.5.
+    Cap new_stop at target-4pt (long) / target+4pt (short) so trailing
+    can never move stop beyond the original target.
     """
+    import os
     risk = abs(trade.entry - trade.stop)
     cur = candidate.bar.close
     pnl = (cur - trade.entry) if trade.direction == 'long' else (trade.entry - cur)
     rr = pnl / risk if risk > 0 else 0
-    if rr <= 0.3:
+    trail_trigger_rr = float(os.environ.get('TRAIL_TRIGGER_RR', '0.8'))
+    if rr <= trail_trigger_rr:
         # In loss o micro-profit, niente trailing: hold silente
-        return {"decision": "hold", "new_stop": None, "new_target": None, "reasoning": f"rr={rr:+.2f}, no trail zone"}
+        return {"decision": "hold", "new_stop": None, "new_target": None, "reasoning": f"rr={rr:+.2f}, no trail zone (trigger={trail_trigger_rr})"}
+    # SAFETY NET: lock-in at higher RR (50% at 1.5R, 75% at 2.5R)
+    # Applied as a MIN on the LLM's new_stop, not a max — LLM can be more aggressive
+    lock_50_rr = float(os.environ.get('TRAIL_LOCK_50_RR', '1.5'))
+    lock_75_rr = float(os.environ.get('TRAIL_LOCK_75_RR', '2.5'))
+    if rr >= lock_50_rr:
+        if trade.direction == 'long':
+            min_lock = trade.entry + risk * 0.5  # lock 50%
+        else:
+            min_lock = trade.entry - risk * 0.5
+    else:
+        min_lock = trade.stop
+    if rr >= lock_75_rr:
+        if trade.direction == 'long':
+            min_lock = trade.entry + risk * 0.75  # lock 75%
+        else:
+            min_lock = trade.entry - risk * 0.75
     # Solo ultime 10 M1 (ridotto da 40)
+    target = getattr(trade, 'target', None)
     m1_compact = _fmt_m1_window(m1_bars, max_bars=10)
     msg = (f"dir={trade.direction} entry={trade.entry} stop={trade.stop} "
-           f"price={cur} rr={rr:+.2f}\n\nLAST 10 M1 (H L C D):\n{m1_compact}\n\n"
-           f"Move stop? trail/hold. If trail: new_stop > {trade.stop} (long) or < {trade.stop} (short).")
+           f"target={target} price={cur} rr={rr:+.2f}\n"
+           f"MIN_LOCK (don't move below): {min_lock:.2f}\n\n"
+           f"LAST 10 M1 (H L C D):\n{m1_compact}\n\n"
+           f"Move stop? trail/hold. If trail: new_stop >= {min_lock:.2f} "
+           f"and {'< target-4' if target and trade.direction=='long' else '> target+4' if target and trade.direction=='short' else '<= entry+20'}")
     raw = llm_ask(_get_management_system_prompt(), msg, model=SCALPER_MODEL)
     if raw.startswith('```'): raw = raw.split('```')[1].lstrip('json').strip()
     try:
@@ -758,11 +787,22 @@ def manage_active_trade(trade, candidate: CandidateBar, session_context: list = 
         decision = data.get("decision", "hold")
         new_stop = data.get("new_stop")
         if decision == 'trail' and new_stop is not None:
-            # Safety: mai allargare lo stop
+            # Safety 1: mai allargare lo stop
             if trade.direction == 'long' and new_stop <= trade.stop:
                 new_stop = None; decision = 'hold'
             elif trade.direction == 'short' and new_stop >= trade.stop:
                 new_stop = None; decision = 'hold'
+            # Safety 2: enforce min_lock floor
+            elif trade.direction == 'long' and new_stop < min_lock:
+                new_stop = min_lock
+            elif trade.direction == 'short' and new_stop > min_lock:
+                new_stop = min_lock
+            # Safety 3: cap at target-4pt so trailing can never overshoot target
+            if target is not None:
+                if trade.direction == 'long' and new_stop is not None and new_stop > target - 4:
+                    new_stop = target - 4
+                elif trade.direction == 'short' and new_stop is not None and new_stop < target + 4:
+                    new_stop = target + 4
         return {"decision": decision, "new_stop": new_stop, "new_target": None,
                 "reasoning": data.get("reason", "")}
     except Exception:

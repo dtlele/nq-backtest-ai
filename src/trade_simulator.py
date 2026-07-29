@@ -129,16 +129,30 @@ def check_pending_fill(pending: PendingTrade, bar: Bar) -> OpenTrade | None:
 
 def _close(trade: OpenTrade, exit_price: float,
            exit_reason: str, exit_bar: Bar) -> ClosedTrade:
+    import os
     sign = 1 if trade.direction == 'long' else -1
-    
-    # Calculate Gross PnL
-    pnl_ticks = sign * (exit_price - trade.entry) / NQ_TICK_SIZE
+
+    # Realistic slippage (NEW: prod2-yellow, after 4-month audit)
+    # Apply 0.5pt slippage against the trade on both entry and exit.
+    # Entry: actual_entry = entry +/- 0.5 (we got filled 0.5 worse than ref)
+    # Exit: actual_exit = exit_price +/- 0.5 (exit was 0.5 worse than ref)
+    # Net slippage per trade: 1pt = 4 ticks = $2 per contract.
+    slippage_pts = float(os.environ.get('BACKTEST_SLIPPAGE_PTS', '0.5'))
+    if trade.direction == 'long':
+        effective_entry = trade.entry + slippage_pts
+        effective_exit = exit_price - slippage_pts
+    else:
+        effective_entry = trade.entry - slippage_pts
+        effective_exit = exit_price + slippage_pts
+
+    # Calculate Gross PnL (with slippage)
+    pnl_ticks = sign * (effective_exit - effective_entry) / NQ_TICK_SIZE
     gross_pnl_usd = pnl_ticks * TICK_VALUE * trade.contracts
-    
-    # Calculate Commissions
+
+    # Commissions
     commissions = calculate_commissions(trade.contracts, instrument=INSTRUMENT)
     net_pnl_usd = gross_pnl_usd - commissions
-    
+
     closed_t = ClosedTrade(
         direction        = trade.direction,
         entry            = trade.entry,
