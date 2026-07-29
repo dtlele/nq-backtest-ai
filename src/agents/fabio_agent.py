@@ -238,17 +238,19 @@ def _et_time(candidate) -> tuple:
 
 def _time_gate(candidate, bias) -> tuple:
     """Gate orario da desk orderflow. Ritorna (ok, veto_reason).
-    - 9:30-10:30 ET: opening rotation, rumore puro → no entry.
-      (Was 9:30-9:45, expanded to 10:30 after 104-trade audit showed
-      10:00-10:30 ET is net negative: 19 trade, 7W, -$322)
+    - 9:30-10:00 ET: opening rotation, rumore puro → no entry.
+      (prod2-yellow final: blocked 9:30-10:00 ET = first 30min only.
+      10:00-10:30 was too aggressive per feedback utente dopo Jun-Jul test:
+      Giugno-Luglio LONG/SHORT su 10:00-10:30 erano -$153, ma c'erano
+      pochi trade e alcuni validi persi. Ridotto a 9:30-10:00.)
     - 11:45-13:15 ET: lunch chop → consentito SOLO se allineato a un drive
       (in lunch il drive continua; il chop punisce il mean-reversion).
     - dopo 15:15 ET: nessuna nuova posizione (chiusura/EOD risk).
     """
     h, m = _et_time(candidate)
     t = h * 60 + m
-    if t < 10 * 60 + 30:
-        return False, f"VETO: opening_rotation (entry alle {h:02d}:{m:02d} ET, prime 60min = rumore, -$322 storico 10:00-10:30)"
+    if t < 10 * 60:
+        return False, f"VETO: opening_rotation (entry alle {h:02d}:{m:02d} ET, prime 30min = rumore)"
     if t >= 15 * 60 + 15:
         return False, f"VETO: late_session (entry alle {h:02d}:{m:02d} ET, no nuove posizioni dopo 15:15)"
     if 11 * 60 + 45 <= t < 13 * 60 + 15 and not bias.is_drive:
