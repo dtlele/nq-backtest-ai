@@ -1341,14 +1341,39 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                     if _raw.startswith('```'):
                         _raw = _raw.split('```')[1].lstrip('json').strip()
                     _ad = json.loads(_raw)
-                    if _ad.get('verdict') == 'reject':
-                        print(f"  [DEEP AUDIT REJECTED ⛔ rule={_ad.get('rule_violated', '?')}] {_ad.get('reason', '')}")
+                    # --- DOPPIO VOTO: secondo auditor con modello diverso ---
+                    # Il primo auditor (AUDIT_MODEL) può "dimenticare" ragionamenti che
+                    # l'altro modello vede (es. 5 Feb: 0731 conferma short, v4-flash vede
+                    # assorbimento). Chiamiamo entrambi e richiediamo concordanza:
+                    # un solo REJECT → reject. Costo: 1 call extra solo quando il
+                    # reflex propone un trade (~18% dei bar).
+                    _audit2_model = os.environ.get('AUDIT2_MODEL', '')
+                    _audit2_verdict = 'confirm'
+                    _audit2_reason = ''
+                    if _audit2_model:
+                        try:
+                            _raw2 = llm_ask(_audit_sys, _audit_msg, model=_audit2_model,
+                                            reasoning_effort='high', max_tokens=6000)
+                            if _raw2.startswith('```'):
+                                _raw2 = _raw2.split('```')[1].lstrip('json').strip()
+                            _ad2 = json.loads(_raw2)
+                            _audit2_verdict = _ad2.get('verdict', 'confirm')
+                            _audit2_reason = _ad2.get('reason', '')
+                            print(f"  [DEEP AUDIT 2 ({_audit2_model})] verdict={_audit2_verdict}: {_audit2_reason[:120]}")
+                        except Exception as _e2:
+                            print(f"  [DEEP AUDIT 2 WARN] secondo auditor fallito ({_e2}), uso solo il primo")
+                    if _ad.get('verdict') == 'reject' or _audit2_verdict == 'reject':
+                        _rej_rule = _ad.get('rule_violated', '?') if _ad.get('verdict') == 'reject' else 'audit2'
+                        _rej_reason = _ad.get('reason', '') if _ad.get('verdict') == 'reject' else _audit2_reason
+                        print(f"  [DEEP AUDIT REJECTED ⛔ rule={_rej_rule}] {_rej_reason}")
                         fabio_signal.direction = 'none'
                         fabio_signal.confidence = 0
-                        fabio_signal.reasoning += f" | AUDIT REJECT ({_ad.get('rule_violated', '?')}): {_ad.get('reason', '')}"
+                        fabio_signal.reasoning += f" | AUDIT REJECT ({_rej_rule}): {_rej_reason}"
                     else:
-                        fabio_signal.confidence = max(fabio_signal.confidence, int(_ad.get('confidence', fabio_signal.confidence)))
-                        print(f"  [DEEP AUDIT CONFIRMED ✅] {_ad.get('reason', '')}")
+                        # Con concordanza: confidence = max dei due, stampa conferma doppia
+                        _conf2 = int(_ad2.get('confidence', 0)) if _audit2_verdict == 'confirm' and _audit2_model else 0
+                        fabio_signal.confidence = max(fabio_signal.confidence, int(_ad.get('confidence', fabio_signal.confidence)), _conf2)
+                        print(f"  [DEEP AUDIT CONFIRMED ✅] {_ad.get('reason', '')} | 2nd: {_audit2_reason[:80]}")
                 except Exception as _e:
                     print(f"  [DEEP AUDIT WARN] audit fallito ({_e}), mantengo reflex")
             else:
