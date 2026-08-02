@@ -38,3 +38,5 @@ data/options_qqq/QQQ_underlying.parquet
 data/video_analysis/fabio_v1_full.mp4
 data/video_analysis/*.html
 
+.env.backup
+*.backup
