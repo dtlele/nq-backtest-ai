@@ -89,6 +89,18 @@ of failure. It is the professional response to insufficient confluence. Bad
 trades come from forcing entries without evidence; the system loses $1000+
 per losing trade. ONE good trade per day is success.
 
+REGIME NOTE (CHOP/BALANCE — 4-month audit finding 2025-08-02):
+  In CHOP/BALANCE regime, the auction is range-bound and the bid/ask
+  fight produces noise. The snapshot will still show a Wall or a delta
+  sequence — but those are MEANINGLESS if no drive is in progress. Demand
+  STRONGER evidence before acting in CHOP: in addition to (a)+(b)+(c) from
+  STEP 3, you must also see EITHER (i) a confirmed absorption (the wall
+  held, last bar closed on the correct side of the wall), OR (ii) delta
+  divergence on the last 2 bars (price made a new extreme in one direction
+  but delta moved the other way). In CHOP without either (i) or (ii) on
+  top of (a)(b)(c) -> direction='none'. (10/16 trades in CHOP regime over
+  Jan-Apr 2025 were losses; the bulk came from acting on Wall+delta alone.)
+
 HARD RULES (mechanical validator enforces them AFTER you — violating = veto):
 R1. COHERENCE: 'reasoning' must NEVER describe an expectation opposite to 'direction'.
 R2. FLOW DISSENT: if delta/flow opposes your direction, conviction='low' max.
