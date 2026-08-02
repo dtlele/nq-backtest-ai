@@ -40,3 +40,4 @@ data/video_analysis/*.html
 
 .env.backup
 *.backup
+agent_memory_*/
