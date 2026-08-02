@@ -735,9 +735,13 @@ def _get_management_system_prompt() -> str:
 
 RULES:
 - 'trail' ONLY if there's a new confirmed swing (higher low for long, lower high
-  for short). Move stop just BEYOND the new swing (below swing low for long,
-  above swing high for short). NEVER widen, NEVER move stop backwards.
-- 'hold' if no new swing or structure intact.
+  for short) AND the stop can move with a BUFFER.
+- BUFFER: new_stop must sit at least 1.5x the average M1 range (typically 4-6 NQ
+  points) BELOW the swing low (long) / ABOVE the swing high (short).
+  NEVER place the stop right at the swing — a normal pullback will stop you out
+  and kill a winner. Leave room for the trade to breathe.
+- 'hold' if no new swing, structure intact, or the stop can't improve by the
+  required buffer.
 - new_stop must be STRICTLY better than current stop (higher for long,
   lower for short). If no improvement possible, return hold.
 
@@ -761,6 +765,10 @@ def manage_active_trade(trade, candidate: CandidateBar, session_context: list = 
     prompt minimal. Decision semplice: hold o trail (no early_exit/reverse).
 
     prod2-yellow: trigger rr=0.8 (was 0.3). Lets winners run more.
+    v4flash-buffer: trigger rr=1.5 (coincide col lock 50%): nessun trailing
+    finche' il trade non e' a 1.5R; sotto questa soglia hold silente (niente
+    chiamate LLM, risparmio API). Il trailing parte solo quando il trade ha
+    margine reale e il pullback non lo stoppera'.
     Lock-in: 50% at rr=1.5 (NEW safety net), 75% at rr=2.5.
     Cap new_stop at target-4pt (long) / target+4pt (short) so trailing
     can never move stop beyond the original target.
@@ -770,7 +778,7 @@ def manage_active_trade(trade, candidate: CandidateBar, session_context: list = 
     cur = candidate.bar.close
     pnl = (cur - trade.entry) if trade.direction == 'long' else (trade.entry - cur)
     rr = pnl / risk if risk > 0 else 0
-    trail_trigger_rr = float(os.environ.get('TRAIL_TRIGGER_RR', '0.8'))
+    trail_trigger_rr = float(os.environ.get('TRAIL_TRIGGER_RR', '1.5'))
     if rr <= trail_trigger_rr:
         # In loss o micro-profit, niente trailing: hold silente
         return {"decision": "hold", "new_stop": None, "new_target": None, "reasoning": f"rr={rr:+.2f}, no trail zone (trigger={trail_trigger_rr})"}
