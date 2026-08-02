@@ -10,11 +10,16 @@ from src.agents.institutional_bias import compute_institutional_bias, bias_gate
 
 # Modalita' agente: 'scalper' (1 chiamata LLM, default — 5x piu' economico)
 # o 'experts' (legacy: 4 esperti + Chief).
-# Modello REFLEX: REFLEX_MODEL (default minimax-m2.7 — 4s, JSON valido, 2.7x piu' economico di GLM-5.2)
-# Modello AUDIT: AUDIT_MODEL (default z-ai/glm-5.2 — 2s ma ragiona profondo)
+# Modello REFLEX/SCALPER: REFLEX_MODEL -> OPENROUTER_MODEL -> default minimax/minimax-m2
+#   (default confermato profittevole: Feb-Mar 2025 +$903, Apr-Mag 2025 +$462 con 56 trade 57.1% WR.
+#    GLM-5.2 testato ma troppo lento: meglio M2 per il singolo-call scalper.)
+# Modello AUDIT: AUDIT_MODEL -> OPENROUTER_MODEL -> default minimax/minimax-m2
+#   (anche l'audit va su M2: V2 audit shadow test su 184 giorni ha confermato il prompt
+#    e M2 è veloce+economico. GLM-5.2 lo usiamo solo se AUDIT_MODEL=glm-5.2 esplicito.)
 FABIO_MODE = os.environ.get('FABIO_MODE', 'scalper').lower()
-SCALPER_MODEL = os.environ.get('REFLEX_MODEL', os.environ.get('OPENROUTER_MODEL', 'z-ai/glm-5.2'))
-AUDIT_MODEL = os.environ.get('AUDIT_MODEL', os.environ.get('OPENROUTER_MODEL', 'z-ai/glm-5.2'))
+DEFAULT_MODEL = 'minimax/minimax-m2'
+SCALPER_MODEL = os.environ.get('REFLEX_MODEL', os.environ.get('OPENROUTER_MODEL', DEFAULT_MODEL))
+AUDIT_MODEL = os.environ.get('AUDIT_MODEL', os.environ.get('OPENROUTER_MODEL', DEFAULT_MODEL))
 
 KNOWLEDGE_FILE = Path(__file__).parent.parent.parent / 'knowledge' / 'fabio_distilled.json'
 
