@@ -531,8 +531,13 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                     should_run_apm = False
                     is_runner_mode = False
 
-                    # NEW: trailing si attiva da rr >= 0.3 (era 2.0). Più reattivo.
-                    if current_rr >= 0.3:
+                    # EXPERIMENT ENTRY-ONLY: con APM_DISABLED=1 l'APM LLM non viene
+                    # mai chiamato — il trade si chiude solo a target o stop (meccanico).
+                    # Serve per isolare l'edge delle ENTRY dell'LLM senza il rumore
+                    # del trailing management. Le posizioni restano aperte fino a TP/SL.
+                    if os.environ.get('APM_DISABLED', '0') == '1':
+                        should_run_apm = False
+                    elif current_rr >= 0.3:
                         should_run_apm = True
                     if current_rr >= 2.0:
                         is_runner_mode = True
