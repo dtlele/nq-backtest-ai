@@ -1,0 +1,2 @@
+{"date": "2025-04-21", "bar_time_utc": "2025-04-21T13:59:00+00:00", "fabio_direction": "dead_bar", "fabio_confidence": 0, "decision": "dead_bar_skip", "no_trade_reason": "low_vol(2580 < 50% avg 7139)", "logged_at": "2026-07-29T14:40:37.398520+00:00"}
+{"date": "2025-04-21", "bar_time_utc": "2025-04-21T14:00:00+00:00", "fabio_direction": "dead_bar", "fabio_confidence": 0, "decision": "dead_bar_skip", "no_trade_reason": "low_vol(2868 < 50% avg 7139)", "logged_at": "2026-07-29T14:40:37.399064+00:00"}

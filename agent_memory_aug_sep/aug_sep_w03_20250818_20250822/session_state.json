@@ -1,0 +1,20 @@
+{
+  "date": "2025-08-20",
+  "ib_high": 23432.0,
+  "ib_low": 23146.0,
+  "poc": 23424.5,
+  "day_type": "trend_down",
+  "open_trade": {
+    "direction": "short",
+    "entry": 23125.0,
+    "stop": 23087.5,
+    "target": 22646.0,
+    "entry_time": "2025-08-20T14:21:00+00:00",
+    "contracts": 0.8009,
+    "news_flag": "none"
+  },
+  "equity": 50056.82313,
+  "daily_pnl_usd": 0,
+  "trade_count_today": 0,
+  "session_stopped": false
+}

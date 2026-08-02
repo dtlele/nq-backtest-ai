@@ -1,0 +1,20 @@
+{
+  "date": "2025-04-21",
+  "ib_high": 18165.0,
+  "ib_low": 17994.0,
+  "poc": 17918.25,
+  "day_type": "trend_down",
+  "open_trade": {
+    "direction": "short",
+    "entry": 17884.25,
+    "stop": 17935.25,
+    "target": 17325.65,
+    "entry_time": "2025-04-21T15:26:00+00:00",
+    "contracts": 0.4887,
+    "news_flag": "none"
+  },
+  "equity": 49846.330440000005,
+  "daily_pnl_usd": 0,
+  "trade_count_today": 0,
+  "session_stopped": false
+}

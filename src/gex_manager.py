@@ -7,6 +7,30 @@ from typing import Tuple, Dict, Any
 GEX_DATA_FILE_QQQ = Path(__file__).parent.parent / 'data' / 'qqq_gex_daily.json'
 GEX_DATA_FILE = Path(__file__).parent.parent / 'data' / 'gex_data.json'
 
+# Cache JSON load (evita di rileggere il file a ogni barra M5)
+_gex_json_cache = None
+_gex_spx_json_cache = None
+
+def _load_qqq_json():
+    global _gex_json_cache
+    if _gex_json_cache is None and GEX_DATA_FILE_QQQ.exists():
+        try:
+            with open(GEX_DATA_FILE_QQQ, 'r', encoding='utf-8') as f:
+                _gex_json_cache = json.load(f)
+        except Exception:
+            _gex_json_cache = {}
+    return _gex_json_cache or {}
+
+def _load_spx_json():
+    global _gex_spx_json_cache
+    if _gex_spx_json_cache is None and GEX_DATA_FILE.exists():
+        try:
+            with open(GEX_DATA_FILE, 'r', encoding='utf-8') as f:
+                _gex_spx_json_cache = json.load(f)
+        except Exception:
+            _gex_spx_json_cache = {}
+    return _gex_spx_json_cache or {}
+
 def load_gex_for_date(date_str: str, overnight_vp=None, opening_price: float = None) -> Dict[str, Any]:
     """
     Load GEX metrics for a given date (format: YYYY-MM-DD or YYYYMMDD).
@@ -19,23 +43,16 @@ def load_gex_for_date(date_str: str, overnight_vp=None, opening_price: float = N
         norm_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
 
     gex_data = {}
-    # Try real QQQ GEX first
-    if GEX_DATA_FILE_QQQ.exists():
-        try:
-            with open(GEX_DATA_FILE_QQQ, 'r', encoding='utf-8') as f:
-                all_gex = json.load(f)
-                gex_data = all_gex.get(norm_date, {})
-        except Exception as e:
-            print(f"  [GEX WARNING] Failed to read {GEX_DATA_FILE_QQQ}: {e}")
+    # Try real QQQ GEX first (cache JSON)
+    all_gex = _load_qqq_json()
+    if all_gex:
+        gex_data = all_gex.get(norm_date, {})
 
-    if not gex_data and GEX_DATA_FILE.exists():
-        # Fall back to SPX proxy
-        try:
-            with open(GEX_DATA_FILE, 'r', encoding='utf-8') as f:
-                all_gex = json.load(f)
-                gex_data = all_gex.get(norm_date, {})
-        except Exception as e:
-            print(f"  [GEX WARNING] Failed to read {GEX_DATA_FILE}: {e}")
+    if not gex_data:
+        # Fall back to SPX proxy (cache JSON)
+        all_gex = _load_spx_json()
+        if all_gex:
+            gex_data = all_gex.get(norm_date, {})
 
     if gex_data:
         # QQQ file uses zero_gamma_nq, call_wall_nq, put_wall_nq; SPX proxy uses zero_gamma_level, call_wall, put_wall

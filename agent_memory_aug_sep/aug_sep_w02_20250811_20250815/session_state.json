@@ -1,0 +1,12 @@
+{
+  "date": "2025-08-12",
+  "ib_high": 23808.25,
+  "ib_low": 23649.25,
+  "poc": 23850.0,
+  "day_type": "transition_state",
+  "open_trade": null,
+  "equity": 50122.61776,
+  "daily_pnl_usd": 71.91184,
+  "trade_count_today": 1,
+  "session_stopped": false
+}

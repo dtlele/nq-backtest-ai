@@ -24,7 +24,9 @@ DYNAMIC_RULES_FILE = Path(__file__).parent.parent.parent / "knowledge" / "dynami
 
 try:
     from dotenv import load_dotenv
-    load_dotenv(Path(__file__).parent.parent.parent / ".env")
+    # override=False: env vars passed to python take priority over .env file.
+    # Without this, OPENROUTER_MODEL=... passed via shell was silently overridden by .env.
+    load_dotenv(Path(__file__).parent.parent.parent / ".env", override=False)
 except ImportError:
     pass
 

@@ -1,0 +1,20 @@
+{
+  "date": "2025-02-24",
+  "ib_high": 21801.75,
+  "ib_low": 21560.25,
+  "poc": 21767.25,
+  "day_type": "trend_down",
+  "open_trade": {
+    "direction": "short",
+    "entry": 21547.0,
+    "stop": 21533.033750000002,
+    "target": 20783.3,
+    "entry_time": "2025-02-24T15:26:00+00:00",
+    "contracts": 0.8995,
+    "news_flag": "none"
+  },
+  "equity": 50249.58894,
+  "daily_pnl_usd": 0,
+  "trade_count_today": 0,
+  "session_stopped": false
+}
