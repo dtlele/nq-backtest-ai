@@ -1958,6 +1958,32 @@ def run_day(csv_path: str, dry_run: bool = False, quiet: bool = False, prev_day_
                 log_reasoning(log_entry)
                 continue
 
+            # ── RISK/TARGET CAPS (dall'analisi 4 trade Marzo 2025) ──────────────
+            # 1. MAX_RISK_PTS: stop oltre 30pt dall'entry = entry lontana dal cluster
+            #    strutturale = rischio sbilanciato (5 Mar risk 65pt, 6 Mar 44.5pt).
+            #    Un trade valido ha lo stop vicino alla struttura; se e' lontano,
+            #    l'entry e' mal posizionata -> VETO.
+            # 2. MAX_TARGET_RR: target a rr 31-43 (measured-move con IB_range enorme)
+            #    = i winner chiudono a 2-3% del percorso e il trail li taglia a 1R.
+            #    Cappare a 4R: il target diventa raggiungibile, il winner chiude
+            #    a target pieno invece di essere tagliato dal trailing.
+            MAX_RISK_PTS = float(os.environ.get('MAX_RISK_PTS', '30'))
+            MAX_TARGET_RR = float(os.environ.get('MAX_TARGET_RR', '4.0'))
+            if risk_points > MAX_RISK_PTS:
+                print(f"  [VETO] Risk {risk_points:.0f}pt > MAX_RISK_PTS {MAX_RISK_PTS:.0f}pt: stop troppo lontano dall'entry (entry mal posizionata vs struttura).")
+                log_entry['decision'] = 'no_trade'
+                log_entry['no_trade_reason'] = f'risk_too_wide_{risk_points:.0f}_gt_{MAX_RISK_PTS:.0f}'
+                log_reasoning(log_entry)
+                continue
+            if consensus.r_ratio > MAX_TARGET_RR:
+                _old_rr = consensus.r_ratio
+                if consensus.direction == 'long':
+                    consensus.target = consensus.entry + (risk_points * MAX_TARGET_RR)
+                else:
+                    consensus.target = consensus.entry - (risk_points * MAX_TARGET_RR)
+                consensus.r_ratio = MAX_TARGET_RR
+                print(f"  [TARGET CAPPED] Target R:R {_old_rr:.1f} > MAX {MAX_TARGET_RR:.0f}: target ridotto a {consensus.target:.2f} (4R raggiungibile, winner non tagliato dal trail)")
+
         # ── EXECUTION ───────────────────────────────────────────────
         # Volume gate: LLM has already analyzed this bar (context preserved),
         # but we only OPEN a trade if volume meets the strategy threshold.
