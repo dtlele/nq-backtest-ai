@@ -97,6 +97,62 @@ export interface DOMData {
   lastTradeSide?: 'A' | 'B';
 }
 
+export interface TradeMarker {
+  entryTime: string;
+  exitTime: string;
+  direction: string;
+  entry: number;
+  stop: number;
+  target: number;
+  exitPrice: number;
+  exitReason: string;
+  pnlUsd: number;
+  pnlTicks: number;
+  setupType: string;
+  confidence: number;
+  contracts: number;
+  fabioReasoning?: string;
+  andreaReasoning?: string;
+}
+
+export interface DailyRoadmap {
+  date: string;
+  contextAnalysis: string;
+  bullish: { trigger_description?: string; target_level?: number; [key: string]: any };
+  bearish: { trigger_description?: string; target_level?: number; [key: string]: any };
+  keyLevels?: number[];
+  raw?: any;
+}
+
+export interface AgentSignalExt {
+  barTimeEt: string;
+  barTimeUtc?: string;
+  direction: string;
+  confidence: number;
+  setupType: string;
+  finalDecision: string;
+  noTradeReason: string;
+  reasoning: string;
+  detail?: {
+    fabio?: any;
+    andrea?: any;
+    context?: any;
+    result?: any;
+  };
+}
+
+export interface MemoryStat {
+  key: string;
+  regime: string;
+  setup: string;
+  wall: string;
+  seen: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  totalPnlUsd: number;
+}
+
 export interface Alert {
   id: string;
   type: 'trade' | 'no_trade' | 'system';
@@ -161,8 +217,20 @@ interface TradingStore {
   setShowCVD: (v: boolean) => void;
   showBigTrades: boolean;
   setShowBigTrades: (v: boolean) => void;
+  showCleanData: boolean;
+  setShowCleanData: (v: boolean) => void;
   selectedCandle: FootprintCandle | null;
   setSelectedCandle: (c: FootprintCandle | null) => void;
+
+  // Clean Bridge Data
+  tradeMarkers: TradeMarker[];
+  setTradeMarkers: (markers: TradeMarker[]) => void;
+  dailyRoadmap: DailyRoadmap | null;
+  setDailyRoadmap: (roadmap: DailyRoadmap | null) => void;
+  agentSignals: AgentSignalExt[];
+  setAgentSignals: (signals: AgentSignalExt[]) => void;
+  memoryStats: MemoryStat[];
+  setMemoryStats: (stats: MemoryStat[]) => void;
 
   // Alerts
   alerts: Alert[];
@@ -244,8 +312,20 @@ export const useTradingStore = create<TradingStore>((set, get) => ({
   setShowCVD: (v) => set({ showCVD: v }),
   showBigTrades: true,
   setShowBigTrades: (v) => set({ showBigTrades: v }),
+  showCleanData: false,
+  setShowCleanData: (v) => set({ showCleanData: v }),
   selectedCandle: null,
   setSelectedCandle: (c) => set({ selectedCandle: c }),
+
+  // Clean Bridge Data
+  tradeMarkers: [],
+  setTradeMarkers: (markers) => set({ tradeMarkers: markers }),
+  dailyRoadmap: null,
+  setDailyRoadmap: (roadmap) => set({ dailyRoadmap: roadmap }),
+  agentSignals: [],
+  setAgentSignals: (signals) => set({ agentSignals: signals }),
+  memoryStats: [],
+  setMemoryStats: (stats) => set({ memoryStats: stats }),
 
   // Alerts
   alerts: [],

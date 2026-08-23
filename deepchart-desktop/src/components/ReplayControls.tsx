@@ -22,7 +22,6 @@ export const ReplayControls: React.FC = () => {
     replayTotalBars,
     replaySpeed,
     sendWsMessage,
-    setAvailableDates,
   } = useTradingStore();
 
   const send = useCallback((msg: object) => {
@@ -31,6 +30,7 @@ export const ReplayControls: React.FC = () => {
 
   const isPlaying = replayMode === 'replay';
   const progress  = replayTotalBars > 0 ? (replayBarIdx / replayTotalBars) * 100 : 0;
+  void progress; // used for future seek bar enhancement
 
   const handlePlay  = () => send({ action: 'replay_play'  });
   const handlePause = () => send({ action: 'replay_pause' });

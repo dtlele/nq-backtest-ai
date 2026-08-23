@@ -6,6 +6,9 @@ Usage:
   python run_backtest.py --days 5            # first 5 days
   python run_backtest.py --days 1 --dry-run  # no API calls, just detect candidates
 """
+import sys
+if sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
 import argparse
 from dotenv import load_dotenv
 load_dotenv()

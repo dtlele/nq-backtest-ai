@@ -1,240 +1,398 @@
-import React, { useState, useEffect } from 'react';
-import { Activity, Settings, Database, Crosshair, BarChart2 } from 'lucide-react';
-import { FootprintChart, type FootprintCandle } from './components/FootprintChart';
+/**
+ * App.tsx — DeepPrint Pro v2.0
+ * Layout principale con:
+ * - Left sidebar (navigazione)
+ * - Top header (symbol, timeframe, status WS)
+ * - SessionInfoBar (IB, day_type, GEX)
+ * - Main area: FootprintChart + VolumeProfile Sidebar + OrderBook DOM
+ * - CVD Chart (pannello inferiore)
+ * - ReplayControls (barra basso)
+ * - AlertPanel (notifiche toast)
+ * - Keyboard shortcuts
+ */
+import React, { useEffect, useCallback } from 'react';
+import { Activity, Settings, Database, Crosshair, BarChart2, Eye, EyeOff } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+
+import { FootprintChart }       from './components/FootprintChart';
+import { VolumeProfileSidebar } from './components/VolumeProfileSidebar';
+import { CVDChart }             from './components/CVDChart';
+import { ReplayControls }       from './components/ReplayControls';
+import { SessionInfoBar }       from './components/SessionInfoBar';
+import { AlertPanel }           from './components/AlertPanel';
+import { RoadmapPanel }        from './components/RoadmapPanel';
+import { AgentSignalsPanel }   from './components/AgentSignalsPanel';
+import { TradeMarkersPanel }   from './components/TradeMarkersPanel';
+import { useWebSocket }         from './hooks/useWebSocket';
+import { useTradingStore }      from './store/tradingStore';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Mock generation for demonstration of Footprint
-function generateMockData(): FootprintCandle[] {
-  const candles: FootprintCandle[] = [];
-  let currentPrice = 25600;
-  
-  for (let i = 0; i < 20; i++) {
-    const isUp = Math.random() > 0.5;
-    const levels = [];
-    const numLevels = Math.floor(Math.random() * 10) + 15; // 15-25 levels per candle
-    
-    let totalVol = 0;
-    let totalDelta = 0;
-    
-    let levelPrice = currentPrice - (numLevels * 0.25) / 2;
-    for (let j = 0; j < numLevels; j++) {
-      const bid = Math.floor(Math.random() * 200);
-      const ask = Math.floor(Math.random() * 200);
-      const delta = ask - bid;
-      
-      let imb: 'none' | 'bid' | 'ask' = 'none';
-      if (ask > bid * 3 && ask > 50) imb = 'ask';
-      if (bid > ask * 3 && bid > 50) imb = 'bid';
-      
-      levels.push({
-        price: levelPrice,
-        bidVol: bid,
-        askVol: ask,
-        delta: delta,
-        isImbalance: imb
-      });
-      
-      totalVol += (bid + ask);
-      totalDelta += delta;
-      levelPrice += 0.25;
-    }
-    
-    // Sort levels descending by price (highest at top)
-    levels.sort((a, b) => b.price - a.price);
-    
-    candles.push({
-      timestamp: new Date(Date.now() - (20 - i) * 60000).toISOString(),
-      open: currentPrice,
-      close: isUp ? currentPrice + 5 : currentPrice - 5,
-      high: currentPrice + 10,
-      low: currentPrice - 10,
-      delta: totalDelta,
-      volume: totalVol,
-      levels: levels
-    });
-    
-    currentPrice = isUp ? currentPrice + 5 : currentPrice - 5;
-  }
-  return candles;
-}
+// ─── OrderBook DOM (componente inline) ───────────────────────────────────────
+const OrderBookDOM: React.FC = () => {
+  const { domData, candles } = useTradingStore();
 
-export default function App() {
-  const [data, setData] = useState<FootprintCandle[]>(generateMockData()); // Pre-fill 20 storiche
-  const [isConnected, setIsConnected] = useState(false);
-  const [activeTab, setActiveTab] = useState('chart');
+  // Se nessun dato DOM live, genera DOM simulato dall'ultima candela
+  const lastClose = candles[candles.length - 1]?.barClose ?? 21500;
 
-  useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8765');
-    
-    ws.onopen = () => setIsConnected(true);
-    ws.onclose = () => setIsConnected(false);
-    
-    ws.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-      if (msg.type === 'candle_update') {
-        const raw = msg.data;
-        const tickSize = 0.25;
-        const high = raw.bar_high;
-        const low = raw.bar_low;
-        const close = raw.bar_close;
-        const vol = raw.bar_volume;
-        const delta = raw.bar_delta;
-        
-        const numTicks = Math.max(1, Math.round((high - low) / tickSize)) + 1;
-        const volPerTick = Math.floor(vol / numTicks);
-        const deltaPerTick = Math.floor(delta / numTicks);
-        
-        const levels = [];
-        for (let p = high; p >= low; p -= tickSize) {
-          const isPoc = Math.abs(p - close) <= 0.5;
-          const bVol = Math.max(0, Math.floor(volPerTick / 2) - deltaPerTick + (isPoc ? volPerTick : 0));
-          const aVol = Math.max(0, Math.floor(volPerTick / 2) + deltaPerTick + (isPoc ? volPerTick : 0));
-          const lvlDelta = aVol - bVol;
-          
-          levels.push({
-            price: p,
-            bidVol: bVol,
-            askVol: aVol,
-            delta: lvlDelta,
-            isImbalance: lvlDelta > 30 ? 'ask' : lvlDelta < -30 ? 'bid' : 'none'
-          });
-        }
+  const generateSimulatedDOM = () => {
+    const bids = Array.from({ length: 15 }, (_, i) => ({
+      price: lastClose - (i + 1) * 0.25,
+      size:  Math.max(1, Math.floor(Math.random() * 40 + 5)),
+    }));
+    const asks = Array.from({ length: 15 }, (_, i) => ({
+      price: lastClose + (i + 1) * 0.25,
+      size:  Math.max(1, Math.floor(Math.random() * 40 + 5)),
+    }));
+    return { bids, asks };
+  };
 
-        const newCandle: FootprintCandle = {
-          timestamp: raw.bar_time_utc || new Date().toISOString(),
-          open: raw.bar_open,
-          high: raw.bar_high,
-          low: raw.bar_low,
-          close: raw.bar_close,
-          delta: raw.bar_delta,
-          volume: raw.bar_volume,
-          levels: levels
-        };
-        
-        setData(prev => {
-          if (prev.length > 0 && prev[prev.length - 1].timestamp === newCandle.timestamp) {
-            const updated = [...prev];
-            updated[updated.length - 1] = newCandle;
-            return updated;
-          }
-          return [...prev.slice(-99), newCandle];
-        });
-      }
-    };
-    
-    return () => ws.close();
-  }, []);
+  const dom = domData || generateSimulatedDOM();
+  const maxSize = Math.max(
+    ...dom.bids.map(b => b.size),
+    ...dom.asks.map(a => a.size),
+    1
+  );
 
   return (
-    <div className="flex h-screen bg-trading-bg text-trading-text font-sans overflow-hidden">
-      {/* Left Sidebar */}
-      <aside className="w-16 bg-trading-panel border-r border-trading-border flex flex-col items-center py-4 space-y-6 z-20">
-        <div 
-          onClick={() => setActiveTab('chart')}
-          className={cn("p-2 rounded-lg cursor-pointer transition-all", activeTab === 'chart' ? "bg-blue-500/20 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)]" : "text-trading-muted hover:text-trading-text hover:bg-slate-800")}
-        >
-          <Activity size={24} />
+    <div className="w-[168px] bg-[#0b1020] flex flex-col shrink-0 border-l border-slate-800">
+      {/* Header */}
+      <div className="h-6 bg-slate-900/80 border-b border-slate-700 flex items-center justify-center shrink-0">
+        <span className="text-[9px] text-slate-400 font-bold tracking-widest">ORDER BOOK</span>
+      </div>
+
+      {/* Column headers */}
+      <div className="flex justify-between text-[9px] text-slate-600 border-b border-slate-800 px-2 py-0.5 shrink-0 font-mono">
+        <span>BID SZ</span>
+        <span>PRICE</span>
+        <span>ASK SZ</span>
+      </div>
+
+      {/* Ask side (sopra, top→bottom = higher price → lower price) */}
+      <div className="flex flex-col-reverse overflow-hidden" style={{ maxHeight: '45%' }}>
+        {dom.asks.slice(0, 15).reverse().map((ask, i) => (
+          <div key={`ask-${i}`} className="flex justify-between items-center text-[10px] font-mono py-0.5 px-2 relative hover:bg-slate-800/40">
+            <div
+              className="absolute right-0 top-0 bottom-0 bg-rose-900/30"
+              style={{ width: `${(ask.size / maxSize) * 60}%` }}
+            />
+            <span className="text-slate-600 z-10">—</span>
+            <span className="text-rose-200 font-bold z-10">{ask.price.toFixed(2)}</span>
+            <span className="text-rose-400 z-10">{ask.size}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Spread / Last trade */}
+      <div className="flex items-center justify-center py-1.5 bg-slate-800/60 border-y border-slate-700 shrink-0">
+        <span className="text-[13px] font-mono font-black text-white">{lastClose.toFixed(2)}</span>
+      </div>
+
+      {/* Bid side */}
+      <div className="flex flex-col overflow-hidden" style={{ maxHeight: '45%' }}>
+        {dom.bids.slice(0, 15).map((bid, i) => (
+          <div key={`bid-${i}`} className="flex justify-between items-center text-[10px] font-mono py-0.5 px-2 relative hover:bg-slate-800/40">
+            <div
+              className="absolute left-0 top-0 bottom-0 bg-emerald-900/30"
+              style={{ width: `${(bid.size / maxSize) * 60}%` }}
+            />
+            <span className="text-emerald-400 z-10">{bid.size}</span>
+            <span className="text-emerald-200 font-bold z-10">{bid.price.toFixed(2)}</span>
+            <span className="text-slate-600 z-10">—</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Stats */}
+      <div className="mt-auto border-t border-slate-800 p-2 text-[9px] font-mono text-slate-600 space-y-0.5 shrink-0">
+        {domData ? (
+          <>
+            <div className="flex justify-between">
+              <span>Last</span>
+              <span className="text-slate-300">{domData.lastTradePrice?.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Size</span>
+              <span className={domData.lastTradeSide === 'A' ? 'text-emerald-400' : 'text-rose-400'}>
+                {domData.lastTradeSize}
+              </span>
+            </div>
+          </>
+        ) : (
+          <span className="text-slate-700 italic">DOM simulato</span>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Toolbar Toggle Button ────────────────────────────────────────────────────
+interface ToggleBtnProps {
+  label: string;
+  active: boolean;
+  onToggle: () => void;
+}
+const ToggleBtn: React.FC<ToggleBtnProps> = ({ label, active, onToggle }) => (
+  <button
+    onClick={onToggle}
+    className={cn(
+      "flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold transition-all border",
+      active
+        ? "bg-blue-600/30 text-blue-300 border-blue-700/60"
+        : "bg-slate-800/50 text-slate-500 border-slate-700/40 hover:text-slate-300"
+    )}
+  >
+    {active ? <Eye size={10} /> : <EyeOff size={10} />}
+    {label}
+  </button>
+);
+
+// ─── App principale ───────────────────────────────────────────────────────────
+export default function App() {
+  const { send } = useWebSocket();
+  void send; // suppress unused warning
+
+  const {
+    wsStatus,
+    candles,
+    replayMode,
+    replaySpeed,
+    showVP,       setShowVP,
+    showGEX,      setShowGEX,
+    showIBBox,    setShowIBBox,
+    showCVD,      setShowCVD,
+    showBigTrades, setShowBigTrades,
+    showCleanData, setShowCleanData,
+    sendWsMessage,
+  } = useTradingStore();
+
+  // ── Keyboard shortcuts ───────────────────────────────────────────────────
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Non intervenire se focus su input/select
+    if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+
+    switch (e.key) {
+      case ' ':
+        e.preventDefault();
+        if (replayMode === 'replay') sendWsMessage?.({ action: 'replay_pause' });
+        else                         sendWsMessage?.({ action: 'replay_play'  });
+        break;
+      case 'ArrowRight':
+        sendWsMessage?.({ action: 'replay_step_forward' });
+        break;
+      case 'ArrowLeft':
+        sendWsMessage?.({ action: 'replay_step_back' });
+        break;
+      case '+':
+      case '=':
+        sendWsMessage?.({ action: 'set_speed', multiplier: Math.min(replaySpeed * 2, 99999) });
+        break;
+      case '-':
+        sendWsMessage?.({ action: 'set_speed', multiplier: Math.max(replaySpeed / 2, 30) });
+        break;
+    }
+  }, [replayMode, replaySpeed, sendWsMessage]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+  // ── Render ───────────────────────────────────────────────────────────────
+  const lastCandle = candles[candles.length - 1];
+
+  return (
+    <div className="flex h-screen bg-[#070c18] text-slate-200 font-sans overflow-hidden">
+
+      {/* ── Left Sidebar (navigation icons) ──────────────────────────────── */}
+      <aside className="w-14 bg-[#0a0e17] border-r border-slate-800 flex flex-col items-center py-3 gap-5 z-20 shrink-0">
+        <div className="flex flex-col items-center gap-1.5">
+          {/* Logo */}
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/40">
+            <span className="text-white text-[10px] font-black">DP</span>
+          </div>
         </div>
-        <div 
-          onClick={() => setActiveTab('stats')}
-          className={cn("p-2 rounded-lg cursor-pointer transition-all", activeTab === 'stats' ? "bg-blue-500/20 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)]" : "text-trading-muted hover:text-trading-text hover:bg-slate-800")}
-        >
-          <BarChart2 size={24} />
+
+        <div className="flex flex-col gap-3 mt-2">
+          {[
+            { icon: Activity,  label: 'Chart'    },
+            { icon: BarChart2, label: 'Stats'    },
+            { icon: Crosshair, label: 'Segnali'  },
+            { icon: Database,  label: 'Dati'     },
+          ].map(({ icon: Icon, label }) => (
+            <button
+              key={label}
+              className="p-2 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-800 transition-all"
+              title={label}
+            >
+              <Icon size={18} />
+            </button>
+          ))}
         </div>
-        <div 
-          onClick={() => setActiveTab('dom')}
-          className={cn("p-2 rounded-lg cursor-pointer transition-all", activeTab === 'dom' ? "bg-blue-500/20 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)]" : "text-trading-muted hover:text-trading-text hover:bg-slate-800")}
+
+        <button
+          className="mt-auto p-2 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-800 transition-all"
+          title="Impostazioni"
         >
-          <Crosshair size={24} />
-        </div>
-        <div 
-          onClick={() => setActiveTab('data')}
-          className={cn("p-2 rounded-lg cursor-pointer transition-all", activeTab === 'data' ? "bg-blue-500/20 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)]" : "text-trading-muted hover:text-trading-text hover:bg-slate-800")}
-        >
-          <Database size={24} />
-        </div>
-        <div 
-          onClick={() => setActiveTab('settings')}
-          className={cn("mt-auto p-2 rounded-lg cursor-pointer transition-all", activeTab === 'settings' ? "bg-blue-500/20 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)]" : "text-trading-muted hover:text-trading-text hover:bg-slate-800")}
-        >
-          <Settings size={24} />
-        </div>
+          <Settings size={18} />
+        </button>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0">
-        {/* Top Header */}
-        <header className="h-14 bg-trading-panel border-b border-trading-border flex items-center px-6 justify-between shrink-0 z-10 shadow-md">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-lg font-bold bg-gradient-to-r from-blue-400 via-indigo-400 to-emerald-400 bg-clip-text text-transparent drop-shadow-sm">
+      {/* ── Main content ─────────────────────────────────────────────────── */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+        {/* ── Top Header ─────────────────────────────────────────────────── */}
+        <header className="h-12 bg-[#0a0e17] border-b border-slate-800 flex items-center px-4 justify-between shrink-0 z-10">
+          {/* Left: symbol + timeframe */}
+          <div className="flex items-center gap-3">
+            <h1 className="text-sm font-black bg-gradient-to-r from-blue-400 via-indigo-300 to-emerald-400 bg-clip-text text-transparent">
               DeepPrint Pro
             </h1>
-            <div className="h-4 w-px bg-trading-border mx-2" />
-            <div className="text-sm font-mono flex items-center space-x-2 bg-slate-900/50 px-3 py-1 rounded-full border border-slate-700/50">
-              <span className="text-trading-muted font-semibold">MNQ</span>
+            <div className="h-4 w-px bg-slate-800" />
+            <div className="flex items-center gap-1.5 text-xs font-mono bg-slate-900/60 px-2 py-1 rounded-full border border-slate-700/50">
+              <span className="text-blue-300 font-bold">MNQ</span>
               <span className="text-slate-600">|</span>
               <span className="text-slate-300">1 Min</span>
             </div>
-          </div>
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-2 text-xs font-mono bg-slate-900/50 px-3 py-1.5 rounded-full border border-slate-700/50">
-               <span className="relative flex h-2.5 w-2.5">
-                  <span className={cn("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", isConnected ? "bg-emerald-400" : "bg-rose-400")}></span>
-                  <span className={cn("relative inline-flex rounded-full h-2.5 w-2.5", isConnected ? "bg-emerald-500" : "bg-rose-500")}></span>
+            {lastCandle && (
+              <>
+                <div className="h-4 w-px bg-slate-800" />
+                <span className="text-xs font-mono font-bold text-white">
+                  {lastCandle.barClose.toFixed(2)}
                 </span>
-               <span className={isConnected ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
-                 {isConnected ? 'LIVE SYNC' : 'DISCONNECTED'}
-               </span>
-             </div>
+                <span className={cn(
+                  "text-xs font-mono",
+                  lastCandle.barDelta >= 0 ? "text-emerald-400" : "text-rose-400"
+                )}>
+                  {lastCandle.barDelta >= 0 ? '▲' : '▼'} {Math.abs(lastCandle.barDelta)}
+                </span>
+              </>
+            )}
+          </div>
+
+          {/* Center: overlay toggles */}
+          <div className="flex items-center gap-1.5">
+            <ToggleBtn label="VP"     active={showVP}        onToggle={() => setShowVP(!showVP)} />
+            <ToggleBtn label="IB"     active={showIBBox}     onToggle={() => setShowIBBox(!showIBBox)} />
+            <ToggleBtn label="GEX"    active={showGEX}       onToggle={() => setShowGEX(!showGEX)} />
+            <ToggleBtn label="CVD"    active={showCVD}       onToggle={() => setShowCVD(!showCVD)} />
+            <ToggleBtn label="Bolle"  active={showBigTrades} onToggle={() => setShowBigTrades(!showBigTrades)} />
+            <ToggleBtn label="Clean"  active={showCleanData} onToggle={() => setShowCleanData(!showCleanData)} />
+          </div>
+
+          {/* Right: WS status + candele count */}
+          <div className="flex items-center gap-3 text-xs font-mono">
+            {candles.length > 0 && (
+              <span className="text-slate-600">{candles.length} barre</span>
+            )}
+            <div className="flex items-center gap-1.5 bg-slate-900/50 px-3 py-1.5 rounded-full border border-slate-700/50">
+              <span className="relative flex h-2 w-2">
+                <span className={cn(
+                  "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
+                  wsStatus === 'connected' ? "bg-emerald-400" :
+                  wsStatus === 'connecting' ? "bg-amber-400" : "bg-rose-400"
+                )} />
+                <span className={cn(
+                  "relative inline-flex rounded-full h-2 w-2",
+                  wsStatus === 'connected' ? "bg-emerald-500" :
+                  wsStatus === 'connecting' ? "bg-amber-500" : "bg-rose-500"
+                )} />
+              </span>
+              <span className={cn(
+                "font-bold text-[10px] tracking-wider",
+                wsStatus === 'connected' ? "text-emerald-400" :
+                wsStatus === 'connecting' ? "text-amber-400" : "text-rose-400"
+              )}>
+                {wsStatus === 'connected'  ? 'LIVE SYNC' :
+                 wsStatus === 'connecting' ? 'CONNECTING' : 'OFFLINE'}
+              </span>
+            </div>
           </div>
         </header>
 
-        {/* Content Workspace */}
-        <div className="flex-1 flex flex-row overflow-hidden">
-           {/* Chart Area */}
-           <div className="flex-1 relative border-r border-trading-border/50">
-             {activeTab === 'chart' ? (
-                <FootprintChart data={data} />
-             ) : (
-                <div className="flex h-full items-center justify-center text-slate-500 font-mono text-xl">
-                  {activeTab.toUpperCase()} PANE - Coming Soon
-                </div>
-             )}
-           </div>
+        {/* ── SessionInfoBar ──────────────────────────────────────────────── */}
+        <SessionInfoBar />
 
-           {/* DOM / Order Book Right Panel */}
-           <div className="w-64 bg-[#0d131f] flex flex-col shrink-0 border-l border-slate-800 shadow-[-5px_0_15px_rgba(0,0,0,0.2)] z-10">
-              <div className="h-8 bg-slate-800/80 border-b border-slate-700 flex items-center justify-center font-bold text-[11px] text-slate-300 tracking-widest">
-                ORDER BOOK (DOM)
-              </div>
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
-                {/* DOM Mockup */}
-                <div className="flex justify-between text-[10px] text-slate-500 border-b border-slate-800 pb-1 mb-1 px-1">
-                  <span>BID SIZ</span>
-                  <span>PRICE</span>
-                  <span>ASK SIZ</span>
+        {/* ── Content workspace ──────────────────────────────────────────── */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+
+          {/* Chart area + sidebars */}
+          <div className="flex flex-1 min-h-0 overflow-hidden">
+
+            {/* FootprintChart (area principale) */}
+            <div className="flex-1 relative min-w-0 overflow-hidden">
+              <FootprintChart autoScroll={replayMode === 'replay'} />
+            </div>
+
+            {/* Volume Profile Sidebar */}
+            {showVP && (
+              <VolumeProfileSidebar
+                maxPrice={candles.length > 0
+                  ? Math.max(...candles.map(c => c.barHigh)) + 4
+                  : 21600}
+                minPrice={candles.length > 0
+                  ? Math.min(...candles.map(c => c.barLow)) - 4
+                  : 21400}
+                cellHeight={CELL_HEIGHT_EXPORT}
+                panY={0}
+                scale={1}
+              />
+            )}
+
+            {/* Order Book DOM */}
+            <OrderBookDOM />
+
+            {/* Clean Data Panel (Roadmap + Agent Signals + Trade Markers) */}
+            {showCleanData && (
+              <div className="w-[260px] bg-[#0b1020] border-l border-slate-800 flex flex-col shrink-0 overflow-y-auto">
+                <div className="h-6 bg-slate-900/80 border-b border-slate-700 flex items-center justify-center shrink-0">
+                  <span className="text-[9px] text-slate-400 font-bold tracking-widest">DEEP DATA</span>
                 </div>
-                {Array.from({length: 30}).map((_, i) => {
-                  const price = (21500 - (i * 0.25)).toFixed(2);
-                  const isAsk = i < 15;
-                  const size = Math.floor(Math.random() * 50) + 1;
-                  return (
-                    <div key={i} className="flex justify-between items-center text-[11px] font-mono py-0.5 px-1 hover:bg-slate-800/50 cursor-pointer group">
-                      <span className="w-1/3 text-left text-emerald-400/80 group-hover:text-emerald-300">{!isAsk ? size : ''}</span>
-                      <span className={cn("w-1/3 text-center font-bold", isAsk ? "text-rose-200" : "text-emerald-200")}>{price}</span>
-                      <span className="w-1/3 text-right text-rose-400/80 group-hover:text-rose-300">{isAsk ? size : ''}</span>
-                    </div>
-                  );
-                })}
+                <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                  <RoadmapPanel />
+                  <AgentSignalsPanel />
+                  <TradeMarkersPanel />
+                </div>
               </div>
-           </div>
+            )}
+          </div>
+
+          {/* CVD Chart (pannello inferiore opzionale) */}
+          {showCVD && (
+            <CVDChart height={90} />
+          )}
         </div>
+
+        {/* ── ReplayControls ─────────────────────────────────────────────── */}
+        <ReplayControls />
       </main>
+
+      {/* ── Alert Panel ────────────────────────────────────────────────────── */}
+      <AlertPanel />
+
+      {/* ── Keyboard hints (visible solo quando nessun dato) ─────────────── */}
+      {candles.length === 0 && wsStatus === 'disconnected' && (
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-50">
+          <div className="bg-slate-900/95 border border-slate-700 rounded-xl p-6 text-center shadow-2xl max-w-sm">
+            <div className="text-4xl mb-3">🚀</div>
+            <div className="text-white font-bold text-sm mb-2">DeepPrint Pro</div>
+            <div className="text-slate-400 text-xs mb-4">Piattaforma Volumetrica NQ Futures</div>
+            <div className="bg-slate-800 rounded-lg p-3 text-left text-xs font-mono text-slate-300 space-y-1">
+              <div className="text-slate-500"># Avvia il server:</div>
+              <div className="text-emerald-400">python platform/ws_server.py</div>
+            </div>
+            <div className="mt-3 text-[10px] text-slate-600 space-y-0.5">
+              <div>SPACE = play/pause · → ← = step · + - = speed</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+// Esporta cell height per VP sidebar sync
+export const CELL_HEIGHT_EXPORT = 22;

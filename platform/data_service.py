@@ -4,14 +4,25 @@ Carica CSV giornalieri, aggrega in barre M1/M5, restituisce dati strutturati.
 """
 import os
 import re
+import sys
 import warnings
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
 import numpy as np
 
-from platform.config import CACHE_OHLC_DIR, NQ_BIG_TRADE_THRESHOLD, NQ_TICK_SIZE
+# Aggiungi project root a sys.path se necessario
+_THIS_DIR = Path(__file__).parent
+_PROJECT_ROOT = _THIS_DIR.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
 from src import Trade, Bar
+
+# Costanti (copiate da config.py per evitare import circolari con built-in platform)
+NQ_BIG_TRADE_THRESHOLD = 30
+NQ_TICK_SIZE = 0.25
+CACHE_OHLC_DIR = Path(os.environ.get('NQ_CACHE_OHLC_DIR', _PROJECT_ROOT / 'cache_ohlc'))
 
 
 REQUIRED_COLS = {'ts_event', 'action', 'side', 'price', 'size'}

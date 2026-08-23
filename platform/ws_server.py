@@ -26,20 +26,49 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
     import websockets
-    from websockets.server import serve as ws_serve
 except ImportError:
     print("ERRORE: websockets non installato. Esegui: pip install websockets")
     sys.exit(1)
 
-import pytz
+# Import configurazione direttamente dal file (evita conflitto con built-in 'platform')
+import importlib.util
+_config_path = PROJECT_ROOT / "platform" / "config.py"
+_spec = importlib.util.spec_from_file_location("deepprint_config", _config_path)
+_config_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_config_mod)
 
-from platform.config import (
-    WS_HOST, WS_PORT, DEFAULT_REPLAY_SPEED, MAX_REPLAY_SPEED,
-    MAX_CANDLES_IN_MEMORY, VP_UPDATE_EVERY_N_BARS,
-    NQ_TICK_SIZE, NQ_BIG_TRADE_THRESHOLD, IB_DURATION_MIN,
-    NY_OPEN_H, NY_OPEN_M, FABIO_START_H, FABIO_START_M, FABIO_END_H, FABIO_END_M
-)
-from platform.data_service import DataService
+WS_HOST = _config_mod.WS_HOST
+WS_PORT = _config_mod.WS_PORT
+DEFAULT_REPLAY_SPEED = _config_mod.DEFAULT_REPLAY_SPEED
+MAX_REPLAY_SPEED = _config_mod.MAX_REPLAY_SPEED
+MAX_CANDLES_IN_MEMORY = _config_mod.MAX_CANDLES_IN_MEMORY
+VP_UPDATE_EVERY_N_BARS = _config_mod.VP_UPDATE_EVERY_N_BARS
+NQ_TICK_SIZE = _config_mod.NQ_TICK_SIZE
+NQ_BIG_TRADE_THRESHOLD = _config_mod.NQ_BIG_TRADE_THRESHOLD
+IB_DURATION_MIN = _config_mod.IB_DURATION_MIN
+NY_OPEN_H = _config_mod.NY_OPEN_H
+NY_OPEN_M = _config_mod.NY_OPEN_M
+FABIO_START_H = _config_mod.FABIO_START_H
+FABIO_START_M = _config_mod.FABIO_START_M
+FABIO_END_H = _config_mod.FABIO_END_H
+FABIO_END_M = _config_mod.FABIO_END_M
+CACHE_OHLC_DIR = _config_mod.CACHE_OHLC_DIR
+
+# Import DataService direttamente
+_ds_path = PROJECT_ROOT / "platform" / "data_service.py"
+_spec2 = importlib.util.spec_from_file_location("deepprint_data_service", _ds_path)
+_ds_mod = importlib.util.module_from_spec(_spec2)
+_spec2.loader.exec_module(_ds_mod)
+DataService = _ds_mod.DataService
+
+# Import CleanBridge (dati agenti da nq-backtest-clean)
+_cb_path = PROJECT_ROOT / "platform" / "clean_bridge.py"
+_spec3 = importlib.util.spec_from_file_location("clean_bridge", _cb_path)
+_cb_mod = importlib.util.module_from_spec(_spec3)
+_spec3.loader.exec_module(_cb_mod)
+get_bridge = _cb_mod.get_bridge
+
+import pytz
 from src.volume_profile import compute_volume_profile
 from src.session_context import (
     build_session_context, compute_ib, classify_day_type,
@@ -215,6 +244,62 @@ def _build_available_dates_message(dates: list) -> dict:
     }
 
 
+def _build_trade_markers_message(date: str) -> dict:
+    """Costruisce il messaggio trade_markers dal CleanBridge."""
+    try:
+        bridge = get_bridge()
+        trades = bridge.get_trade_markers(date)
+    except Exception as e:
+        print(f"[Server] Errore bridge.get_trade_markers({date}): {e}")
+        trades = []
+    return {
+        'type': 'trade_markers',
+        'data': {'date': date, 'trades': trades}
+    }
+
+
+def _build_daily_roadmap_message(date: str) -> dict:
+    """Costruisce il messaggio daily_roadmap dal CleanBridge."""
+    try:
+        bridge = get_bridge()
+        roadmap = bridge.get_daily_roadmap(date)
+    except Exception as e:
+        print(f"[Server] Errore bridge.get_daily_roadmap({date}): {e}")
+        roadmap = None
+    return {
+        'type': 'daily_roadmap',
+        'data': roadmap  # Può essere None se non disponibile
+    }
+
+
+def _build_memory_stats_message() -> dict:
+    """Costruisce il messaggio memory_stats dal CleanBridge."""
+    try:
+        bridge = get_bridge()
+        stats = bridge.get_memory_stats()
+    except Exception as e:
+        print(f"[Server] Errore bridge.get_memory_stats(): {e}")
+        stats = []
+    return {
+        'type': 'memory_stats',
+        'data': {'stats': stats}
+    }
+
+
+def _build_agent_signals_batch(date: str) -> dict:
+    """Costruisce il messaggio agent_signals_batch dal CleanBridge."""
+    try:
+        bridge = get_bridge()
+        signals = bridge.get_agent_signals(date)
+    except Exception as e:
+        print(f"[Server] Errore bridge.get_agent_signals({date}): {e}")
+        signals = []
+    return {
+        'type': 'agent_signals_batch',
+        'data': {'date': date, 'signals': signals}
+    }
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Server principale
 # ─────────────────────────────────────────────────────────────────────────────
@@ -292,6 +377,24 @@ class DeepPrintServer:
             await self.broadcast(_build_replay_status_message(
                 self.mode, date, 0, len(self.bars_m1), self.replay_speed
             ))
+
+            # Dati CleanBridge per questa data (esegui in executor per I/O)
+            try:
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, lambda: get_bridge().load())
+
+                # Invia trade_markers, daily_roadmap, agent_signals_batch
+                await self.broadcast(_build_trade_markers_message(date))
+                await self.broadcast(_build_daily_roadmap_message(date))
+                await self.broadcast(_build_agent_signals_batch(date))
+                await self.broadcast(_build_memory_stats_message())
+            except Exception as e:
+                print(f"[Server] Errore caricamento CleanBridge per {date}: {e}")
+                # Invia comunque messaggi vuoti per non bloccare il frontend
+                await self.broadcast({'type': 'trade_markers', 'data': {'date': date, 'trades': []}})
+                await self.broadcast({'type': 'daily_roadmap', 'data': None})
+                await self.broadcast({'type': 'agent_signals_batch', 'data': {'date': date, 'signals': []}})
+                await self.broadcast({'type': 'memory_stats', 'data': {'stats': []}})
         except Exception as e:
             print(f"[Server] Errore caricamento {date}: {e}")
             await self.broadcast({'type': 'error', 'data': {'message': str(e)}})
@@ -366,6 +469,19 @@ class DeepPrintServer:
             await self.send_to(websocket, _build_vp_message(
                 self.current_vp, self.bars_m1[:self.bar_idx]
             ))
+
+        # Memory stats globali (una volta all'avvio)
+        try:
+            bridge = get_bridge()
+            bridge.load()
+            await self.send_to(websocket, _build_memory_stats_message())
+            # Dati clean per la data corrente
+            if self.replay_date:
+                await self.send_to(websocket, _build_trade_markers_message(self.replay_date))
+                await self.send_to(websocket, _build_daily_roadmap_message(self.replay_date))
+                await self.send_to(websocket, _build_agent_signals_batch(self.replay_date))
+        except Exception:
+            pass
 
         # Ultime N candele come storia iniziale (batch)
         start = max(0, self.bar_idx - MAX_CANDLES_IN_MEMORY)
@@ -464,6 +580,17 @@ class DeepPrintServer:
 
         elif action == 'get_available_dates':
             await self.send_to(websocket, _build_available_dates_message(self.available_dates))
+
+        elif action == 'get_daily_roadmap':
+            date = msg.get('date', self.replay_date)
+            await self.send_to(websocket, _build_daily_roadmap_message(date))
+
+        elif action == 'get_memory_stats':
+            await self.send_to(websocket, _build_memory_stats_message())
+
+        elif action == 'get_agent_signals':
+            date = msg.get('date', self.replay_date)
+            await self.send_to(websocket, _build_agent_signals_batch(date))
 
         elif action == 'ping':
             await self.send_to(websocket, {'type': 'pong', 'ts': datetime.now().isoformat()})
@@ -617,8 +744,8 @@ class DeepPrintServer:
         replay_task = asyncio.create_task(self.replay_loop())
 
         try:
-            # Avvia server WebSocket
-            async with ws_serve(
+            # Avvia server WebSocket (websockets v16+ usa websockets.serve)
+            async with websockets.serve(
                 self.handler,
                 WS_HOST,
                 WS_PORT,
@@ -626,7 +753,7 @@ class DeepPrintServer:
                 ping_timeout=10,
                 max_size=10 * 1024 * 1024,  # 10MB max message
             ):
-                print(f"[Server] ✅ Server avviato. Premere Ctrl+C per uscire.\n")
+                print(f"[Server] [OK] Server avviato. Premere Ctrl+C per uscire.\n")
                 await asyncio.Future()  # Blocca per sempre
         except KeyboardInterrupt:
             print(f"\n[Server] Interruzione ricevuta, chiusura...")

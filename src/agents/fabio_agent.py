@@ -1,4 +1,5 @@
 import json
+import concurrent.futures
 from pathlib import Path
 from src import CandidateBar, FabioSignal, FABIO_NOTEBOOK_ID
 from src.agents.llm_client import llm_ask
@@ -175,21 +176,42 @@ def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list
     # Base user msg containing all context
     base_user_msg = f"## TRADING RULES (DISTILLED KNOWLEDGE)\n{rules_text}\n{context_text}\n\n## TASK\n{question}\n\n"
     
-    # 1. AMT Analyst
-    amt_prompt = "You are the AMT (Auction Market Theory) Analyst. Focus on Value Area High/Low, POC, Initial Balance, and Single Prints. Are we in balance (acceptance) or imbalance (exploration)? Respond with a concise paragraph summarizing your bias (Long/Short/Neutral) and the key AMT levels."
-    amt_report = llm_ask(amt_prompt, base_user_msg + "Analyze the setup strictly from an AMT perspective.")
-    
-    # 2. Footprint/Order Flow Analyst
-    flow_prompt = "You are the Order Flow & Footprint Analyst. Focus on Delta, imbalances, trapped traders, and volume walls. Who has control at the micro level? Respond with a concise paragraph summarizing your bias (Long/Short/Neutral) and the key order flow dynamics."
-    flow_report = llm_ask(flow_prompt, base_user_msg + "Analyze the setup strictly from an Order Flow perspective.")
-    
-    # 3. Technical Analyst
-    tech_prompt = "You are the Technical Structure Analyst. Focus on VWAP, standard deviations, moving averages, and general price action setups. Respond with a concise paragraph summarizing your bias (Long/Short/Neutral) and the structural logic."
-    tech_report = llm_ask(tech_prompt, base_user_msg + "Analyze the setup strictly from a Technical Structure perspective.")
-    
+    # Define Expert Prompts
+    amt_prompt = "You are the AMT Analyst. Focus on Value Area High/Low, POC, Initial Balance, and Single Prints. Are we in balance or imbalance? Respond with a concise paragraph summarizing your bias (Long/Short/Neutral) and the key AMT levels."
+    flow_prompt = "You are the Order Flow Analyst. Focus on Delta, imbalances, trapped traders, and volume walls. Who has control? Respond with a concise paragraph summarizing your bias (Long/Short/Neutral) and the key order flow dynamics."
+    tech_prompt = "You are the Technical Structure Analyst. Focus on VWAP, standard deviations, moving averages, and general price action setups. CRUCIAL: Differentiate between extended breakouts (chasing) and high-probability pullbacks. We prefer entering on pullbacks that resume the trend. Respond with a concise paragraph summarizing your bias (Long/Short/Neutral) and the structural logic."
+    macro_prompt = "You are the Macro & GEX Analyst. Focus on Gamma Exposure regimes (Positive vs Negative) and overnight session context. Are dealers suppressing or amplifying volatility? Respond with a concise paragraph dictating the 'Market Regime' (Trend vs Chop)."
+    risk_prompt = "You are the Risk Manager (The Bouncer). Focus ONLY on volatility, time of day, and account protection. Will this trade require a stop wider than 20 points? Is it too close to a news event? CRUCIAL: If the stop is > 20 points because the move is extended, do NOT authorize the trade. We only enter on pullbacks where the structural stop is <= 20 points. Respond with a concise paragraph. If the trade is too risky or extended, you MUST output the exact word 'VETO'."
+
+    def fetch_expert(prompt, user_msg):
+        return llm_ask(prompt, user_msg)
+
+    # Run all 5 experts in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        f_macro = executor.submit(fetch_expert, macro_prompt, base_user_msg + "Analyze the setup strictly from a Macro & GEX perspective.")
+        f_amt   = executor.submit(fetch_expert, amt_prompt, base_user_msg + "Analyze the setup strictly from an AMT perspective.")
+        f_flow  = executor.submit(fetch_expert, flow_prompt, base_user_msg + "Analyze the setup strictly from an Order Flow perspective.")
+        f_tech  = executor.submit(fetch_expert, tech_prompt, base_user_msg + "Analyze the setup strictly from a Technical Structure perspective.")
+        f_risk  = executor.submit(fetch_expert, risk_prompt, base_user_msg + "Analyze the setup strictly from a Risk Management perspective. Output VETO if dangerous.")
+        
+        macro_report = f_macro.result()
+        amt_report   = f_amt.result()
+        flow_report  = f_flow.result()
+        tech_report  = f_tech.result()
+        risk_report  = f_risk.result()
+
+    # The Bouncer checks for VETO
+    if "VETO" in risk_report.upper():
+        return FabioSignal(
+            direction='none', confidence=0, entry=None, stop=None, target=None, setup_type='none',
+            reasoning=f"VETOED BY RISK MANAGER. Reason: {risk_report}",
+            market_narrative_update="Risk Manager vetoed the trade.",
+            nlm_answer="VETO",
+        )
+
     # 4. Chief / Portfolio Manager
     chief_prompt = _get_system_prompt()
-    chief_msg = base_user_msg + f"## EXPERT REPORTS\n\n### AMT Analyst Report\n{amt_report}\n\n### Order Flow Analyst Report\n{flow_report}\n\n### Technical Analyst Report\n{tech_report}\n\n"
+    chief_msg = base_user_msg + f"## EXPERT REPORTS\n\n### Macro & GEX Analyst Report\n{macro_report}\n\n### AMT Analyst Report\n{amt_report}\n\n### Order Flow Analyst Report\n{flow_report}\n\n### Technical Analyst Report\n{tech_report}\n\n"
     chief_msg += "You are the Chief Portfolio Manager. Read the expert reports above, evaluate any divergences, and make the final trading decision. Respond with JSON only."
     
     user_msg = chief_msg
@@ -221,7 +243,7 @@ def analyze(candidate: CandidateBar, session_context: list = None, m1_bars: list
                     
             # If we get here, it's valid
             # We also attach the sub-reports inside the reasoning or as a side-note for auditing.
-            combined_reasoning = data.get('reasoning', '') + f" [AMT Bias: {amt_report[:50]}... | Flow: {flow_report[:50]}...]"
+            combined_reasoning = data.get('reasoning', '') + f" [Macro: {macro_report[:40]}... | AMT: {amt_report[:40]}... | Flow: {flow_report[:40]}...]"
             return FabioSignal(
                 direction   = direction,
                 confidence  = int(data.get('confidence', 0)),

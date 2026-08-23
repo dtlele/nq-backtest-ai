@@ -27,6 +27,10 @@ export function useWebSocket() {
     setReplayStatus,
     setAvailableDates,
     addAlert,
+    setTradeMarkers,
+    setDailyRoadmap,
+    setAgentSignals,
+    setMemoryStats,
   } = useTradingStore();
 
   const handleMessage = useCallback((event: MessageEvent) => {
@@ -73,6 +77,37 @@ export function useWebSocket() {
 
         case 'available_dates':
           if (data?.dates) setAvailableDates(data.dates);
+          break;
+
+        case 'trade_markers':
+          if (data?.trades) setTradeMarkers(data.trades);
+          break;
+
+        case 'daily_roadmap':
+          setDailyRoadmap(data || null);
+          break;
+
+        case 'agent_signals_batch':
+          if (data?.signals) {
+            setAgentSignals(data.signals);
+            // Per ogni signal con decisione 'trade', aggiungi alert
+            for (const signal of data.signals) {
+              if (signal.finalDecision === 'trade') {
+                addAlert({
+                  type: 'trade',
+                  direction: signal.direction === 'long' ? 'long' : 'short',
+                  confidence: signal.confidence,
+                  setupType: signal.setupType,
+                  message: `${signal.direction?.toUpperCase()} — ${signal.setupType} — ${signal.confidence}% confidence`,
+                  reasoning: signal.reasoning,
+                });
+              }
+            }
+          }
+          break;
+
+        case 'memory_stats':
+          if (data?.stats) setMemoryStats(data.stats);
           break;
 
         case 'agent_signal':

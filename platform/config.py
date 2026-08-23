@@ -7,7 +7,7 @@ import os
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 PROJECT_ROOT   = Path(__file__).parent.parent
-CACHE_OHLC_DIR = PROJECT_ROOT / "cache_ohlc"
+CACHE_OHLC_DIR = Path(os.environ.get('NQ_CACHE_OHLC_DIR', PROJECT_ROOT / 'cache_ohlc'))
 AGENT_MEMORY_DIR = PROJECT_ROOT / "agent_memory"
 DATA_DIR       = PROJECT_ROOT / "data"
 OUTPUT_DIR     = PROJECT_ROOT / "output"
