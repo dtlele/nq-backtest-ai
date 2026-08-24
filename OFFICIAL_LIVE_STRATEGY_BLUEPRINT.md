@@ -1,4 +1,4 @@
-﻿# 🏛️ OFFICIAL LIVE STRATEGY BLUEPRINT & RISK PROTOCOL
+# 🏛️ OFFICIAL LIVE STRATEGY BLUEPRINT & RISK PROTOCOL
 **Autore:** Mauro & Antigravity (AlphaEvo Quantitative Lab)  
 **Data di Emissione:** 24 Agosto 2026  
 **Stato:** DOCUMENTO UFFICIALE DI RIFERIMENTO (MASTER SOURCE OF TRUTH)  
@@ -98,6 +98,7 @@ flowchart LR
 
 ---
 
-## 6. 🚫 REGOLA ANTI-ALLUCINAZIONE
-Tutte le strategie precedenti (Fabio, vecchie varianti 1:1, FundedNext) sono **TOTALMENTE ARCHIVIATE E DEPRECATE**.  
+## 6. 🚫 REGOLA ANTI-ALLUCINAZIONE & PROTOCOLLO DATI GEX REALI AL 100%
+1. **Dati GEX Reali Obbligatori:** Tutti i backtest, ottimizzazioni genetiche ed esecuzioni a mercato DEVONO utilizzare **esclusivamente i dati GEX reali calcolati dalla catena opzioni CBOE/OPRA** (`real_cboe_gex_feed.py` e `data/gex_data.json`). È vietata qualsiasi approssimazione fittizia non ancorata all'Open Interest reale.
+2. **Archiviazione Strategie Legacy:** Tutte le strategie precedenti (Fabio, vecchie varianti 1:1, FundedNext) sono **TOTALMENTE ARCHIVIATE E DEPRECATE**.  
 Questo documento è l'unica guida ufficiale per lo sviluppo, backtest ed esecuzione a mercato reale.
