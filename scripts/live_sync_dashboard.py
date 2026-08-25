@@ -2,8 +2,9 @@ import time, json, os
 from pathlib import Path
 
 STATUS_PATH = Path("dashboard/public/data/status.json")
-SESSION_PATH = Path("agent_memory/session_state.json")
-TRADES_PATH = Path("agent_memory/trades_log.jsonl")
+SYNC_MEM = os.environ.get('SYNC_MEMORY_DIR', 'agent_memory')
+SESSION_PATH = Path(SYNC_MEM + "/session_state.json")
+TRADES_PATH = Path(SYNC_MEM + "/trades_log.jsonl")
 DATA_DIR = Path("dashboard/public/data")
 
 def loop():
